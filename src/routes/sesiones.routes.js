@@ -7,7 +7,10 @@ const router = Router();
 const usuarioId = 'user-123';
 
 // GET: Obtener todas las sesiones del usuario
-router.get('/sesiones', (req, res) => sesionController.getAll(req, res));
+router.get('/sesiones', (req, res) => {
+  req.params.usuarioId = 'user-123';
+  sesionController.getAll(req, res);
+});
 
 // GET: Obtener una sesión específica por ID
 router.get('/sesiones/:sesionId', (req, res) => sesionController.getById(req, res));
