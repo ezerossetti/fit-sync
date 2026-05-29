@@ -1,0 +1,122 @@
+{
+  "info": {
+    "name": "FitSync Backend",
+    "description": "Colección para testear los endpoints de FitSync en Node/Express",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar sesiones",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/sesiones",
+          "host": ["{{base_url}}"],
+          "path": ["sesiones"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Obtener sesión por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/sesiones/{{sesionId}}",
+          "host": ["{{base_url}}"],
+          "path": ["sesiones", "{{sesionId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Crear sesión",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fecha\": \"2026-06-01\",\n  \"rutina_id\": \"rutina-004\",\n  \"rutina_nombre\": \"Full Body\",\n  \"ejercicios\": [\n    {\n      \"ejercicio_id\": \"ej-008\",\n      \"nombre\": \"Overhead Press\",\n      \"series\": [\n        { \"set_num\": 1, \"peso_kg\": 40, \"reps\": 8 },\n        { \"set_num\": 2, \"peso_kg\": 42.5, \"reps\": 6 }\n      ]\n    },\n    {\n      \"ejercicio_id\": \"ej-009\",\n      \"nombre\": \"Goblet Squat\",\n      \"series\": [\n        { \"set_num\": 1, \"peso_kg\": 24, \"reps\": 12 },\n        { \"set_num\": 2, \"peso_kg\": 24, \"reps\": 10 }\n      ]\n    }\n  ],\n  \"volumen_total\": 1320,\n  \"duracion_min\": 40,\n  \"completada\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/sesiones",
+          "host": ["{{base_url}}"],
+          "path": ["sesiones"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Actualizar sesión",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"completada\": true,\n  \"duracion_min\": 48\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/sesiones/{{sesionId}}",
+          "host": ["{{base_url}}"],
+          "path": ["sesiones", "{{sesionId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Eliminar sesión",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/sesiones/{{sesionId}}",
+          "host": ["{{base_url}}"],
+          "path": ["sesiones", "{{sesionId}}"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "sesionId",
+      "value": "sesion-001",
+      "type": "string"
+    }
+  ]
+}
