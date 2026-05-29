@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import sesionesRouter from './sesiones.routes.js';
+import rutinasRouter from './rutinas.routes.js';
 
 const router = Router();
 
@@ -14,5 +15,8 @@ router.get('/health', async (req, res) => {
 
 // Rutas de sesiones
 router.use('/', sesionesRouter);
+
+// Rutas de rutinas
+router.use('/', rutinasRouter);
 
 export default router;
