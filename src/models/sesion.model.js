@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 // Datos mockeados - reemplazar con Supabase más adelante
 const sesionesDB = [
