@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import sesionesRouter from './sesiones.routes.js';
 
 const router = Router();
 
@@ -10,5 +11,8 @@ router.get('/health', async (req, res) => {
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
+
+// Rutas de sesiones
+router.use('/', sesionesRouter);
 
 export default router;
