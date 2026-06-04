@@ -303,7 +303,7 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 
 ```bash
 # Clonar repo
-git clone https://github.com/tu-usuario/fit-sync.git
+git clone https://github.com/ezerossetti/fit-sync
 cd fit-sync
 
 # Setup Backend
