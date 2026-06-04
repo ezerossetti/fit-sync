@@ -21,8 +21,8 @@ router.post('/sesiones', (req, res) => {
   sesionController.create(req, res);
 });
 
-// PUT: Actualizar una sesión
-router.put('/sesiones/:sesionId', (req, res) => sesionController.update(req, res));
+// PATCH: Actualizar una sesión
+router.patch('/sesiones/:sesionId', (req, res) => sesionController.update(req, res));
 
 // DELETE: Eliminar una sesión
 router.delete('/sesiones/:sesionId', (req, res) => sesionController.remove(req, res));
