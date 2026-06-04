@@ -26,9 +26,9 @@ const sesionesService = {
     return response.data.data
   },
 
-  // PATCH actualizar sesión
+  // PUT actualizar sesión
   update: async (id, data) => {
-    const response = await axiosInstance.patch(`/sesiones/${id}`, data)
+    const response = await axiosInstance.put(`/sesiones/${id}`, data)
     return response.data.data
   },
 

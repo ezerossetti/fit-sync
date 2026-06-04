@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import SesionForm from './components/SesionForm'
 import SesionesList from './components/SesionesList'
+import UsuarioForm from './components/UsuarioForm'
+import UsuarioList from './components/UsuarioList'
 
 export default function App() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const handleSesionCreated = () => {
+    setRefreshKey(prev => prev + 1)
+  }
+
+  const handleUsuarioCreated = () => {
     setRefreshKey(prev => prev + 1)
   }
 
@@ -18,7 +24,10 @@ export default function App() {
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         <SesionForm onSesionCreated={handleSesionCreated} />
-        <SesionesList key={refreshKey} />
+        <SesionesList key={`sesiones-${refreshKey}`} />
+
+        <UsuarioForm onUsuarioCreated={handleUsuarioCreated} />
+        <UsuarioList key={`usuarios-${refreshKey}`} />
       </main>
     </div>
   )

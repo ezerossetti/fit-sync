@@ -26,9 +26,9 @@ const rutinasService = {
     return response.data.data
   },
 
-  // PATCH actualizar rutina
+  // PUT actualizar rutina
   update: async (id, data) => {
-    const response = await axiosInstance.patch(`/rutinas/${id}`, data)
+    const response = await axiosInstance.put(`/rutinas/${id}`, data)
     return response.data.data
   },
 
