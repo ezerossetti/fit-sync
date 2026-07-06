@@ -9,9 +9,21 @@
 **FitSync** es una PWA (Progressive Web App) de registro de entrenamiento de fuerza para deportistas amateurs de 18-35 años que entrenan sin entrenador en Argentina. La app permite registrar series, pesos y repeticiones sin teclado, mostrando el historial de la sesión anterior antes de cada ejercicio para facilitar la sobrecarga progresiva.
 
 **Stack:**
-- **Backend:** Node.js + Express.js (ES modules)
-- **Frontend:** Vite + React 18 + Axios (PWA)
-- **Base de datos:** Preparada para Supabase (actualmente con datos mockeados)
+- **Backend:** Node.js + Express.js (ES modules), deployado en **Render**
+- **Frontend:** Vite + React 18 + Axios (PWA), deployado en **Vercel**
+- **Base de datos:** **Supabase (PostgreSQL)** — conectado y funcionando en producción con datos reales
+
+---
+
+## 🌐 Demo en Producción
+
+- **Frontend:** https://fit-sync-topaz.vercel.app
+- **Backend / API:** https://fit-sync-59pg.onrender.com
+
+> ⚠️ El backend está en el free tier de Render, que se "duerme" tras 15 min sin tráfico. La primera request después de estar inactiva puede tardar 30-60 seg en responder — es esperado, no es un error.
+
+<!-- 📸 TODO: reemplazar por la captura real de la app corriendo en producción -->
+![FitSync en producción](./screenshot.png)
 
 ---
 
@@ -26,6 +38,14 @@
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black)
 ![Axios](https://img.shields.io/badge/Axios-5A28CC?style=flat&logo=axios&logoColor=white)
+
+### Base de Datos
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
+
+### Deploy
+![Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
 
 ### Tools
 ![Postman](https://img.shields.io/badge/Postman-FF6C37?style=flat&logo=postman&logoColor=white)
@@ -48,9 +68,10 @@ fit-sync-backend/
 │   │   │   ├── rutina.controller.js
 │   │   │   └── usuario.controller.js
 │   │   ├── models/
-│   │   │   ├── sesion.model.js       # Mock data (Supabase ready)
-│   │   │   ├── rutina.model.js
-│   │   │   └── usuario.model.js
+│   │   │   ├── sesion.model.js       # Conectado a Supabase real (getAll, getById, create, update, remove)
+│   │   │   ├── rutina.model.js       # Conectado a Supabase real
+│   │   │   └── usuario.model.js      # Conectado a Supabase real
+│   │   ├── supabase.js               # Cliente de Supabase (createClient con URL + ANON_KEY)
 │   │   └── routes/
 │   │       ├── index.routes.js
 │   │       ├── sesiones.routes.js
@@ -122,6 +143,42 @@ npm run preview
 
 Frontend corre en: `http://localhost:5173`  
 Proxy automático: `/api` → `http://localhost:3000`
+
+---
+
+## ☁️ Deploy (C12 - C13)
+
+### Backend → Render
+
+1. New + → Web Service → conectar el repo desde GitHub.
+2. **Root Directory:** `backend`
+3. **Branch:** `main`
+4. **Build Command:** `npm install`
+5. **Start Command:** `node index.js`
+6. **Environment Variables** (Render → Settings → Environment):
+   ```
+   SUPABASE_URL=<tu url de supabase>
+   SUPABASE_ANON_KEY=<tu anon key de supabase>
+   ```
+7. Deploy. URL pública: `https://fit-sync-59pg.onrender.com`
+
+### Frontend → Vercel
+
+1. Importar el repo en Vercel.
+2. **Root Directory:** `frontend`
+3. **Environment Variables:**
+   ```
+   VITE_API_URL=https://fit-sync-59pg.onrender.com
+   ```
+   ⚠️ Ojo con el typo clásico de copy-paste: verificar que arranque con `https://` completo (con las dos "s" y las dos barras), no `ttps://`.
+4. Deploy. Cualquier cambio de env var requiere **Redeploy manual** (no se aplica solo).
+5. URL pública: `https://fit-sync-topaz.vercel.app`
+
+### Supabase → Configuración necesaria
+
+- Proyecto creado en [supabase.com](https://supabase.com), con tablas `usuarios`, `rutinas` y `sesiones` (nombres en minúscula, tal cual las espera el backend).
+- **Row Level Security (RLS):** si las tablas devuelven `success: true` con `data: []` aunque tengan filas cargadas, el problema es RLS activado sin policies. Se soluciona desactivando RLS por ahora desde Supabase → Authentication → Policies (a resolver con policies reales más adelante en la materia).
+- Datos de prueba cargados en las 3 tablas para validar el flujo end-to-end en producción.
 
 ---
 
@@ -241,7 +298,7 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 
 - ✅ Backend API con patrón MVC
 - ✅ 3 entidades: Sesion, Rutina, Usuario
-- ✅ Datos mockeados listos para Supabase
+- ✅ Conectado a **Supabase real** (PostgreSQL) — sin datos mockeados
 - ✅ Frontend Vite + React con proxy (PWA)
 - ✅ 4 componentes funcionales (CRUD básico)
 - ✅ 3 servicios con 5 métodos CRUD cada uno
@@ -250,6 +307,10 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 - ✅ Postman collection para testing
 - ✅ Migración PATCH → PUT
 - ✅ Backend separado en directorio propio
+- ✅ **Backend deployado en Render**, leyendo/escribiendo en Supabase real
+- ✅ **Frontend deployado en Vercel**, apuntando al backend de Render
+- ✅ Flujo CRUD completo validado end-to-end en producción (no solo local)
+- ✅ Variables de entorno separadas por ambiente (nunca hardcodeadas)
 
 ---
 
@@ -268,10 +329,11 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 - [ ] CORS configurado por ambiente
 
 ### Base de Datos 🗄️
-- [ ] Migración a Supabase
+- [x] Migración a Supabase
 - [ ] Migrations/Seeders
 - [ ] Índices optimizados
 - [ ] Soft deletes
+- [ ] Policies de RLS reales (por ahora está desactivado)
 
 ### Features MVP 🚀
 - [ ] Historial inmediato ("Última vez: 100kg × 5 reps")
@@ -292,10 +354,11 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 - [ ] E2E tests (frontend)
 
 ### DevOps & Deploy 🚀
-- [ ] Deploy frontend en Vercel
-- [ ] Deploy backend en Railway
+- [x] Deploy frontend en Vercel
+- [x] Deploy backend en Render
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] Docker setup
+- [ ] Captura de pantalla de la app en producción (README)
 
 ---
 
@@ -330,13 +393,15 @@ Copia `.env.example` a `.env` y ajustá según tu ambiente:
 NODE_ENV=development
 PORT=3000
 
+# Database (Supabase)
+SUPABASE_URL=https://<tu-proyecto>.supabase.co
+SUPABASE_ANON_KEY=<tu-anon-key>
+
 # Frontend Configuration
 VITE_API_URL=http://localhost:3000
-
-# Database (Supabase - Futuro)
-# SUPABASE_URL=
-# SUPABASE_ANON_KEY=
 ```
+
+En producción, `VITE_API_URL` se configura en Vercel apuntando al backend de Render (`https://fit-sync-59pg.onrender.com`), y `SUPABASE_URL` / `SUPABASE_ANON_KEY` se configuran en Render con los mismos valores del `.env` local.
 
 **Nota:** El archivo `.env` está en `.gitignore`. Usá `.env.example` como referencia.
 
@@ -393,4 +458,4 @@ MIT
 
 ---
 
-**Última actualización:** Junio 2026
+**Última actualización:** Julio 2026 (C12 - C13: Supabase + Deploy en Render/Vercel)

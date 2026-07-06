@@ -1,0 +1,276 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import rutinasService from '../services/rutinas.service'
+import { searchExercises } from '../data/exerciseCatalog'
+
+const LIMITE_FREE = 3
+
+function ExerciseBuilder({ ejercicios, setEjercicios }) {
+  const [query, setQuery] = useState('')
+  const sugerencias = query.trim() ? searchExercises(query).slice(0, 5) : []
+
+  const agregar = (nombre) => {
+    if (!nombre.trim()) return
+    setEjercicios([...ejercicios, { nombre: nombre.trim(), series_objetivo: 3, reps_objetivo: 10 }])
+    setQuery('')
+  }
+
+  const quitar = (idx) => setEjercicios(ejercicios.filter((_, i) => i !== idx))
+
+  const actualizar = (idx, campo, valor) => {
+    const copia = [...ejercicios]
+    copia[idx] = { ...copia[idx], [campo]: valor }
+    setEjercicios(copia)
+  }
+
+  return (
+    <div>
+      <label className="text-label-md text-on-surface-variant uppercase">Ejercicios</label>
+      <div className="relative mt-1">
+        <input
+          className="input-field"
+          placeholder="Buscar ejercicio (ej: deadlift, sentadilla)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregar(query))}
+        />
+        {sugerencias.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 card overflow-hidden">
+            {sugerencias.map(s => (
+              <button
+                key={s.nombre}
+                type="button"
+                onClick={() => agregar(s.nombre)}
+                className="w-full text-left px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-high"
+              >
+                {s.nombre} <span className="text-on-surface-variant text-label-md">· {s.grupo}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {ejercicios.map((ej, idx) => (
+          <div key={idx} className="card p-3 flex items-center gap-3">
+            <span className="material-symbols-outlined text-accent text-[20px]">fitness_center</span>
+            <span className="flex-1 text-body-sm text-on-surface">{ej.nombre}</span>
+            <input
+              type="number"
+              min="1"
+              className="w-14 bg-surface-container-lowest border border-surface-container-high rounded text-center text-body-sm py-1"
+              value={ej.series_objetivo}
+              onChange={(e) => actualizar(idx, 'series_objetivo', Number(e.target.value))}
+            />
+            <span className="text-label-md text-on-surface-variant">series ×</span>
+            <input
+              type="number"
+              min="1"
+              className="w-14 bg-surface-container-lowest border border-surface-container-high rounded text-center text-body-sm py-1"
+              value={ej.reps_objetivo}
+              onChange={(e) => actualizar(idx, 'reps_objetivo', Number(e.target.value))}
+            />
+            <span className="text-label-md text-on-surface-variant">reps</span>
+            <button type="button" onClick={() => quitar(idx)} className="text-error">
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+        ))}
+        {ejercicios.length === 0 && (
+          <p className="text-body-sm text-on-surface-variant italic">Todavía no agregaste ejercicios.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function Rutinas() {
+  const [rutinas, setRutinas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [nombre, setNombre] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [ejercicios, setEjercicios] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const navigate = useNavigate()
+
+  const cargar = async () => {
+    setLoading(true)
+    try {
+      const data = await rutinasService.getAll()
+      setRutinas(data || [])
+    } catch (e) {
+      console.error(e)
+      setError('No se pudieron cargar las rutinas.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { cargar() }, [])
+
+  const rutinasActivas = rutinas.filter(r => r.activa)
+  const limiteAlcanzado = !editando && rutinasActivas.length >= LIMITE_FREE
+
+  const abrirNueva = () => {
+    setEditando(null)
+    setNombre('')
+    setDescripcion('')
+    setEjercicios([])
+    setShowForm(true)
+  }
+
+  const abrirEditar = (r) => {
+    setEditando(r)
+    setNombre(r.nombre)
+    setDescripcion(r.descripcion || '')
+    setEjercicios(r.ejercicios || [])
+    setShowForm(true)
+  }
+
+  const guardar = async (e) => {
+    e.preventDefault()
+    if (!nombre.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      const payload = { nombre, descripcion, ejercicios, activa: editando ? editando.activa : true }
+      if (editando) {
+        await rutinasService.update(editando.id, payload)
+      } else {
+        await rutinasService.create(payload)
+      }
+      setShowForm(false)
+      await cargar()
+    } catch (e) {
+      console.error(e)
+      setError('No se pudo guardar la rutina.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Eliminar esta rutina?')) return
+    try {
+      await rutinasService.delete(id)
+      await cargar()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const toggleActiva = async (r) => {
+    if (!r.activa && rutinasActivas.length >= LIMITE_FREE) {
+      alert(`Tier gratuito: máximo ${LIMITE_FREE} rutinas activas. Desactivá otra o pasate a Premium.`)
+      return
+    }
+    try {
+      await rutinasService.update(r.id, { activa: !r.activa })
+      await cargar()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  if (showForm) {
+    return (
+      <div>
+        <button onClick={() => setShowForm(false)} className="flex items-center gap-1 text-accent text-body-sm mb-4">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span> Volver
+        </button>
+        <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">
+          {editando ? 'Editar rutina' : 'Nueva rutina'}
+        </h1>
+        <p className="text-body-sm text-on-surface-variant mb-5">Definí el nombre y los ejercicios que la componen.</p>
+
+        <form onSubmit={guardar} className="space-y-4">
+          <div>
+            <label className="text-label-md text-on-surface-variant uppercase">Nombre</label>
+            <input className="input-field mt-1" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Día de Empuje" required />
+          </div>
+          <div>
+            <label className="text-label-md text-on-surface-variant uppercase">Descripción (opcional)</label>
+            <textarea className="input-field mt-1" rows={2} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Notas sobre esta rutina" />
+          </div>
+
+          <ExerciseBuilder ejercicios={ejercicios} setEjercicios={setEjercicios} />
+
+          {error && <p className="text-body-sm text-error">{error}</p>}
+
+          <button type="submit" disabled={saving} className="btn-primary w-full py-3 text-body-md">
+            {saving ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear rutina'}
+          </button>
+        </form>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="font-display text-headline-lg-mobile text-on-surface">Mis rutinas</h1>
+      </div>
+      <p className="text-body-sm text-on-surface-variant mb-2">
+        {rutinasActivas.length}/{LIMITE_FREE} rutinas activas (tier gratuito) · historial siempre libre
+      </p>
+
+      {limiteAlcanzado && (
+        <div className="card p-3 mb-4 border-accent/40 flex items-center gap-2">
+          <span className="material-symbols-outlined text-accent text-[18px]">lock</span>
+          <p className="text-body-sm text-on-surface-variant">Llegaste al límite del tier gratuito. Podés crear la rutina igual, quedará inactiva.</p>
+        </div>
+      )}
+
+      <button onClick={abrirNueva} className="btn-primary w-full py-3 text-body-md mb-5 flex items-center justify-center gap-2">
+        <span className="material-symbols-outlined text-[18px]">add</span> Nueva rutina
+      </button>
+
+      {error && <p className="text-body-sm text-error mb-3">{error}</p>}
+
+      {loading ? (
+        <p className="text-body-sm text-on-surface-variant">Cargando rutinas...</p>
+      ) : rutinas.length === 0 ? (
+        <div className="card p-6 text-center">
+          <span className="material-symbols-outlined text-on-surface-variant text-[32px] mb-2">checklist</span>
+          <p className="text-body-md text-on-surface">Todavía no creaste ninguna rutina</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {rutinas.map(r => (
+            <div key={r.id} className="card p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-body-lg font-semibold text-on-surface">{r.nombre}</p>
+                    {r.activa && <span className="text-label-md bg-accent/15 text-accent px-2 py-0.5 rounded-full">ACTIVA</span>}
+                  </div>
+                  {r.descripcion && <p className="text-body-sm text-on-surface-variant mt-0.5">{r.descripcion}</p>}
+                  <p className="text-label-md text-on-surface-variant mt-2">
+                    {(r.ejercicios || []).length} ejercicios · {(r.ejercicios || []).map(e => e.nombre).join(', ') || 'sin ejercicios'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-outline-variant">
+                <button onClick={() => navigate(`/entrenar/${r.id}`)} className="btn-secondary flex-1 py-2 text-body-sm flex items-center justify-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">bolt</span> Entrenar
+                </button>
+                <button onClick={() => toggleActiva(r)} className="px-3 py-2 text-body-sm text-on-surface-variant">
+                  {r.activa ? 'Desactivar' : 'Activar'}
+                </button>
+                <button onClick={() => abrirEditar(r)} className="text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+                <button onClick={() => eliminar(r.id)} className="text-error">
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
