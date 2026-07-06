@@ -1,0 +1,283 @@
+<!DOCTYPE html><html class="dark" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: #0d0f0d;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .progress-gradient {
+            background: linear-gradient(90deg, #0a2e6e 0%, #29b0e8 100%);
+        }
+        .bar-gradient {
+            background: linear-gradient(0deg, #0a2e6e 0%, #29b0e8 100%);
+        }
+        .tonal-layer-1 { background-color: #16181d; }
+        .tonal-layer-2 { background-color: #1c1f26; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#1f201e",
+                        "on-surface-variant": "#c4c6d2",
+                        "tertiary-fixed": "#86f8c9",
+                        "on-secondary-container": "#003247",
+                        "primary-container": "#0a2e6e",
+                        "inverse-surface": "#e3e2df",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "on-primary-container": "#7d98de",
+                        "on-tertiary-fixed": "#002115",
+                        "surface-container-lowest": "#0d0f0d",
+                        "inverse-on-surface": "#2f312f",
+                        "error": "#ffb4ab",
+                        "secondary": "#7ad0ff",
+                        "on-tertiary": "#003827",
+                        "surface-dim": "#121412",
+                        "secondary-fixed": "#c3e8ff",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#34ad83",
+                        "surface-container-highest": "#343533",
+                        "on-secondary-fixed": "#001e2c",
+                        "secondary-fixed-dim": "#7ad0ff",
+                        "inverse-primary": "#415c9e",
+                        "outline-variant": "#444650",
+                        "tertiary-container": "#003a28",
+                        "on-primary-fixed": "#001947",
+                        "background": "#121412",
+                        "on-primary": "#082d6d",
+                        "surface-container-low": "#1b1c1a",
+                        "on-tertiary-fixed-variant": "#00513a",
+                        "on-secondary": "#003549",
+                        "primary": "#b1c5ff",
+                        "tertiary-fixed-dim": "#68dbae",
+                        "tertiary": "#68dbae",
+                        "surface-bright": "#383938",
+                        "surface-container-high": "#292a29",
+                        "surface": "#121412",
+                        "on-background": "#e3e2df",
+                        "secondary-container": "#00a1d8",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#274484",
+                        "surface-variant": "#343533",
+                        "outline": "#8e909b",
+                        "on-surface": "#e3e2df",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "surface-tint": "#b1c5ff",
+                        "on-error": "#690005",
+                        "primary-fixed": "#dae2ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-mobile": "16px",
+                        "container-max": "1200px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Lexend"],
+                        "headline-xl": ["Lexend"],
+                        "headline-sm": ["Lexend"],
+                        "headline-lg-mobile": ["Lexend"],
+                        "headline-lg": ["Lexend"],
+                        "body-md": ["Lexend"],
+                        "body-sm": ["Lexend"],
+                        "body-lg": ["Lexend"],
+                        "headline-md": ["Lexend"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface antialiased min-h-screen pb-24">
+<!-- Top App Bar -->
+<header class="bg-surface-container-lowest flex items-center justify-between px-margin-mobile h-14 w-full top-0 z-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">sync</span>
+<h1 class="font-headline-sm text-headline-sm font-bold text-secondary-container">FitSync</h1>
+</div>
+<button class="hover:opacity-80 transition-opacity duration-200">
+<span class="material-symbols-outlined text-on-surface-variant">share</span>
+</button>
+</header>
+<main class="px-margin-mobile py-6 max-w-container-max mx-auto">
+<!-- Success Hero Section -->
+<section class="text-center mb-8">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-tertiary-container mb-4">
+<span class="material-symbols-outlined text-tertiary text-4xl" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-2">¡Sesión completada!</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Has superado tus límites hoy. Mantén el ritmo.</p>
+</section>
+<!-- PB Banner -->
+<div class="mb-8 rounded-xl p-4 flex items-center gap-4 border-l-4 border-[#1D9E75]" style="background-color: rgba(29, 158, 117, 0.1);">
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-[#1D9E75] text-2xl" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-[#1D9E75] uppercase tracking-wider">Nuevo PB Detectado</p>
+<p class="font-body-md text-body-md text-on-surface font-semibold">¡Nuevo récord personal en Press de Banca!</p>
+</div>
+</div>
+<!-- Bento Stats Grid -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="tonal-layer-1 p-5 rounded-xl border border-white/5">
+<span class="material-symbols-outlined text-secondary-container mb-2">fitness_center</span>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Volumen total</p>
+<div class="flex items-baseline gap-1">
+<span class="font-headline-md text-headline-md text-on-surface">4.200</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">kg</span>
+</div>
+</div>
+<div class="tonal-layer-1 p-5 rounded-xl border border-white/5">
+<span class="material-symbols-outlined text-secondary-container mb-2">layers</span>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Series</p>
+<div class="flex items-baseline gap-1">
+<span class="font-headline-md text-headline-md text-on-surface">12</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">total</span>
+</div>
+</div>
+</div>
+<!-- Weekly Volume Chart -->
+<section class="tonal-layer-1 p-6 rounded-xl mb-8 border border-white/5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-6">Volumen Semanal</h3>
+<div class="flex items-end justify-between h-40 gap-2 mb-4">
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm relative h-24 overflow-hidden">
+<div class="absolute bottom-0 w-full bar-gradient opacity-40" style="height: 60%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">L</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm relative h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bar-gradient opacity-60" style="height: 75%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">M</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm relative h-28 overflow-hidden">
+<div class="absolute bottom-0 w-full bar-gradient opacity-50" style="height: 65%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">X</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm relative h-36 overflow-hidden">
+<div class="absolute bottom-0 w-full bar-gradient" style="height: 100%"></div>
+</div>
+<span class="font-label-md text-label-md text-secondary-container font-bold">J</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm h-0"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">V</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm h-0"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">S</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="w-full bg-surface-container-lowest rounded-t-sm h-0"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">D</span>
+</div>
+</div>
+</section>
+<!-- Exercise Breakdown -->
+<section class="mb-10">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-4">Desglose de Ejercicios</h3>
+<div class="space-y-3">
+<!-- Exercise 1 -->
+<div class="tonal-layer-1 p-4 rounded-xl flex items-center justify-between border-l-4 border-secondary-container">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A focused athlete performing a heavy barbell bench press in a dimly lit, high-end commercial gym. The lighting is cinematic with deep shadows and sharp cyan highlights reflecting off the metallic weights. The aesthetic is clean, professional, and data-centric, emphasizing strength and precision. The overall atmosphere is intense and performance-driven, consistent with a dark-mode athletic application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDP_9TzbQFyNYnGAZOnuZxkB1BJ1ynUnCqHhCZH1hitjbfUUKOZznTVqrbQjfUjPHD2co-HGyexIzCiSb9n2IOhETur8GpNwNixaSfuzk1XSPVMM1BUKF3Cr_W5STCUOTb8l8yMDe5pu3Uh8gk8KVOqSX_Nm2l48C9vTwjus8Q0Daed0vhGEeNQ7oCksfZP3PIHrfLFDW5TC5T67xvu_AY-qTM6zHbIuWWLKWVcCQ31mACNt1XXFF4L62an8q0Y6BvcebfZ0MqnIMqD">
+</div>
+<div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Press de Banca</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">4 series • 1.200 kg total</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[#1D9E75]" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+<!-- Exercise 2 -->
+<div class="tonal-layer-1 p-4 rounded-xl flex items-center justify-between border-l-4 border-secondary-container">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up of heavy dumbbells on a rack in a high-tech athletic training center. The environment is dark and minimalist with a palette of deep blacks and cool blues. Subtle lighting accents define the edges of the chrome and rubber materials, creating a sense of premium quality and elite coaching. The mood is focused and ready for action." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiIocWnQxyVFPl74IeFM1Sm4aFty2HB9_dUGmTQ_o4ULxLIq-A8F4obts5noSVXoktnr1f56F-sCjlLBNGz73gJmN7ek5ogaTRi75IQ69sckRYSnk2eXi3LkWDNPyBQU3w0XLbCKhXJxn6imGjbm25JyA45W1WbvRUOBgG1oEMlFJh8QGL-P9rcwcM3XiErA-iLVR5uZdWAaVmur53OKaOfXtT1F92vhnQZIeF3z-5ZnbgQ0JjpGYoofsY3k7zKcyOQ0FjB1RDkeQi">
+</div>
+<div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Aperturas con Mancuerna</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">4 series • 800 kg total</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">horizontal_rule</span>
+</div>
+<!-- Exercise 3 -->
+<div class="tonal-layer-1 p-4 rounded-xl flex items-center justify-between border-l-4 border-secondary-container">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A specialized cable machine handle in a modern gym setting. The background is a dark base with tonal layers of charcoal and navy. Sharp technical lines and 1px cyan borders define the machine's architecture. The lighting is focused and professional, evoking a data-driven approach to fitness and strength training." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwRTp3SLUQkRvw7dnpQt6GoaGrPC9uEX4r1meiIKqxfqyJf6b-YfjPBNh_UBF7baCMSQGAYxwyVmFOg73MNE1TUAmPATWJ3cw1VTeGQjvhZshVC7gsn37y_syvI1WYm7GRYnxMsTD8jmYxkV7pSTOZ-ARaoKsHHNCIIFHufPD68D_VEnVkxooeDuf3zbkBVLZhEqVpPfaGcLOOKCYcEyRc6mMBSFNMY1uEzeZD8cTrHuGPR8mMxPkk-i1K9ZNgmaLZcU7plpjCcAjE">
+</div>
+<div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Cruce de Poleas</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">4 series • 2.200 kg total</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">horizontal_rule</span>
+</div>
+</div>
+</section>
+<!-- Primary CTA -->
+<div class="fixed bottom-24 left-0 w-full px-margin-mobile">
+<button class="w-full h-14 bg-[#0A2E6E] text-[#F4F3F0] font-bold rounded-lg hover:opacity-90 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
+<span>Volver al inicio</span>
+<span class="material-symbols-outlined">home</span>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center py-2 px-margin-mobile bg-surface-container rounded-t-xl">
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer p-2 rounded-lg">
+<span class="material-symbols-outlined">fitness_center</span>
+<span class="font-label-md text-label-md">Rutinas</span>
+</div>
+<div class="flex flex-col items-center justify-center text-secondary-container font-bold hover:bg-surface-container-highest transition-colors cursor-pointer p-2 rounded-lg scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-md text-label-md">Historial</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer p-2 rounded-lg">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Perfil</span>
+</div>
+</nav>
+</body></html>

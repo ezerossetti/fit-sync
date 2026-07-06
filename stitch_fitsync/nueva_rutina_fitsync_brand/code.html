@@ -1,0 +1,237 @@
+<!DOCTYPE html><html class="dark" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#1f201e",
+                        "on-surface-variant": "#c4c6d2",
+                        "tertiary-fixed": "#86f8c9",
+                        "on-secondary-container": "#003247",
+                        "primary-container": "#0a2e6e",
+                        "inverse-surface": "#e3e2df",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "on-primary-container": "#7d98de",
+                        "on-tertiary-fixed": "#002115",
+                        "surface-container-lowest": "#0d0f0d",
+                        "inverse-on-surface": "#2f312f",
+                        "error": "#ffb4ab",
+                        "secondary": "#7ad0ff",
+                        "on-tertiary": "#003827",
+                        "surface-dim": "#121412",
+                        "secondary-fixed": "#c3e8ff",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#34ad83",
+                        "surface-container-highest": "#343533",
+                        "on-secondary-fixed": "#001e2c",
+                        "secondary-fixed-dim": "#7ad0ff",
+                        "inverse-primary": "#415c9e",
+                        "outline-variant": "#444650",
+                        "tertiary-container": "#003a28",
+                        "on-primary-fixed": "#001947",
+                        "background": "#121412",
+                        "on-primary": "#082d6d",
+                        "surface-container-low": "#1b1c1a",
+                        "on-tertiary-fixed-variant": "#00513a",
+                        "on-secondary": "#003549",
+                        "primary": "#b1c5ff",
+                        "tertiary-fixed-dim": "#68dbae",
+                        "tertiary": "#68dbae",
+                        "surface-bright": "#383938",
+                        "surface-container-high": "#292a29",
+                        "surface": "#121412",
+                        "on-background": "#e3e2df",
+                        "secondary-container": "#00a1d8",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#274484",
+                        "surface-variant": "#343533",
+                        "outline": "#8e909b",
+                        "on-surface": "#e3e2df",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "surface-tint": "#b1c5ff",
+                        "on-error": "#690005",
+                        "primary-fixed": "#dae2ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-mobile": "16px",
+                        "container-max": "1200px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Lexend"],
+                        "headline-xl": ["Lexend"],
+                        "headline-sm": ["Lexend"],
+                        "headline-lg-mobile": ["Lexend"],
+                        "headline-lg": ["Lexend"],
+                        "body-md": ["Lexend"],
+                        "body-sm": ["Lexend"],
+                        "body-lg": ["Lexend"],
+                        "headline-md": ["Lexend"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #0d0d0f; }
+        .tonal-layer-1 { background-color: #16181d; }
+        .tonal-layer-2 { background-color: #1c1f26; }
+        .accent-cyan { color: #29b0e8; }
+        .bg-accent-navy { background-color: #0a2e6e; }
+        .border-accent-cyan { border-color: #29b0e8; }
+        .timeline-border { border-left: 4px solid #29b0e8; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="bg-surface-container-lowest flex items-center justify-between px-margin-mobile h-14 w-full fixed top-0 z-50">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container" data-icon="sync">sync</span>
+<h1 class="font-headline-sm text-headline-sm font-bold text-secondary-container">FitSync</h1>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity duration-200" data-icon="close">close</button>
+</header>
+<main class="pt-20 px-margin-mobile max-w-container-max mx-auto">
+<!-- Screen Title -->
+<section class="mb-8">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-2">Nueva Rutina</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Define tu próximo desafío de entrenamiento.</p>
+</section>
+<!-- Form Section -->
+<div class="space-y-6">
+<!-- Name Input -->
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-secondary-container uppercase tracking-wider">Nombre de la Rutina</label>
+<input class="w-full bg-[#0d0d0f] border border-[#16181d] focus:border-[#29b0e8] rounded-lg p-4 text-on-surface placeholder:text-outline outline-none transition-all" placeholder="Ej: Empuje Hipertrofia" type="text">
+</div>
+<!-- Search Bar -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full bg-surface-container border border-outline-variant rounded-full py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant outline-none focus:ring-1 focus:ring-secondary-container" placeholder="Buscar ejercicios..." type="text">
+</div>
+<!-- Exercise List -->
+<section class="space-y-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase">Ejercicios Seleccionados</h3>
+<!-- Card 1: Peso Muerto -->
+<div class="tonal-layer-1 timeline-border p-4 rounded-xl flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Peso muerto</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Cadena posterior</p>
+</div>
+<button class="material-symbols-outlined text-error" data-icon="delete">delete</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Series</span>
+<div class="flex items-center justify-between bg-surface-container-low rounded-lg p-1 border border-outline-variant/10">
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="remove">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm">3</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Reps</span>
+<div class="flex items-center justify-between bg-surface-container-low rounded-lg p-1 border border-outline-variant/10">
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="remove">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm">8</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: Press Militar -->
+<div class="tonal-layer-1 timeline-border p-4 rounded-xl flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Press Militar</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Hombros y Tríceps</p>
+</div>
+<button class="material-symbols-outlined text-error" data-icon="delete">delete</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Series</span>
+<div class="flex items-center justify-between bg-surface-container-low rounded-lg p-1 border border-outline-variant/10">
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="remove">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm">4</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Reps</span>
+<div class="flex items-center justify-between bg-surface-container-low rounded-lg p-1 border border-outline-variant/10">
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="remove">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm">10</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-md border-accent-cyan border text-secondary-container hover:bg-secondary-container/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Add More Button -->
+<button class="w-full py-4 border-2 border-dashed border-outline-variant rounded-xl flex items-center justify-center gap-2 text-on-surface-variant hover:border-secondary-container hover:text-secondary-container transition-all">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-md text-label-md">AÑADIR EJERCICIO</span>
+</button>
+</section>
+</div>
+</main>
+<!-- Bottom Action Bar -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container p-4 pb-8 flex flex-col gap-4 shadow-2xl z-50">
+<button class="w-full bg-[#0a2e6e] text-[#f4f3f0] py-4 rounded-lg font-bold text-body-lg hover:opacity-90 transition-opacity uppercase tracking-wide">
+            Guardar Rutina
+        </button>
+</div>
+<!-- Background Decoration for Performance Vibe -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-20 overflow-hidden">
+<div class="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary-container rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-5%] left-[-5%] w-[400px] h-[400px] bg-secondary-container rounded-full blur-[100px]"></div>
+</div>
+</body></html>

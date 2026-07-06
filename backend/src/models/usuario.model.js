@@ -1,68 +1,116 @@
-import crypto from 'crypto';
-
-const usuariosDB = [
-  {
-    id: 'usuario-001',
-    nombre: 'María López',
-    email: 'maria.lopez@example.com',
-    rol: 'cliente',
-    activo: true,
-    creado_en: new Date('2026-01-10')
-  },
-  {
-    id: 'usuario-002',
-    nombre: 'Juan Torres',
-    email: 'juan.torres@example.com',
-    rol: 'admin',
-    activo: true,
-    creado_en: new Date('2026-02-18')
-  },
-  {
-    id: 'usuario-003',
-    nombre: 'Ana García',
-    email: 'ana.garcia@example.com',
-    rol: 'cliente',
-    activo: false,
-    creado_en: new Date('2026-03-05')
-  }
-];
+import { supabase } from '../supabase.js';
 
 export const usuarioModel = {
+  // Obtener todos los usuarios
   getAll: async () => {
-    return usuariosDB;
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error en usuarioModel.getAll:', error);
+      throw error;
+    }
   },
 
+  // Obtener un usuario por ID
   getById: async (usuarioId) => {
-    return usuariosDB.find(usuario => usuario.id === usuarioId);
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', usuarioId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error en usuarioModel.getById:', error);
+      throw error;
+    }
   },
 
+  // Crear un nuevo usuario
   create: async (dataUsuario) => {
-    const nuevoUsuario = {
-      id: crypto.randomUUID(),
-      nombre: dataUsuario.nombre,
-      email: dataUsuario.email,
-      rol: dataUsuario.rol || 'cliente',
-      activo: dataUsuario.activo ?? true,
-      creado_en: new Date(dataUsuario.creado_en || Date.now())
-    };
+    try {
+      const payload = {
+        nombre: dataUsuario.nombre,
+        email: dataUsuario.email,
+        rol: dataUsuario.rol || 'cliente',
+        activo: dataUsuario.activo ?? true
+      };
 
-    usuariosDB.push(nuevoUsuario);
-    return nuevoUsuario;
+      // Si viene creado_en, lo agregamos
+      if (dataUsuario.creado_en) {
+        payload.creado_en = dataUsuario.creado_en;
+      }
+
+      // Si viene un ID predefinido, lo incluimos (útil para tests o IDs específicos)
+      if (dataUsuario.id) {
+        payload.id = dataUsuario.id;
+      }
+
+      const { data, error } = await supabase
+        .from('usuarios')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error en usuarioModel.create:', error);
+      throw error;
+    }
   },
 
+  // Actualizar un usuario
   update: async (usuarioId, datosActualizacion) => {
-    const usuario = usuariosDB.find(u => u.id === usuarioId);
-    if (!usuario) return null;
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .update(datosActualizacion)
+        .eq('id', usuarioId)
+        .select()
+        .maybeSingle();
 
-    Object.assign(usuario, datosActualizacion);
-    return usuario;
+      if (error) {
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error en usuarioModel.update:', error);
+      throw error;
+    }
   },
 
+  // Eliminar un usuario
   remove: async (usuarioId) => {
-    const index = usuariosDB.findIndex(u => u.id === usuarioId);
-    if (index === -1) return null;
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', usuarioId)
+        .select()
+        .maybeSingle();
 
-    const [usuarioEliminado] = usuariosDB.splice(index, 1);
-    return usuarioEliminado;
+      if (error) {
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error en usuarioModel.remove:', error);
+      throw error;
+    }
   }
 };
+

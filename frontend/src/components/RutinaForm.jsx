@@ -1,118 +1,120 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { CheckCircle, AlertCircle, X, Save, Plus } from 'lucide-react'
 import rutinasService from '../services/rutinas.service'
 
-export default function RutinaForm({ onRutinaCreada }) {
-  const [form, setForm] = useState({
-    nombre: '',
-    descripcion: '',
-    activa: true
-  })
+const F = "'Lexend', sans-serif"
+
+const INPUT = {
+  width: '100%', padding: '10px 14px', borderRadius: '8px',
+  border: '1px solid #444650', backgroundColor: '#0D0D0F', color: '#e3e2df',
+  fontFamily: F, fontSize: '14px', boxSizing: 'border-box',
+  outline: 'none', transition: 'border-color 0.2s'
+}
+
+const LABEL = {
+  display: 'block', marginBottom: '6px', fontFamily: F,
+  fontSize: '12px', fontWeight: '600', color: '#7ad0ff',
+  textTransform: 'uppercase', letterSpacing: '0.05em'
+}
+
+export default function RutinaForm({ onRutinaCreada, rutinaEditando, onCancelEdit }) {
+  const [form, setForm] = useState({ nombre: '', descripcion: '', activa: true })
   const [loading, setLoading] = useState(false)
   const [mensaje, setMensaje] = useState(null)
 
+  useEffect(() => {
+    if (rutinaEditando) {
+      setForm({ nombre: rutinaEditando.nombre || '', descripcion: rutinaEditando.descripcion || '', activa: rutinaEditando.activa !== undefined ? rutinaEditando.activa : true })
+    } else { resetForm() }
+  }, [rutinaEditando])
+
+  const resetForm = () => setForm({ nombre: '', descripcion: '', activa: true })
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
   const handleSubmit = async () => {
-    if (!form.nombre.trim()) {
-      setMensaje({ tipo: 'error', texto: 'El nombre es obligatorio' })
-      return
-    }
+    if (!form.nombre.trim()) return setMensaje({ tipo: 'error', texto: 'El nombre es obligatorio' })
     try {
-      setLoading(true)
-      setMensaje(null)
-      await rutinasService.create({
-        ...form,
-        usuario_id: 'user-123',
-        ejercicios: []
-      })
-      setMensaje({ tipo: 'ok', texto: '✅ Rutina creada correctamente' })
-      setForm({ nombre: '', descripcion: '', activa: true })
+      setLoading(true); setMensaje(null)
+      if (rutinaEditando) {
+        await rutinasService.update(rutinaEditando.id, { ...form, usuario_id: 'user-123', ejercicios: rutinaEditando.ejercicios || [] })
+        setMensaje({ tipo: 'ok', texto: 'Rutina actualizada correctamente' })
+      } else {
+        await rutinasService.create({ ...form, usuario_id: 'user-123', ejercicios: [] })
+        setMensaje({ tipo: 'ok', texto: 'Rutina creada correctamente' }); resetForm()
+      }
       if (onRutinaCreada) onRutinaCreada()
+      setTimeout(() => setMensaje(null), 3000)
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.message || 'Error al crear rutina' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const inputStyle = {
-    width: '100%',
-    padding: '8px',
-    marginTop: '4px',
-    marginBottom: '12px',
-    borderRadius: '4px',
-    border: '1px solid #ccc',
-    fontSize: '14px',
-    boxSizing: 'border-box'
+      setMensaje({ tipo: 'error', texto: err.message || 'Error al guardar rutina' })
+    } finally { setLoading(false) }
   }
 
   return (
-    <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-      <h2>Nueva Rutina</h2>
-
-      <label style={{ fontWeight: 'bold', fontSize: '14px' }}>Nombre *</label>
-      <input
-        style={inputStyle}
-        name="nombre"
-        placeholder="Ej: Push Day"
-        value={form.nombre}
-        onChange={handleChange}
-      />
-
-      <label style={{ fontWeight: 'bold', fontSize: '14px' }}>Descripción</label>
-      <input
-        style={inputStyle}
-        name="descripcion"
-        placeholder="Ej: Empuje de tren superior"
-        value={form.descripcion}
-        onChange={handleChange}
-      />
-
-      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          name="activa"
-          checked={form.activa}
-          onChange={handleChange}
-        />
-        <span style={{ fontWeight: 'bold', fontSize: '14px' }}>Activa</span>
-      </label>
-
+    <div style={{ backgroundColor: '#16181D', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', padding: '24px', marginBottom: '8px', fontFamily: F }}>
       {mensaje && (
         <div style={{
-          padding: '10px',
-          marginBottom: '12px',
-          borderRadius: '4px',
-          backgroundColor: mensaje.tipo === 'ok' ? '#e8f5e9' : '#ffebee',
-          color: mensaje.tipo === 'ok' ? '#2e7d32' : '#c62828',
-          fontSize: '14px'
+          padding: '12px 16px', marginBottom: '16px', borderRadius: '8px',
+          backgroundColor: mensaje.tipo === 'ok' ? 'rgba(104,219,174,0.08)' : 'rgba(255,180,171,0.08)',
+          borderLeft: `4px solid ${mensaje.tipo === 'ok' ? '#68dbae' : '#ffb4ab'}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
-          {mensaje.texto}
+          <span style={{ color: mensaje.tipo === 'ok' ? '#68dbae' : '#ffb4ab', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {mensaje.tipo === 'ok' ? <CheckCircle size={15} /> : <AlertCircle size={15} />}
+            {mensaje.texto}
+          </span>
+          <button onClick={() => setMensaje(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><X size={15} /></button>
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        style={{
-          backgroundColor: loading ? '#90caf9' : '#1976d2',
-          color: 'white',
-          padding: '10px 24px',
-          border: 'none',
-          borderRadius: '4px',
+      <div style={{ marginBottom: '16px' }}>
+        <label style={LABEL}>Nombre *</label>
+        <input name="nombre" value={form.nombre} onChange={handleChange}
+          placeholder="Ej: Push Day" style={INPUT}
+          onFocus={(e) => e.target.style.borderColor = '#29B0E8'}
+          onBlur={(e) => e.target.style.borderColor = '#444650'} />
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={LABEL}>Descripción</label>
+        <input name="descripcion" value={form.descripcion} onChange={handleChange}
+          placeholder="Ej: Empuje de tren superior" style={INPUT}
+          onFocus={(e) => e.target.style.borderColor = '#29B0E8'}
+          onBlur={(e) => e.target.style.borderColor = '#444650'} />
+      </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', cursor: 'pointer' }}>
+        <input type="checkbox" name="activa" checked={form.activa} onChange={handleChange}
+          style={{ width: '16px', height: '16px', accentColor: '#29B0E8', cursor: 'pointer' }} />
+        <span style={{ fontFamily: F, fontSize: '14px', fontWeight: '500', color: '#c4c6d2' }}>Activa</span>
+      </label>
+
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <button onClick={handleSubmit} disabled={loading} style={{
+          fontFamily: F, fontSize: '14px', fontWeight: '600',
+          padding: '10px 24px', borderRadius: '8px', border: 'none',
+          backgroundColor: loading ? '#292a29' : '#0A2E6E',
+          color: loading ? '#8e909b' : '#F4F3F0',
           cursor: loading ? 'not-allowed' : 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold'
-        }}
-      >
-        {loading ? 'Creando...' : 'Crear Rutina'}
-      </button>
+          display: 'flex', alignItems: 'center', gap: '6px', transition: 'opacity 0.2s'
+        }}>
+          {rutinaEditando ? <Save size={14} /> : <Plus size={14} />}
+          {loading ? 'Guardando...' : rutinaEditando ? 'Guardar Cambios' : 'Crear Rutina'}
+        </button>
+        {rutinaEditando && (
+          <button onClick={() => { resetForm(); if (onCancelEdit) onCancelEdit() }} style={{
+            fontFamily: F, fontSize: '14px', fontWeight: '600',
+            padding: '10px 24px', borderRadius: '8px',
+            border: '1px solid #444650', backgroundColor: 'transparent', color: '#c4c6d2',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <X size={14} /> Cancelar
+          </button>
+        )}
+      </div>
     </div>
   )
 }

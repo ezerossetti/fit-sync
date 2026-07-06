@@ -1,0 +1,107 @@
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #121412;
+  color: #e3e2df;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+  transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #29b0e8;
+  background-color: #0d0f0d;
+  box-shadow: 0 0 0 2px rgba(41, 176, 232, 0.1);
+}
+
+table {
+  font-size: 14px;
+}
+
+table th,
+table td {
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* FitSync Design System */
+:root {
+  --surface: #121412;
+  --surface-container-lowest: #0d0f0d;
+  --surface-container-low: #1b1c1a;
+  --surface-container: #1f201e;
+  --surface-container-high: #292a29;
+  --surface-container-highest: #343533;
+  --on-surface: #e3e2df;
+  --on-surface-variant: #c4c6d2;
+  --primary: #b1c5ff;
+  --secondary-container: #00a1d8;
+  --secondary: #7ad0ff;
+  --tertiary: #68dbae;
+  --tertiary-container: #003a28;
+  --outline-variant: #444650;
+  --error: #ffb4ab;
+  --tonal-layer-1: #16181d;
+  --accent-cyan: #29b0e8;
+}
+
+.session-card {
+  border-left: 4px solid var(--accent-cyan);
+  background-color: var(--tonal-layer-1);
+}
+
+.glass-panel {
+  background: rgba(22, 24, 29, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(41, 176, 232, 0.1);
+}
+
+.timeline-border {
+  border-left: 4px solid var(--accent-cyan);
+}
+
+.progress-gradient {
+  background: linear-gradient(90deg, #0A2E6E 0%, #29B0E8 100%);
+}
+

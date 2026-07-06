@@ -1,0 +1,208 @@
+<!DOCTYPE html><html class="dark" lang="es"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#1f201e",
+                    "on-surface-variant": "#c4c6d2",
+                    "tertiary-fixed": "#86f8c9",
+                    "on-secondary-container": "#003247",
+                    "primary-container": "#0a2e6e",
+                    "inverse-surface": "#e3e2df",
+                    "on-secondary-fixed-variant": "#004c69",
+                    "on-primary-container": "#7d98de",
+                    "on-tertiary-fixed": "#002115",
+                    "surface-container-lowest": "#0d0f0d",
+                    "inverse-on-surface": "#2f312f",
+                    "error": "#ffb4ab",
+                    "secondary": "#7ad0ff",
+                    "on-tertiary": "#003827",
+                    "surface-dim": "#121412",
+                    "secondary-fixed": "#c3e8ff",
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary-container": "#34ad83",
+                    "surface-container-highest": "#343533",
+                    "on-secondary-fixed": "#001e2c",
+                    "secondary-fixed-dim": "#7ad0ff",
+                    "inverse-primary": "#415c9e",
+                    "outline-variant": "#444650",
+                    "tertiary-container": "#003a28",
+                    "on-primary-fixed": "#001947",
+                    "background": "#121412",
+                    "on-primary": "#082d6d",
+                    "surface-container-low": "#1b1c1a",
+                    "on-tertiary-fixed-variant": "#00513a",
+                    "on-secondary": "#003549",
+                    "primary": "#b1c5ff",
+                    "tertiary-fixed-dim": "#68dbae",
+                    "tertiary": "#68dbae",
+                    "surface-bright": "#383938",
+                    "surface-container-high": "#292a29",
+                    "surface": "#121412",
+                    "on-background": "#e3e2df",
+                    "secondary-container": "#00a1d8",
+                    "error-container": "#93000a",
+                    "on-primary-fixed-variant": "#274484",
+                    "surface-variant": "#343533",
+                    "outline": "#8e909b",
+                    "on-surface": "#e3e2df",
+                    "primary-fixed-dim": "#b1c5ff",
+                    "surface-tint": "#b1c5ff",
+                    "on-error": "#690005",
+                    "primary-fixed": "#dae2ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "margin-mobile": "16px",
+                    "container-max": "1200px",
+                    "margin-desktop": "32px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Lexend"],
+                    "headline-xl": ["Lexend"],
+                    "headline-sm": ["Lexend"],
+                    "headline-lg-mobile": ["Lexend"],
+                    "headline-lg": ["Lexend"],
+                    "body-md": ["Lexend"],
+                    "body-sm": ["Lexend"],
+                    "body-lg": ["Lexend"],
+                    "headline-md": ["Lexend"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-border {
+            border: 1px solid rgba(41, 176, 232, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-surface-container-lowest text-secondary-container flex items-center justify-between px-margin-mobile h-14 w-full top-0 z-40">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined transition-opacity duration-200 hover:opacity-80">arrow_back</span>
+<h1 class="font-headline-sm text-headline-sm font-bold text-secondary-container">FitSync</h1>
+</div>
+<span class="material-symbols-outlined text-secondary-container transition-opacity duration-200 hover:opacity-80" data-icon="sync">sync</span>
+</header>
+<main class="flex-1 px-margin-mobile pb-32">
+<!-- Hero Section / Exercise Intro -->
+<section class="mt-8 space-y-6">
+<div class="space-y-1">
+<span class="text-secondary font-label-md text-label-md uppercase tracking-widest">Pre-Serie</span>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Peso Muerto</h2>
+<p class="text-on-surface-variant font-body-md text-body-md">Tracción / Cadena Posterior</p>
+</div>
+<!-- Media Preview Card -->
+<div class="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-container tonal-border">
+<img alt="Peso Muerto Técnica" class="w-full h-full object-cover opacity-60" data-alt="A professional fitness athlete performing a heavy deadlift in a dark, atmospheric industrial gym. The lighting is high-contrast with cool blue and cyan highlights illuminating the muscle definition and the steel textures of the barbell. The background is a minimalist black void focusing purely on the athletic form and the grit of the workout. The aesthetic is modern, cinematic, and technically precise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDByRUkRBa3VuVkWXVbYT7vIZnaVCjjAafjBLTm-jMHNTGf9rRruF0gp5nH3FuLhAE4UHjlajgHwukR2bPHWJ82jTmGw8yv1FP13xHzMsTJWO1_ArvONH7E-crVMqXIjI0MaEv2nw7QrCIUeUjEhLsxNKfAXAwq0oWwP5JEcw1tVeWjg7YdKSUJjVRGe1G_wd-Ki9BoTFt-p7_p7VGntMKEBJxPGvPezmy4Fl6iuzmS9uYSx79-tYLqiANQDmt7E25-xHWZIskfTccJ">
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-16 h-16 rounded-full bg-primary-container/80 backdrop-blur-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+<!-- Stats Bento Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- PR Card -->
+<div class="bg-surface-container p-4 rounded-xl border-l-4 border-secondary tonal-border">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<span class="text-on-surface-variant font-label-md text-label-md">PR PERSONAL</span>
+</div>
+<div class="font-headline-md text-headline-md text-on-surface">110<span class="text-body-sm font-body-sm ml-1">kg</span></div>
+</div>
+<!-- Last Session Card -->
+<div class="bg-surface-container p-4 rounded-xl border-l-4 border-outline-variant tonal-border">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-outline text-sm">history</span>
+<span class="text-on-surface-variant font-label-md text-label-md">ÚLT. SESIÓN</span>
+</div>
+<div class="font-headline-md text-headline-md text-on-surface">105<span class="text-body-sm font-body-sm ml-1">kg</span></div>
+</div>
+</div>
+<!-- Focus & Notes -->
+<div class="bg-surface-container p-5 rounded-xl tonal-border space-y-4">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">info</span>
+                    Puntos Clave
+                </h3>
+<ul class="space-y-3">
+<li class="flex items-start gap-3">
+<div class="mt-1 w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">Mantén la columna neutra y el core contraído durante toda la tracción.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="mt-1 w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">Empuja el suelo con los pies; no intentes "tirar" solo con los brazos.</span>
+</li>
+<li class="flex items-start gap-3">
+<div class="mt-1 w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">Extensión completa de cadera en el bloqueo superior.</span>
+</li>
+</ul>
+</div>
+</section>
+</main>
+<!-- Fixed Action & Bottom Nav -->
+<div class="fixed bottom-0 w-full z-50">
+<!-- Main CTA -->
+<div class="px-margin-mobile pb-6">
+<button class="w-full bg-primary-container text-on-background py-4 rounded-lg font-bold text-headline-sm flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-transform">
+                COMENZAR SERIE
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">timer</span>
+</button>
+</div>
+<!-- BottomNavBar -->
+<nav class="bg-surface-container flex justify-around items-center py-2 px-margin-mobile rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-secondary-container font-bold transition-colors hover:bg-surface-container-highest transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+<span class="font-label-md text-label-md">Rutinas</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant transition-colors hover:bg-surface-container-highest transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-md text-label-md">Historial</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant transition-colors hover:bg-surface-container-highest transition-colors scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Perfil</span>
+</a>
+</nav>
+</div>
+</body></html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html><html class="dark"><head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container": "#1f201e",
+            "on-surface-variant": "#c4c6d2",
+            "tertiary-fixed": "#86f8c9",
+            "on-secondary-container": "#003247",
+            "primary-container": "#0a2e6e",
+            "inverse-surface": "#e3e2df",
+            "on-secondary-fixed-variant": "#004c69",
+            "on-primary-container": "#7d98de",
+            "on-tertiary-fixed": "#002115",
+            "surface-container-lowest": "#0d0f0d",
+            "inverse-on-surface": "#2f312f",
+            "error": "#ffb4ab",
+            "secondary": "#7ad0ff",
+            "on-tertiary": "#003827",
+            "surface-dim": "#121412",
+            "secondary-fixed": "#c3e8ff",
+            "on-error-container": "#ffdad6",
+            "on-tertiary-container": "#34ad83",
+            "surface-container-highest": "#343533",
+            "on-secondary-fixed": "#001e2c",
+            "secondary-fixed-dim": "#7ad0ff",
+            "inverse-primary": "#415c9e",
+            "outline-variant": "#444650",
+            "tertiary-container": "#003a28",
+            "on-primary-fixed": "#001947",
+            "background": "#121412",
+            "on-primary": "#082d6d",
+            "surface-container-low": "#1b1c1a",
+            "on-tertiary-fixed-variant": "#00513a",
+            "on-secondary": "#003549",
+            "primary": "#b1c5ff",
+            "tertiary-fixed-dim": "#68dbae",
+            "tertiary": "#68dbae",
+            "surface-bright": "#383938",
+            "surface-container-high": "#292a29",
+            "surface": "#121412",
+            "on-background": "#e3e2df",
+            "secondary-container": "#00a1d8",
+            "error-container": "#93000a",
+            "on-primary-fixed-variant": "#274484",
+            "surface-variant": "#343533",
+            "outline": "#8e909b",
+            "on-surface": "#e3e2df",
+            "primary-fixed-dim": "#b1c5ff",
+            "surface-tint": "#b1c5ff",
+            "on-error": "#690005",
+            "primary-fixed": "#dae2ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "unit": "4px",
+            "margin-mobile": "16px",
+            "container-max": "1200px",
+            "margin-desktop": "32px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "label-md": ["Lexend"],
+            "headline-xl": ["Lexend"],
+            "headline-sm": ["Lexend"],
+            "headline-lg-mobile": ["Lexend"],
+            "headline-lg": ["Lexend"],
+            "body-md": ["Lexend"],
+            "body-sm": ["Lexend"],
+            "body-lg": ["Lexend"],
+            "headline-md": ["Lexend"]
+          },
+          "fontSize": {
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+            "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+            "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+            "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #0d0f0d;
+      color: #e3e2df;
+    }
+    .accent-border-left {
+      border-left: 4px solid #00a1d8;
+    }
+    .progress-gradient {
+      background: linear-gradient(to right, #0a2e6e, #00a1d8);
+    }
+    .inner-shadow-recessed {
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-surface-container-lowest flex items-center justify-between px-margin-mobile h-14 w-full fixed top-0 z-50">
+<div class="flex items-center gap-unit">
+<span class="material-symbols-outlined text-secondary-container" data-icon="sync">sync</span>
+<h1 class="font-headline-sm text-headline-sm font-bold text-secondary-container">FitSync</h1>
+</div>
+<button class="transition-opacity duration-200 hover:opacity-80">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="close">close</span>
+</button>
+</header>
+<!-- Content Canvas -->
+<main class="flex-grow pt-20 pb-32 px-margin-mobile max-w-container-max mx-auto w-full">
+<!-- Exercise Header -->
+<section class="mb-8">
+<div class="flex items-baseline justify-between mb-2">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Peso Muerto</h2>
+<span class="font-label-md text-label-md bg-secondary-container/10 text-secondary-container px-3 py-1 rounded-full border border-secondary-container/20">SERIE 2/4</span>
+</div>
+<div class="accent-border-left bg-surface-container p-4 rounded-lg flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Historial Anterior</span>
+<p class="font-body-md text-body-md text-secondary-container font-semibold">Serie 1: 100kg x 5 ✓</p>
+</div>
+<button class="border border-secondary-container text-secondary-container font-label-md text-label-md px-4 py-2 rounded-lg transition-transform active:scale-95">
+          Repetir carga
+        </button>
+</div>
+</section>
+<!-- Controls Bento Grid -->
+<div class="grid grid-cols-1 gap-gutter mb-8">
+<!-- Carga Stepper -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<label class="font-label-md text-label-md text-on-surface-variant block mb-4 uppercase tracking-widest text-center">CARGA (KG)</label>
+<div class="flex items-center justify-between">
+<button class="w-14 h-14 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary-container transition-transform active:scale-90">
+<span class="material-symbols-outlined text-3xl" data-icon="remove">remove</span>
+</button>
+<div class="text-center">
+<span class="font-headline-xl text-headline-xl text-on-surface">102.5</span>
+</div>
+<button class="w-14 h-14 rounded-lg bg-secondary-container flex items-center justify-center text-on-secondary-container transition-transform active:scale-90">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Repeticiones Stepper -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<label class="font-label-md text-label-md text-on-surface-variant block mb-4 uppercase tracking-widest text-center">REPETICIONES</label>
+<div class="flex items-center justify-between">
+<button class="w-14 h-14 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary-container transition-transform active:scale-90">
+<span class="material-symbols-outlined text-3xl" data-icon="remove">remove</span>
+</button>
+<div class="text-center">
+<span class="font-headline-xl text-headline-xl text-on-surface">5</span>
+</div>
+<button class="w-14 h-14 rounded-lg bg-secondary-container flex items-center justify-center text-on-secondary-container transition-transform active:scale-90">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Timer & Progress -->
+<section class="flex flex-col items-center justify-center py-6">
+<div class="relative w-40 h-40 flex items-center justify-center mb-4">
+<!-- SVG Ring -->
+<svg class="absolute inset-0 w-full h-full transform -rotate-90">
+<circle class="text-surface-container-highest" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-secondary-container" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="110" stroke-width="8"></circle>
+</svg>
+<div class="text-center">
+<span class="font-headline-md text-headline-md text-on-surface block">01:30</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Descanso</span>
+</div>
+</div>
+<!-- Visual Reinforcement (Contextual Image) -->
+<div class="w-full h-48 rounded-xl overflow-hidden relative group">
+<img alt="Fitness Motivation" class="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 transition-all duration-700" data-alt="A cinematic, high-contrast close-up of a muscular athlete's hands gripping a heavy steel barbell with chalk dust in the air. The lighting is dramatic and moody with deep shadows and sharp cyan highlights, emphasizing the metallic texture and physical effort. The scene is set in a premium, dark-first industrial gym with a minimalist corporate aesthetic and clean lines. Professional fitness photography with a shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvNVUyPd7CzQ2FVk8se1-wWmeT6kL5OsKiW4nbqgMqiAhoRzGRL_hkbVeVqEmPH2W2qVyqX_XuyeXsZhbHiYGJBLmq2HcL4v_oAeyOdqGOYxa--WaOMx9GDj_Iq7DDfGp7y2tYxZA93zCvK65rgevifDZx9RM-utcqzKZzRmVNc41-qnXtXc9PmKNAMtPhinsECvT1ZqH0RxsUrq6X1rH9njWJvBHldx2HE0TCFyv3yOkIBgvzIDCxJMpCiqy3ms03DUkXoTgyVtT3">
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<p class="font-label-md text-label-md text-secondary-container flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+            ESTÁS AL 95% DE TU RÉCORD PERSONAL
+          </p>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Action Area -->
+<footer class="fixed bottom-0 w-full z-50 p-margin-mobile bg-surface-container/80 backdrop-blur-md">
+<button class="w-full h-16 bg-primary-container text-white rounded-lg flex items-center justify-center gap-3 transition-transform active:scale-[0.98] shadow-lg">
+<span class="material-symbols-outlined text-2xl" data-icon="vibration">vibration</span>
+<span class="font-headline-sm text-headline-sm uppercase tracking-wider">Guardar Serie</span>
+</button>
+</footer>
+</body></html>
