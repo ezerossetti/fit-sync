@@ -44,8 +44,9 @@ export function formatDuracion(min) {
 }
 
 export function formatTimer(totalSeconds) {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
-  const s = Math.floor(totalSeconds % 60).toString().padStart(2, '0')
+  const t = Math.max(0, totalSeconds)
+  const m = Math.floor(t / 60).toString().padStart(2, '0')
+  const s = Math.floor(t % 60).toString().padStart(2, '0')
   return `${m}:${s}`
 }
 
@@ -64,4 +65,44 @@ export function ultimoRegistroEjercicio(sesiones = [], nombreEjercicio) {
 
   const mejorSet = series.reduce((max, s) => (Number(s.peso) > Number(max.peso) ? s : max), series[0])
   return { fecha: sesion.fecha, series, mejorSet }
+}
+
+// Récord personal histórico (peso más alto levantado alguna vez) para un ejercicio dado
+export function prPersonalEjercicio(sesiones = [], nombreEjercicio) {
+  let mejor = null
+  for (const s of sesiones) {
+    const ejercicio = (s.ejercicios || []).find(e => e.nombre === nombreEjercicio)
+    if (!ejercicio) continue
+    for (const set of ejercicio.series || []) {
+      const peso = Number(set.peso) || 0
+      if (!mejor || peso > mejor.peso) {
+        mejor = { peso, reps: set.reps, fecha: s.fecha }
+      }
+    }
+  }
+  return mejor
+}
+
+const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+
+// Devuelve el volumen total levantado por cada día de la semana actual (lunes a domingo)
+export function volumenPorDiaSemana(sesiones = [], sesionExtra = null) {
+  const hoy = new Date()
+  const diaSemana = hoy.getDay() === 0 ? 7 : hoy.getDay() // 1 = lunes ... 7 = domingo
+  const inicio = new Date(hoy)
+  inicio.setHours(0, 0, 0, 0)
+  inicio.setDate(inicio.getDate() - (diaSemana - 1))
+
+  const totales = [0, 0, 0, 0, 0, 0, 0]
+  const todas = sesionExtra ? [...sesiones, sesionExtra] : sesiones
+
+  todas.forEach(s => {
+    const f = new Date(s.fecha)
+    if (f < inicio) return
+    const diffDias = Math.floor((f - inicio) / (1000 * 60 * 60 * 24))
+    if (diffDias < 0 || diffDias > 6) return
+    totales[diffDias] += Number(s.volumen_total ?? volumenSesion(s.ejercicios))
+  })
+
+  return DIAS_SEMANA.map((label, i) => ({ label, volumen: totales[i], esHoy: i === diaSemana - 1 }))
 }

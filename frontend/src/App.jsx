@@ -11,7 +11,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
-      <main className="max-w-container-max mx-auto px-margin-mobile pt-[72px] pb-28">
+      <main
+        className="max-w-container-max mx-auto px-margin-mobile pb-28"
+        style={{ paddingTop: 'calc(72px + env(safe-area-inset-top))' }}
+      >
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/rutinas" element={<Rutinas />} />

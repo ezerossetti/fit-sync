@@ -1,17 +1,47 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
-import { searchExercises } from '../data/exerciseCatalog'
+import { searchExercises, getExerciseInfo } from '../data/exerciseCatalog'
 
-const LIMITE_FREE = 3
+// ---------- Control numérico compacto (- valor +) ----------
+function NumberControl({ value, onChange, min = 1 }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="w-7 h-7 rounded-full border border-accent/40 text-accent flex items-center justify-center active:bg-accent/10"
+        aria-label="Restar"
+      >
+        <span className="material-symbols-outlined text-[16px]">remove</span>
+      </button>
+      <span className="font-mono text-body-md text-on-surface w-6 text-center tabular-nums">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        className="w-7 h-7 rounded-full border border-accent/40 text-accent flex items-center justify-center active:bg-accent/10"
+        aria-label="Sumar"
+      >
+        <span className="material-symbols-outlined text-[16px]">add</span>
+      </button>
+    </div>
+  )
+}
 
+// ---------- Constructor de ejercicios de la rutina ----------
 function ExerciseBuilder({ ejercicios, setEjercicios }) {
   const [query, setQuery] = useState('')
   const sugerencias = query.trim() ? searchExercises(query).slice(0, 5) : []
 
-  const agregar = (nombre) => {
+  const agregar = (nombre, grupo) => {
     if (!nombre.trim()) return
-    setEjercicios([...ejercicios, { nombre: nombre.trim(), series_objetivo: 3, reps_objetivo: 10 }])
+    const info = getExerciseInfo(nombre)
+    setEjercicios([...ejercicios, {
+      nombre: nombre.trim(),
+      grupo: grupo || info?.grupo || 'Personalizado',
+      series_objetivo: 3,
+      reps_objetivo: 10,
+    }])
     setQuery('')
   }
 
@@ -40,7 +70,7 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
               <button
                 key={s.nombre}
                 type="button"
-                onClick={() => agregar(s.nombre)}
+                onClick={() => agregar(s.nombre, s.grupo)}
                 className="w-full text-left px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-high"
               >
                 {s.nombre} <span className="text-on-surface-variant text-label-md">· {s.grupo}</span>
@@ -50,35 +80,39 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
         )}
       </div>
 
-      <div className="mt-3 space-y-2">
+      {ejercicios.length === 0 ? (
+        <p className="text-body-sm text-on-surface-variant italic mt-3">Todavía no agregaste ejercicios.</p>
+      ) : (
+        <p className="text-label-md text-accent uppercase mt-4 mb-2">Ejercicios seleccionados</p>
+      )}
+
+      <div className="space-y-2.5">
         {ejercicios.map((ej, idx) => (
-          <div key={idx} className="card p-3 flex items-center gap-3">
-            <span className="material-symbols-outlined text-accent text-[20px]">fitness_center</span>
-            <span className="flex-1 text-body-sm text-on-surface">{ej.nombre}</span>
-            <input
-              type="number"
-              min="1"
-              className="w-14 bg-surface-container-lowest border border-surface-container-high rounded text-center text-body-sm py-1"
-              value={ej.series_objetivo}
-              onChange={(e) => actualizar(idx, 'series_objetivo', Number(e.target.value))}
-            />
-            <span className="text-label-md text-on-surface-variant">series ×</span>
-            <input
-              type="number"
-              min="1"
-              className="w-14 bg-surface-container-lowest border border-surface-container-high rounded text-center text-body-sm py-1"
-              value={ej.reps_objetivo}
-              onChange={(e) => actualizar(idx, 'reps_objetivo', Number(e.target.value))}
-            />
-            <span className="text-label-md text-on-surface-variant">reps</span>
-            <button type="button" onClick={() => quitar(idx)} className="text-error">
-              <span className="material-symbols-outlined text-[18px]">close</span>
+          <div key={idx} className="card p-4 relative">
+            <button
+              type="button"
+              onClick={() => quitar(idx)}
+              className="absolute top-3 right-3 w-7 h-7 rounded-md bg-error-container/40 text-error flex items-center justify-center"
+              aria-label="Quitar ejercicio"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete</span>
             </button>
+
+            <p className="text-body-md font-semibold text-on-surface pr-8">{ej.nombre}</p>
+            <p className="text-label-md text-on-surface-variant mb-3">{ej.grupo || 'Personalizado'}</p>
+
+            <div className="flex items-center gap-6">
+              <div>
+                <p className="text-label-md text-on-surface-variant uppercase mb-1">Series</p>
+                <NumberControl value={ej.series_objetivo} onChange={(v) => actualizar(idx, 'series_objetivo', v)} />
+              </div>
+              <div>
+                <p className="text-label-md text-on-surface-variant uppercase mb-1">Reps</p>
+                <NumberControl value={ej.reps_objetivo} onChange={(v) => actualizar(idx, 'reps_objetivo', v)} />
+              </div>
+            </div>
           </div>
         ))}
-        {ejercicios.length === 0 && (
-          <p className="text-body-sm text-on-surface-variant italic">Todavía no agregaste ejercicios.</p>
-        )}
       </div>
     </div>
   )
@@ -111,9 +145,6 @@ export default function Rutinas() {
 
   useEffect(() => { cargar() }, [])
 
-  const rutinasActivas = rutinas.filter(r => r.activa)
-  const limiteAlcanzado = !editando && rutinasActivas.length >= LIMITE_FREE
-
   const abrirNueva = () => {
     setEditando(null)
     setNombre('')
@@ -136,7 +167,7 @@ export default function Rutinas() {
     setSaving(true)
     setError(null)
     try {
-      const payload = { nombre, descripcion, ejercicios, activa: editando ? editando.activa : true }
+      const payload = { nombre, descripcion, ejercicios, activa: true }
       if (editando) {
         await rutinasService.update(editando.id, payload)
       } else {
@@ -156,19 +187,6 @@ export default function Rutinas() {
     if (!confirm('¿Eliminar esta rutina?')) return
     try {
       await rutinasService.delete(id)
-      await cargar()
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  const toggleActiva = async (r) => {
-    if (!r.activa && rutinasActivas.length >= LIMITE_FREE) {
-      alert(`Tier gratuito: máximo ${LIMITE_FREE} rutinas activas. Desactivá otra o pasate a Premium.`)
-      return
-    }
-    try {
-      await rutinasService.update(r.id, { activa: !r.activa })
       await cargar()
     } catch (e) {
       console.error(e)
@@ -213,16 +231,7 @@ export default function Rutinas() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="font-display text-headline-lg-mobile text-on-surface">Mis rutinas</h1>
       </div>
-      <p className="text-body-sm text-on-surface-variant mb-2">
-        {rutinasActivas.length}/{LIMITE_FREE} rutinas activas (tier gratuito) · historial siempre libre
-      </p>
-
-      {limiteAlcanzado && (
-        <div className="card p-3 mb-4 border-accent/40 flex items-center gap-2">
-          <span className="material-symbols-outlined text-accent text-[18px]">lock</span>
-          <p className="text-body-sm text-on-surface-variant">Llegaste al límite del tier gratuito. Podés crear la rutina igual, quedará inactiva.</p>
-        </div>
-      )}
+      <p className="text-body-sm text-on-surface-variant mb-5">Organizá tus días de entrenamiento.</p>
 
       <button onClick={abrirNueva} className="btn-primary w-full py-3 text-body-md mb-5 flex items-center justify-center gap-2">
         <span className="material-symbols-outlined text-[18px]">add</span> Nueva rutina
@@ -243,10 +252,7 @@ export default function Rutinas() {
             <div key={r.id} className="card p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-body-lg font-semibold text-on-surface">{r.nombre}</p>
-                    {r.activa && <span className="text-label-md bg-accent/15 text-accent px-2 py-0.5 rounded-full">ACTIVA</span>}
-                  </div>
+                  <p className="text-body-lg font-semibold text-on-surface">{r.nombre}</p>
                   {r.descripcion && <p className="text-body-sm text-on-surface-variant mt-0.5">{r.descripcion}</p>}
                   <p className="text-label-md text-on-surface-variant mt-2">
                     {(r.ejercicios || []).length} ejercicios · {(r.ejercicios || []).map(e => e.nombre).join(', ') || 'sin ejercicios'}
@@ -257,13 +263,10 @@ export default function Rutinas() {
                 <button onClick={() => navigate(`/entrenar/${r.id}`)} className="btn-secondary flex-1 py-2 text-body-sm flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">bolt</span> Entrenar
                 </button>
-                <button onClick={() => toggleActiva(r)} className="px-3 py-2 text-body-sm text-on-surface-variant">
-                  {r.activa ? 'Desactivar' : 'Activar'}
-                </button>
-                <button onClick={() => abrirEditar(r)} className="text-on-surface-variant">
+                <button onClick={() => abrirEditar(r)} className="px-3 py-2 text-on-surface-variant">
                   <span className="material-symbols-outlined text-[18px]">edit</span>
                 </button>
-                <button onClick={() => eliminar(r.id)} className="text-error">
+                <button onClick={() => eliminar(r.id)} className="px-3 py-2 text-error">
                   <span className="material-symbols-outlined text-[18px]">delete</span>
                 </button>
               </div>

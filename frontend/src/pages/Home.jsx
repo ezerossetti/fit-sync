@@ -24,6 +24,56 @@ function inicioDeSemana() {
   return d
 }
 
+// ---------- Logros (Sugerencia #1) ----------
+function calcularLogros({ sesiones, rutinas, racha }) {
+  const volumenTotal = sesiones.reduce((acc, s) => acc + Number(s.volumen_total ?? volumenSesion(s.ejercicios)), 0)
+
+  return [
+    {
+      id: 'primera-sesion',
+      icon: 'emoji_events',
+      titulo: 'Primer paso',
+      desc: 'Completá tu primera sesión',
+      logrado: sesiones.length >= 1,
+    },
+    {
+      id: 'racha-3',
+      icon: 'local_fire_department',
+      titulo: 'En racha',
+      desc: '3 días seguidos entrenando',
+      logrado: racha >= 3,
+    },
+    {
+      id: 'racha-7',
+      icon: 'whatshot',
+      titulo: 'Imparable',
+      desc: '7 días seguidos entrenando',
+      logrado: racha >= 7,
+    },
+    {
+      id: 'sesiones-10',
+      icon: 'military_tech',
+      titulo: 'Constancia',
+      desc: '10 sesiones completadas',
+      logrado: sesiones.length >= 10,
+    },
+    {
+      id: 'volumen-10k',
+      icon: 'fitness_center',
+      titulo: 'Tonelada',
+      desc: '10.000 kg de volumen acumulado',
+      logrado: volumenTotal >= 10000,
+    },
+    {
+      id: 'primera-rutina',
+      icon: 'checklist',
+      titulo: 'Organizado',
+      desc: 'Creá tu primera rutina',
+      logrado: rutinas.length >= 1,
+    },
+  ]
+}
+
 export default function Home() {
   const [rutinas, setRutinas] = useState([])
   const [sesiones, setSesiones] = useState([])
@@ -45,11 +95,12 @@ export default function Home() {
     })()
   }, [])
 
-  const rutinasActivas = rutinas.filter(r => r.activa)
   const inicio = inicioDeSemana()
   const sesionesSemana = sesiones.filter(s => new Date(s.fecha) >= inicio)
   const racha = calcularRacha(sesiones)
   const ultimaSesion = sesiones[0]
+  const logros = calcularLogros({ sesiones, rutinas, racha })
+  const logrosDesbloqueados = logros.filter(l => l.logrado).length
 
   return (
     <div className="space-y-6">
@@ -81,8 +132,8 @@ export default function Home() {
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="card p-3 text-center">
-          <p className="font-mono text-headline-md text-accent">{loading ? '–' : rutinasActivas.length}</p>
-          <p className="text-label-md text-on-surface-variant mt-1">Rutinas activas</p>
+          <p className="font-mono text-headline-md text-accent">{loading ? '–' : rutinas.length}</p>
+          <p className="text-label-md text-on-surface-variant mt-1">Rutinas</p>
         </div>
         <div className="card p-3 text-center">
           <p className="font-mono text-headline-md text-accent">{loading ? '–' : sesionesSemana.length}</p>
@@ -136,13 +187,36 @@ export default function Home() {
                   <p className="text-body-md font-semibold text-on-surface">{r.nombre}</p>
                   <p className="text-label-md text-on-surface-variant">{(r.ejercicios || []).length} ejercicios</p>
                 </div>
-                {r.activa && (
-                  <span className="text-label-md bg-accent/15 text-accent px-2 py-1 rounded-full">ACTIVA</span>
-                )}
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      {/* Logros */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-headline-sm font-display text-on-surface">Logros</h3>
+          <span className="text-label-md text-on-surface-variant">{logrosDesbloqueados}/{logros.length}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {logros.map(l => (
+            <div
+              key={l.id}
+              className={`card p-3 text-center flex flex-col items-center gap-1.5 ${l.logrado ? 'border-accent/40' : 'opacity-50'}`}
+            >
+              <span
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${l.logrado ? 'bg-accent/15 text-accent' : 'bg-surface-container-high text-on-surface-variant'}`}
+              >
+                <span className="material-symbols-outlined text-[20px]" style={l.logrado ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                  {l.icon}
+                </span>
+              </span>
+              <p className="text-label-md font-semibold text-on-surface leading-tight">{l.titulo}</p>
+              <p className="text-label-md text-on-surface-variant leading-tight">{l.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
