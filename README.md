@@ -186,7 +186,7 @@ Proxy automático: `/api` → `http://localhost:3000`
 
 ---
 
-## ☁️ Deploy (C12 - C13)
+## ☁️ Deploy 
 
 ### Backend → Render
 
