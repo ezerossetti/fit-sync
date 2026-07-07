@@ -1,40 +1,33 @@
-import axios from 'axios'
-
-const axiosInstance = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-})
+import apiClient from './apiClient'
 
 const rutinasService = {
-  // GET todas las rutinas
+  // GET todas las rutinas del usuario logueado
   getAll: async () => {
-    const response = await axiosInstance.get('/rutinas')
+    const response = await apiClient.get('/rutinas')
     return response.data.data
   },
 
   // GET una rutina por ID
   getById: async (id) => {
-    const response = await axiosInstance.get(`/rutinas/${id}`)
+    const response = await apiClient.get(`/rutinas/${id}`)
     return response.data.data
   },
 
   // POST crear nueva rutina
   create: async (data) => {
-    const response = await axiosInstance.post('/rutinas', data)
+    const response = await apiClient.post('/rutinas', data)
     return response.data.data
   },
 
   // PUT actualizar rutina
   update: async (id, data) => {
-    const response = await axiosInstance.put(`/rutinas/${id}`, data)
+    const response = await apiClient.put(`/rutinas/${id}`, data)
     return response.data.data
   },
 
   // DELETE eliminar rutina
   delete: async (id) => {
-    const response = await axiosInstance.delete(`/rutinas/${id}`)
+    const response = await apiClient.delete(`/rutinas/${id}`)
     return response.data.data
   }
 }

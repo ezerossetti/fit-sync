@@ -106,3 +106,64 @@ export function volumenPorDiaSemana(sesiones = [], sesionExtra = null) {
 
   return DIAS_SEMANA.map((label, i) => ({ label, volumen: totales[i], esHoy: i === diaSemana - 1 }))
 }
+
+// ---------- Stats agregadas para la pantalla de Perfil ----------
+
+// Racha de días consecutivos entrenando, contando hacia atrás desde hoy
+export function calcularRacha(sesiones = []) {
+  if (!sesiones.length) return 0
+  const dias = new Set(sesiones.map(s => new Date(s.fecha).toDateString()))
+  let racha = 0
+  let cursor = new Date()
+  while (dias.has(cursor.toDateString())) {
+    racha += 1
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return racha
+}
+
+// Volumen total levantado en toda la vida del usuario (todas las sesiones)
+export function volumenTotalHistorico(sesiones = []) {
+  return sesiones.reduce((acc, s) => acc + Number(s.volumen_total ?? volumenSesion(s.ejercicios)), 0)
+}
+
+// Cantidad de entrenamientos completados
+export function sesionesCompletadas(sesiones = []) {
+  return sesiones.filter(s => s.completada).length
+}
+
+// Horas totales de esfuerzo (suma de duracion_min de todas las sesiones)
+export function horasActivasTotales(sesiones = []) {
+  const minutos = sesiones.reduce((acc, s) => acc + (Number(s.duracion_min) || 0), 0)
+  return Math.round(minutos / 60)
+}
+
+// Cuenta cuántas veces, a lo largo de toda la historia, se batió un récord
+// personal por ejercicio (cada vez que un set superó el máximo anterior de ese ejercicio)
+export function recordsPersonalesTotal(sesiones = []) {
+  const mejoresPorEjercicio = {}
+  let total = 0
+
+  const ordenadas = [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+
+  for (const s of ordenadas) {
+    for (const ej of s.ejercicios || []) {
+      const mejorActual = mejoresPorEjercicio[ej.nombre] || 0
+      const maxSesion = Math.max(0, ...(ej.series || []).map(set => Number(set.peso) || 0))
+      if (maxSesion > mejorActual) {
+        mejoresPorEjercicio[ej.nombre] = maxSesion
+        total += 1
+      }
+    }
+  }
+
+  return total
+}
+
+// Nivel simple en base a la cantidad de entrenamientos completados
+export function nivelPorSesiones(cantidadSesiones) {
+  if (cantidadSesiones >= 100) return 'Avanzado'
+  if (cantidadSesiones >= 25) return 'Intermedio'
+  if (cantidadSesiones >= 1) return 'Principiante'
+  return 'Recién llegado'
+}

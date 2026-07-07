@@ -42,8 +42,8 @@ export default {
         'error-container': '#93000a',
       },
       fontFamily: {
-        display: ['Lexend', 'sans-serif'],
-        body: ['Lexend', 'sans-serif'],
+        display: ['"Space Grotesk"', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       fontSize: {

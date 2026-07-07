@@ -5,7 +5,7 @@ const TABS = [
   { to: '/rutinas', label: 'Rutinas', icon: 'checklist' },
   { to: '/entrenar', label: 'Entrenar', icon: 'add_circle', isCta: true },
   { to: '/historial', label: 'Historial', icon: 'history' },
-  { to: '/usuarios', label: 'Perfil', icon: 'person' },
+  { to: '/perfil', label: 'Perfil', icon: 'person' },
 ]
 
 export default function BottomNav() {

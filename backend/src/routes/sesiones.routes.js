@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { sesionController } from '../controllers/sesion.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// Rutas para sesiones (con usuarioId hardcodeado por ahora)
-const usuarioId = 'user-123';
+router.use(requireAuth);
 
-// GET: Obtener todas las sesiones del usuario
+// GET: Obtener todas las sesiones del usuario logueado
 router.get('/sesiones', (req, res) => {
-  req.params.usuarioId = 'user-123';
+  req.params.usuarioId = req.usuarioId;
   sesionController.getAll(req, res);
 });
 
@@ -17,7 +17,7 @@ router.get('/sesiones/:sesionId', (req, res) => sesionController.getById(req, re
 
 // POST: Crear una nueva sesión
 router.post('/sesiones', (req, res) => {
-  req.params.usuarioId = usuarioId;
+  req.params.usuarioId = req.usuarioId;
   sesionController.create(req, res);
 });
 

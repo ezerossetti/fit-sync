@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
+import usuarioService from '../services/usuario.service'
+import { useAuth } from '../context/AuthContext'
 import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg } from '../utils/helpers'
 
 function calcularRacha(sesiones) {
@@ -75,17 +77,24 @@ function calcularLogros({ sesiones, rutinas, racha }) {
 }
 
 export default function Home() {
+  const { user } = useAuth()
   const [rutinas, setRutinas] = useState([])
   const [sesiones, setSesiones] = useState([])
+  const [perfil, setPerfil] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     (async () => {
       try {
-        const [r, s] = await Promise.all([rutinasService.getAll(), sesionesService.getAll()])
+        const [r, s, p] = await Promise.all([
+          rutinasService.getAll(),
+          sesionesService.getAll(),
+          usuarioService.getMe().catch(() => null),
+        ])
         setRutinas(r || [])
         setSesiones((s || []).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
+        setPerfil(p)
       } catch (e) {
         console.error(e)
         setError('No se pudo conectar con el backend. Puede estar "durmiendo" (free tier de Render) — probá recargar en 30-60 seg.')
@@ -101,13 +110,15 @@ export default function Home() {
   const ultimaSesion = sesiones[0]
   const logros = calcularLogros({ sesiones, rutinas, racha })
   const logrosDesbloqueados = logros.filter(l => l.logrado).length
+  const nombre = perfil?.nombre || user?.user_metadata?.nombre || 'Deportista'
+  const primerNombre = nombre.split(' ')[0]
 
   return (
     <div className="space-y-6">
       {/* Hero greeting */}
       <div>
         <p className="text-body-sm text-on-surface-variant">{saludoPorHora()},</p>
-        <h1 className="font-display text-headline-lg-mobile text-on-surface">Martín 💪</h1>
+        <h1 className="font-display text-headline-lg-mobile text-on-surface">{primerNombre} 💪</h1>
       </div>
 
       {error && (

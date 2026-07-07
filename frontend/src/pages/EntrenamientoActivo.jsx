@@ -453,7 +453,7 @@ export default function EntrenamientoActivo() {
         )}
 
         <div className="space-y-2">
-          <button onClick={guardarSerie} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
+          <button onClick={() => guardarSerie()} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-[20px]">check_circle</span>
             {objetivo && hechas + 1 >= objetivo ? 'Serie completada ✓ → Siguiente' : 'Serie completada ✓'}
           </button>

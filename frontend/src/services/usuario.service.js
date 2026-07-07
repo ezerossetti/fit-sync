@@ -1,40 +1,15 @@
-import axios from 'axios'
-
-const axiosInstance = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-})
+import apiClient from './apiClient'
 
 const usuarioService = {
-  // GET todos los usuarios
-  getAll: async () => {
-    const response = await axiosInstance.get('/usuario')
+  // GET el perfil del usuario logueado (el backend lo resuelve por el token, no por ID)
+  getMe: async () => {
+    const response = await apiClient.get('/usuario/me')
     return response.data.data
   },
 
-  // GET un usuario por ID
-  getById: async (id) => {
-    const response = await axiosInstance.get(`/usuario/${id}`)
-    return response.data.data
-  },
-
-  // POST crear nuevo usuario
-  create: async (data) => {
-    const response = await axiosInstance.post('/usuario', data)
-    return response.data.data
-  },
-
-  // PUT actualizar usuario
-  update: async (id, data) => {
-    const response = await axiosInstance.put(`/usuario/${id}`, data)
-    return response.data.data
-  },
-
-  // DELETE eliminar usuario
-  delete: async (id) => {
-    const response = await axiosInstance.delete(`/usuario/${id}`)
+  // PUT actualizar datos del perfil propio (por ahora, nombre)
+  updateMe: async (data) => {
+    const response = await apiClient.put('/usuario/me', data)
     return response.data.data
   }
 }

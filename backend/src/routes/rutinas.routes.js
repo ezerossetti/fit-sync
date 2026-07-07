@@ -1,18 +1,20 @@
 import { Router } from 'express';
 import { rutinaController } from '../controllers/rutina.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = Router();
-const usuarioId = 'user-123';
+
+router.use(requireAuth);
 
 router.get('/rutinas', (req, res) => {
-  req.params.usuarioId = usuarioId;
+  req.params.usuarioId = req.usuarioId;
   rutinaController.getAll(req, res);
 });
 
 router.get('/rutinas/:rutinaId', (req, res) => rutinaController.getById(req, res));
 
 router.post('/rutinas', (req, res) => {
-  req.params.usuarioId = usuarioId;
+  req.params.usuarioId = req.usuarioId;
   rutinaController.create(req, res);
 });
 
