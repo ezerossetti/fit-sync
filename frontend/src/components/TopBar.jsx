@@ -1,3 +1,5 @@
+import logo from '../assets/logo.png'
+
 export default function TopBar({ title }) {
   return (
     <header
@@ -5,8 +7,8 @@ export default function TopBar({ title }) {
       style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(56px + env(safe-area-inset-top))' }}
     >
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-accent text-[18px] leading-none">bolt</span>
+        <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
+          <img src={logo} alt="FitSync" className="w-full h-full object-contain" />
         </div>
         <span className="font-display font-bold text-headline-sm text-on-primary-container tracking-tight leading-none">
           {title || 'FitSync'}

@@ -3,6 +3,7 @@ import sesionesRouter from './sesiones.routes.js';
 import rutinasRouter from './rutinas.routes.js';
 import usuarioRouter from './usuario.routes.js';
 import ejerciciosRouter from './ejercicios.routes.js';
+import coachRouter from './coach.routes.js';
 
 const router = Router();
 
@@ -26,5 +27,8 @@ router.use('/', usuarioRouter);
 
 // Rutas de ejercicios personalizados
 router.use('/', ejerciciosRouter);
+
+// Rutas del coach IA
+router.use('/', coachRouter);
 
 export default router;

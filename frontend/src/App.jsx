@@ -8,6 +8,7 @@ import Rutinas from './pages/Rutinas'
 import EntrenamientoActivo from './pages/EntrenamientoActivo'
 import Historial from './pages/Historial'
 import Perfil from './pages/Perfil'
+import CoachChat from './components/CoachChat'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -42,6 +43,7 @@ export default function App() {
         </Routes>
       </main>
       <BottomNav />
+      <CoachChat />
     </div>
   )
 }
