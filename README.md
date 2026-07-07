@@ -12,7 +12,6 @@
 - **Backend:** Node.js + Express.js (ES modules), deployado en **Render**
 - **Frontend:** Vite + React 18 + Axios (PWA), deployado en **Vercel**
 - **Base de datos:** **Supabase (PostgreSQL)** — conectado y funcionando en producción con datos reales
-- **Autenticación:** **Supabase Auth** (JWT)
 
 ---
 
@@ -68,13 +67,11 @@ fit-sync-backend/
 │   │   │   ├── sesion.controller.js
 │   │   │   ├── rutina.controller.js
 │   │   │   └── usuario.controller.js
-│   │   ├── middleware/
-│   │   │   └── auth.middleware.js    # requireAuth: valida el JWT de Supabase
 │   │   ├── models/
 │   │   │   ├── sesion.model.js       # Conectado a Supabase real (getAll, getById, create, update, remove)
 │   │   │   ├── rutina.model.js       # Conectado a Supabase real
 │   │   │   └── usuario.model.js      # Conectado a Supabase real
-│   │   ├── supabase.js               # Cliente de Supabase (createClient con URL + SERVICE_ROLE_KEY)
+│   │   ├── supabase.js               # Cliente de Supabase (createClient con URL + ANON_KEY)
 │   │   └── routes/
 │   │       ├── index.routes.js
 │   │       ├── sesiones.routes.js
@@ -90,27 +87,11 @@ fit-sync-backend/
 │   └── src/
 │       ├── main.jsx
 │       ├── App.jsx
-│       ├── context/
-│       │   └── AuthContext.jsx
-│       ├── lib/
-│       │   └── supabaseClient.js
-│       ├── data/
-│       │   ├── exerciseCatalog.js    # Catálogo de 62 ejercicios
-│       │   └── coach.js              # Modo coach: sugerir alternativa / generar rutina
-│       ├── pages/
-│       │   ├── Login.jsx
-│       │   ├── Home.jsx
-│       │   ├── Rutinas.jsx
-│       │   ├── EntrenamientoActivo.jsx
-│       │   ├── Historial.jsx
-│       │   └── Perfil.jsx
 │       ├── components/
 │       │   ├── SesionesList.jsx
 │       │   ├── SesionForm.jsx
 │       │   ├── UsuarioList.jsx
 │       │   └── UsuarioForm.jsx
-│       ├── utils/
-│       │   └── helpers.js
 │       └── services/
 │           ├── sesiones.service.js   # 5 métodos CRUD
 │           ├── rutinas.service.js    # 5 métodos CRUD
@@ -178,7 +159,6 @@ Proxy automático: `/api` → `http://localhost:3000`
    ```
    SUPABASE_URL=<tu url de supabase>
    SUPABASE_ANON_KEY=<tu anon key de supabase>
-   SUPABASE_SERVICE_ROLE_KEY=<tu service role key de supabase>
    ```
 7. Deploy. URL pública: `https://fit-sync-59pg.onrender.com`
 
@@ -189,8 +169,6 @@ Proxy automático: `/api` → `http://localhost:3000`
 3. **Environment Variables:**
    ```
    VITE_API_URL=https://fit-sync-59pg.onrender.com
-   VITE_SUPABASE_URL=<tu url de supabase>
-   VITE_SUPABASE_ANON_KEY=<tu anon key de supabase>
    ```
    ⚠️ Ojo con el typo clásico de copy-paste: verificar que arranque con `https://` completo (con las dos "s" y las dos barras), no `ttps://`.
 4. Deploy. Cualquier cambio de env var requiere **Redeploy manual** (no se aplica solo).
@@ -199,7 +177,7 @@ Proxy automático: `/api` → `http://localhost:3000`
 ### Supabase → Configuración necesaria
 
 - Proyecto creado en [supabase.com](https://supabase.com), con tablas `usuarios`, `rutinas` y `sesiones` (nombres en minúscula, tal cual las espera el backend).
-- **Row Level Security (RLS):** ya está activado con policies reales. El backend usa la `service_role` key para saltarse RLS (ya valida el JWT por su cuenta), así que si falta esa variable de entorno vas a tener errores de RLS en los inserts/updates.
+- **Row Level Security (RLS):** si las tablas devuelven `success: true` con `data: []` aunque tengan filas cargadas, el problema es RLS activado sin policies. Se soluciona desactivando RLS por ahora desde Supabase → Authentication → Policies (a resolver con policies reales más adelante en la materia).
 - Datos de prueba cargados en las 3 tablas para validar el flujo end-to-end en producción.
 
 ---
@@ -240,8 +218,6 @@ GET /api/health
 | PUT | `/api/usuario/:id` | Actualizar usuario |
 | DELETE | `/api/usuario/:id` | Eliminar usuario |
 
-> 🔐 Las rutas de `sesiones` y `rutinas` requieren header `Authorization: Bearer <token>` (JWT de Supabase Auth).
-
 ### Formato de Respuestas
 
 **Exitosa:**
@@ -264,29 +240,6 @@ GET /api/health
 
 ## 🎨 Frontend — Componentes
 
-### Login
-- Login y registro con Supabase Auth
-
-### Home
-- Saludo con el nombre real del usuario logueado (antes hardcodeado)
-
-### Rutinas
-- CRUD de rutinas
-- Botón "Duplicar rutina"
-- Modo coach: "Sugerir alternativa" por ejercicio y "Generar rutina sugerida" por split
-
-### EntrenamientoActivo
-- Botones +/- sin teclado, cronómetro de descanso
-- Corte automático de series (fix del bug de "siguiente infinito")
-
-### Historial
-- Heatmap de actividad (12 semanas) y gráfico de progreso por ejercicio
-- Récords personales automáticos
-
-### Perfil
-- Preferencias (descanso, unidad) persistidas en la base
-- Toggle de recordatorios/push eliminado
-
 ### SesionesList
 - Muestra todas las sesiones del usuario
 - Campos: `fecha`, `rutina_nombre`, `volumen_total`, `duracion_min`, `completada`
@@ -298,7 +251,7 @@ GET /api/health
 ### SesionForm
 - Formulario para registrar una nueva sesión
 - Refresca la lista automáticamente al crear
-- `usuario_id` ya no hardcodeado — sale de la sesión de Supabase Auth
+- `usuario_id` hardcodeado: `'user-123'`
 
 ### UsuarioList
 - Muestra todos los usuarios registrados
@@ -347,8 +300,10 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 - ✅ 3 entidades: Sesion, Rutina, Usuario
 - ✅ Conectado a **Supabase real** (PostgreSQL) — sin datos mockeados
 - ✅ Frontend Vite + React con proxy (PWA)
+- ✅ 4 componentes funcionales (CRUD básico)
 - ✅ 3 servicios con 5 métodos CRUD cada uno
 - ✅ Manejo de loading y errores
+- ✅ CSS inline mínimo (scaffold)
 - ✅ Postman collection para testing
 - ✅ Migración PATCH → PUT
 - ✅ Backend separado en directorio propio
@@ -356,51 +311,38 @@ usuarioService.delete(id)         // DELETE /api/usuario/:id
 - ✅ **Frontend deployado en Vercel**, apuntando al backend de Render
 - ✅ Flujo CRUD completo validado end-to-end en producción (no solo local)
 - ✅ Variables de entorno separadas por ambiente (nunca hardcodeadas)
-- ✅ Autenticación real con Supabase Auth (reemplazó el `usuario_id` hardcodeado)
-- ✅ RLS activado con policies reales + service role key en el backend
-- ✅ Diseño con identidad FitSync, mobile-first, Tailwind CSS
-- ✅ Pantalla activa de entrenamiento con botones +/- sin teclado
-- ✅ Historial inmediato de la sesión anterior
-- ✅ Cronómetro de descanso integrado
-- ✅ Fix del bug de "siguiente infinito" en Entrenamiento Activo
-- ✅ Catálogo de ejercicios ampliado a 62
-- ✅ Botón "Duplicar rutina"
-- ✅ Preferencias del Perfil persistidas
-- ✅ Heatmap de actividad + gráfico de progreso por ejercicio
-- ✅ Récords personales (PRs) automáticos
-- ✅ Modo coach (sugerir alternativa + generar rutina sugerida)
 
 ---
 
 ## 📝 TODO / Pendientes
 
 ### UX/UI Design 🎨
-- [x] Diseño visual con identidad FitSync (#0A2E6E + #29B0E8)
-- [x] Mobile-first responsive design
-- [x] Componentes con Tailwind CSS
-- [x] Pantalla activa de entrenamiento con botones +/- sin teclado
+- [ ] Diseño visual con identidad FitSync (#0A2E6E + #29B0E8)
+- [ ] Mobile-first responsive design
+- [ ] Componentes con Tailwind CSS
+- [ ] Pantalla activa de entrenamiento con botones +/- sin teclado
 
 ### Autenticación & Seguridad 🔐
-- [x] Implementar JWT o sesiones
+- [ ] Implementar JWT o sesiones
 - [ ] Validación de datos (zod o yup)
 - [ ] Rate limiting
 - [ ] CORS configurado por ambiente
 
 ### Base de Datos 🗄️
 - [x] Migración a Supabase
-- [x] Policies de RLS reales
 - [ ] Migrations/Seeders
 - [ ] Índices optimizados
 - [ ] Soft deletes
+- [ ] Policies de RLS reales (por ahora está desactivado)
 
 ### Features MVP 🚀
-- [x] Historial inmediato ("Última vez: 100kg × 5 reps")
-- [x] Cronómetro de descanso integrado
-- [x] Catálogo de ejercicios ampliado (bilingüe pendiente)
+- [ ] Historial inmediato ("Última vez: 100kg × 5 reps")
+- [ ] Cronómetro de descanso integrado
+- [ ] Catálogo de ejercicios bilingüe
 - [ ] Freemium (máx. 3 rutinas en tier gratuito)
 
 ### Features V2 🔮
-- [ ] Analytics avanzados de progreso (1RM estimado)
+- [ ] Analytics avanzados de progreso
 - [ ] Backup en la nube
 - [ ] Sincronización multidispositivo
 - [ ] Exportación de historial
@@ -454,15 +396,12 @@ PORT=3000
 # Database (Supabase)
 SUPABASE_URL=https://<tu-proyecto>.supabase.co
 SUPABASE_ANON_KEY=<tu-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
 
 # Frontend Configuration
 VITE_API_URL=http://localhost:3000
-VITE_SUPABASE_URL=https://<tu-proyecto>.supabase.co
-VITE_SUPABASE_ANON_KEY=<tu-anon-key>
 ```
 
-En producción, `VITE_API_URL` se configura en Vercel apuntando al backend de Render (`https://fit-sync-59pg.onrender.com`), y `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` se configuran en Render con los mismos valores del `.env` local.
+En producción, `VITE_API_URL` se configura en Vercel apuntando al backend de Render (`https://fit-sync-59pg.onrender.com`), y `SUPABASE_URL` / `SUPABASE_ANON_KEY` se configuran en Render con los mismos valores del `.env` local.
 
 **Nota:** El archivo `.env` está en `.gitignore`. Usá `.env.example` como referencia.
 
@@ -492,19 +431,8 @@ kill -9 <PID>
 - Reiniciar el dev server del frontend
 
 ### Error: "getAll devuelve array vacío"
-- Verificar que el token de sesión se manda en el header `Authorization: Bearer <token>`
-- Revisar que el usuario logueado tiene filas asociadas a su `usuario_id`
-
-### Error: `Failed to resolve import "@supabase/supabase-js"`
-```bash
-cd frontend && npm install @supabase/supabase-js
-```
-
-### Error: `violates foreign key constraint "usuarios_id_fkey"`
-- Hay filas viejas en `usuarios` que no existen en `auth.users`. Revisar y borrar antes de aplicar la FK.
-
-### Error: `new row violates row-level security policy`
-- Falta `SUPABASE_SERVICE_ROLE_KEY` en el `.env` del backend o en Render.
+- Verificar que `usuarioId` se pasa correctamente en las rutas
+- Revisar que el mock filtra por `usuario_id === 'user-123'`
 
 ---
 
@@ -530,4 +458,4 @@ MIT
 
 ---
 
-**Última actualización:** Julio 2026 (Auth con Supabase Auth, catálogo 62 ejercicios, heatmap + progreso, modo coach)
+**Última actualización:** Julio 2026 (C12 - C13: Supabase + Deploy en Render/Vercel)

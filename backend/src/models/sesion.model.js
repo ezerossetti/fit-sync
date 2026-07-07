@@ -49,7 +49,8 @@ export const sesionModel = {
         ejercicios: dataSesion.ejercicios || [],
         volumen_total: dataSesion.volumen_total || 0,
         duracion_min: dataSesion.duracion_min || 0,
-        completada: dataSesion.completada || false
+        completada: dataSesion.completada || false,
+        notas: dataSesion.notas || null
       };
 
       // Si viene un ID predefinido, lo incluimos (útil para tests o IDs específicos)

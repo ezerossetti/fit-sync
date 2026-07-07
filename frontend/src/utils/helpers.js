@@ -122,6 +122,54 @@ export function calcularRacha(sesiones = []) {
   return racha
 }
 
+// Racha "con recuperación": igual que calcularRacha, pero permite UN día salteado
+// sin cortar la racha (estilo "streak freeze"). El día de hoy nunca cuenta como
+// falta si todavía no se entrenó (para no castigar al usuario a mitad del día).
+// Devuelve { racha, huboGracia } donde huboGracia indica si se usó ese día libre.
+export function calcularRachaDetalle(sesiones = []) {
+  if (!sesiones.length) return { racha: 0, huboGracia: false }
+
+  const dias = new Set(sesiones.map(s => new Date(s.fecha).toDateString()))
+  let racha = 0
+  let graciaDisponible = 1
+  let huboGracia = false
+  let esPrimerDia = true
+
+  const cursor = new Date()
+  cursor.setHours(0, 0, 0, 0)
+
+  // Límite de seguridad para no iterar para siempre si algo sale mal
+  for (let i = 0; i < 3650; i++) {
+    const key = cursor.toDateString()
+
+    if (dias.has(key)) {
+      racha += 1
+      esPrimerDia = false
+      cursor.setDate(cursor.getDate() - 1)
+      continue
+    }
+
+    // Hoy sin sesión todavía: no es una falta, seguimos revisando ayer
+    if (esPrimerDia) {
+      esPrimerDia = false
+      cursor.setDate(cursor.getDate() - 1)
+      continue
+    }
+
+    // Día salteado: usamos la gracia una sola vez por racha
+    if (graciaDisponible > 0) {
+      graciaDisponible -= 1
+      huboGracia = true
+      cursor.setDate(cursor.getDate() - 1)
+      continue
+    }
+
+    break
+  }
+
+  return { racha, huboGracia: racha > 0 && huboGracia }
+}
+
 // Volumen total levantado en toda la vida del usuario (todas las sesiones)
 export function volumenTotalHistorico(sesiones = []) {
   return sesiones.reduce((acc, s) => acc + Number(s.volumen_total ?? volumenSesion(s.ejercicios)), 0)
@@ -237,4 +285,84 @@ export function datosHeatmap(sesiones = [], semanas = 12) {
     cols.push(dias)
   }
   return cols
+}
+
+// ---------- Deload automático sugerido ----------
+
+// Agrupa el volumen total en semanas completas (lunes a domingo), sin incluir
+// la semana actual (que todavía está en curso). Devuelve las últimas `semanas`
+// semanas completas, ordenadas de más vieja a más nueva.
+export function volumenPorSemana(sesiones = [], semanas = 6) {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const diaSemanaHoy = hoy.getDay() === 0 ? 7 : hoy.getDay() // 1 = lunes ... 7 = domingo
+  const inicioSemanaActual = new Date(hoy)
+  inicioSemanaActual.setDate(inicioSemanaActual.getDate() - (diaSemanaHoy - 1))
+
+  const bloques = []
+  for (let i = semanas; i >= 1; i--) {
+    const inicio = new Date(inicioSemanaActual)
+    inicio.setDate(inicio.getDate() - i * 7)
+    const fin = new Date(inicio)
+    fin.setDate(fin.getDate() + 6)
+    bloques.push({ inicio, fin, volumen: 0, cantidadSesiones: 0 })
+  }
+
+  sesiones.forEach(s => {
+    const f = new Date(s.fecha)
+    const bloque = bloques.find(b => f >= b.inicio && f <= new Date(b.fin.getFullYear(), b.fin.getMonth(), b.fin.getDate(), 23, 59, 59))
+    if (!bloque) return
+    bloque.volumen += Number(s.volumen_total ?? volumenSesion(s.ejercicios))
+    bloque.cantidadSesiones += 1
+  })
+
+  return bloques
+}
+
+// Detecta si conviene sugerir una semana de descarga (deload): el usuario viene
+// entrenando de forma sostenida (varias semanas seguidas, sin bajar el volumen)
+// pero no consiguió ningún récord personal en sus últimas sesiones — señal de
+// estancamiento/fatiga acumulada más que de falta de esfuerzo.
+// Devuelve null si no hay suficiente historial o no aplica, o un objeto
+// { semanasSostenidas, mensaje } si conviene sugerirlo.
+export function sugerirDeload(sesiones = []) {
+  if (sesiones.length < 6) return null
+
+  const semanas = volumenPorSemana(sesiones, 5)
+  const semanasConEntreno = semanas.filter(s => s.cantidadSesiones > 0)
+
+  // Necesitamos al menos 3 semanas completas seguidas con entrenamiento
+  if (semanasConEntreno.length < 3) return null
+  const ultimas3 = semanasConEntreno.slice(-3)
+  const sonConsecutivas = ultimas3.every(s => s.cantidadSesiones > 0)
+  if (!sonConsecutivas) return null
+
+  // El volumen no debe haber caído de forma marcada semana a semana
+  // (si ya bajó el usuario solo, probablemente ya está descargando)
+  const vieneSostenido = ultimas3.every((s, i, arr) => i === 0 || s.volumen >= arr[i - 1].volumen * 0.85)
+  if (!vieneSostenido) return null
+
+  // ¿Hubo algún récord personal en las últimas sesiones?
+  const ordenadasAsc = [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+  const N = Math.min(6, ordenadasAsc.length)
+  const recientes = ordenadasAsc.slice(-N)
+  const anteriores = ordenadasAsc.slice(0, ordenadasAsc.length - N)
+
+  const mejorAntes = {}
+  anteriores.forEach(s => (s.ejercicios || []).forEach(ej => {
+    const max = Math.max(0, ...(ej.series || []).map(set => Number(set.peso) || 0))
+    if (max > (mejorAntes[ej.nombre] || 0)) mejorAntes[ej.nombre] = max
+  }))
+
+  const huboPRReciente = recientes.some(s => (s.ejercicios || []).some(ej => {
+    const max = Math.max(0, ...(ej.series || []).map(set => Number(set.peso) || 0))
+    return max > (mejorAntes[ej.nombre] || 0)
+  }))
+
+  if (huboPRReciente) return null
+
+  return {
+    semanasSostenidas: ultimas3.length,
+    mensaje: `Llevás ${ultimas3.length} semanas entrenando fuerte sin bajar el volumen, y no sumaste ningún récord en tus últimas sesiones. Puede ser buen momento para una semana de descarga: bajá el peso ~10-20% y las series a la mitad.`,
+  }
 }

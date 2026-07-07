@@ -3,10 +3,13 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import usuarioService from '../services/usuario.service'
 import sesionesService from '../services/sesiones.service'
+import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import {
-  calcularRacha, volumenTotalHistorico, sesionesCompletadas,
-  horasActivasTotales, recordsPersonalesTotal, nivelPorSesiones, formatKg
+  calcularRachaDetalle, volumenTotalHistorico, sesionesCompletadas,
+  horasActivasTotales, recordsPersonalesTotal, nivelPorSesiones, formatKg, formatTimer
 } from '../utils/helpers'
+
+const PRESETS_DESCANSO = [30, 60, 90, 120, 180]
 
 export default function Perfil() {
   const { user, signOut } = useAuth()
@@ -19,25 +22,35 @@ export default function Perfil() {
 
   // Preferencias — ahora persisten en usuarios.preferencias (jsonb) vía /usuario/me
   const [descansoDefault, setDescansoDefault] = useState(90)
+  const [descansoInput, setDescansoInput] = useState('90')
   const [unidad, setUnidad] = useState('Kilogramos')
   const [prefsListas, setPrefsListas] = useState(false)
+
+  // Ejercicios personalizados persistentes
+  const [ejerciciosPersonalizados, setEjerciciosPersonalizados] = useState([])
+  const [cargandoPersonalizados, setCargandoPersonalizados] = useState(true)
 
   useEffect(() => {
     (async () => {
       try {
-        const [p, s] = await Promise.all([
+        const [p, s, ep] = await Promise.all([
           usuarioService.getMe().catch(() => null),
           sesionesService.getAll().catch(() => []),
+          ejerciciosPersonalizadosService.getAll().catch(() => []),
         ])
         setPerfil(p)
         setNombreForm(p?.nombre || '')
         setHistorial(s || [])
+        setEjerciciosPersonalizados(ep || [])
         if (p?.preferencias) {
-          setDescansoDefault(p.preferencias.descansoDefault ?? 90)
+          const d = p.preferencias.descansoDefault ?? 90
+          setDescansoDefault(d)
+          setDescansoInput(String(d))
           setUnidad(p.preferencias.unidad ?? 'Kilogramos')
         }
       } finally {
         setLoading(false)
+        setCargandoPersonalizados(false)
         setPrefsListas(true) // evita guardar de vuelta los valores por defecto antes de cargar los reales
       }
     })()
@@ -76,10 +89,39 @@ export default function Perfil() {
     }
   }
 
+  // Descanso configurable sin límite: el usuario puede tipear cualquier valor
+  // (en segundos). Los presets son solo atajos rápidos, no un tope.
+  const aplicarDescanso = (segundos) => {
+    const val = Math.max(0, Math.round(Number(segundos) || 0))
+    setDescansoDefault(val)
+    setDescansoInput(String(val))
+  }
+
+  const onDescansoInputChange = (e) => {
+    const val = e.target.value
+    if (val === '' || /^[0-9]+$/.test(val)) setDescansoInput(val)
+  }
+
+  const confirmarDescansoInput = () => {
+    const val = descansoInput === '' ? 0 : parseInt(descansoInput, 10)
+    aplicarDescanso(val)
+  }
+
+  const eliminarEjercicioPersonalizado = async (id) => {
+    if (!confirm('¿Eliminar este ejercicio personalizado?')) return
+    try {
+      await ejerciciosPersonalizadosService.delete(id)
+      setEjerciciosPersonalizados(prev => prev.filter(e => e.id !== id))
+    } catch (err) {
+      console.error(err)
+      alert('No se pudo eliminar el ejercicio personalizado.')
+    }
+  }
+
   const nombre = perfil?.nombre || user?.user_metadata?.nombre || 'Deportista'
   const inicial = nombre?.[0]?.toUpperCase() || '?'
 
-  const racha = calcularRacha(historial)
+  const { racha, huboGracia } = calcularRachaDetalle(historial)
   const volumen = volumenTotalHistorico(historial)
   const completados = sesionesCompletadas(historial)
   const horas = horasActivasTotales(historial)
@@ -137,6 +179,9 @@ export default function Perfil() {
             <span className="px-3 py-1 rounded-full text-label-md bg-success-container text-on-success-container flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
               {racha} {racha === 1 ? 'Día' : 'Días'}
+              {huboGracia && (
+                <span title="Tenés un día de gracia usado en esta racha" className="material-symbols-outlined text-[13px] ml-0.5">shield</span>
+              )}
             </span>
           )}
         </div>
@@ -174,16 +219,46 @@ export default function Perfil() {
         <span className="material-symbols-outlined text-accent text-[20px]">tune</span>
         <h2 className="text-body-md font-semibold text-on-surface">Preferencias de Entrenamiento</h2>
       </div>
-      <div className="card divide-y divide-outline-variant mb-6">
-        <button onClick={() => setDescansoDefault(d => (d === 90 ? 60 : d === 60 ? 120 : 90))} className="w-full flex items-center justify-between p-4 text-left">
-          <span className="flex items-center gap-2 text-body-sm text-on-surface">
+      <div className="card mb-6">
+        <div className="p-4 border-b border-outline-variant">
+          <span className="flex items-center gap-2 text-body-sm text-on-surface mb-3">
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant">timer</span>
             Descanso predeterminado
           </span>
-          <span className="flex items-center gap-1 text-body-sm text-on-surface-variant">
-            {descansoDefault}s <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          </span>
-        </button>
+
+          <div className="flex items-center gap-3 mb-3">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={5}
+              className="input-field w-24 text-center font-mono"
+              value={descansoInput}
+              onChange={onDescansoInputChange}
+              onBlur={confirmarDescansoInput}
+              onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur())}
+              aria-label="Segundos de descanso"
+            />
+            <span className="text-body-sm text-on-surface-variant">segundos</span>
+            <span className="font-mono text-body-md text-accent ml-auto">{formatTimer(descansoDefault)}</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {PRESETS_DESCANSO.map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => aplicarDescanso(s)}
+                className={`px-3 py-1 rounded-full text-label-md border ${descansoDefault === s ? 'bg-accent/15 border-accent text-accent' : 'border-outline-variant text-on-surface-variant'}`}
+              >
+                {s < 60 ? `${s}s` : `${Math.round(s / 60)} min`}
+              </button>
+            ))}
+          </div>
+          <p className="text-label-md text-on-surface-variant mt-2">
+            Sin límite: escribí el valor exacto que quieras (ej: 45, 75, 240...).
+          </p>
+        </div>
         <button onClick={() => setUnidad(u => (u === 'Kilogramos' ? 'Libras' : 'Kilogramos'))} className="w-full flex items-center justify-between p-4 text-left">
           <span className="flex items-center gap-2 text-body-sm text-on-surface">
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant">scale</span>
@@ -193,6 +268,39 @@ export default function Perfil() {
             {unidad} <span className="material-symbols-outlined text-[16px]">chevron_right</span>
           </span>
         </button>
+      </div>
+
+      {/* Ejercicios personalizados */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="material-symbols-outlined text-accent text-[20px]">fitness_center</span>
+        <h2 className="text-body-md font-semibold text-on-surface">Mis Ejercicios Personalizados</h2>
+      </div>
+      <div className="card mb-6 overflow-hidden">
+        {cargandoPersonalizados ? (
+          <p className="text-body-sm text-on-surface-variant p-4">Cargando...</p>
+        ) : ejerciciosPersonalizados.length === 0 ? (
+          <p className="text-body-sm text-on-surface-variant p-4">
+            Todavía no creaste ningún ejercicio propio. Podés hacerlo desde el buscador al armar una rutina.
+          </p>
+        ) : (
+          <div className="divide-y divide-outline-variant">
+            {ejerciciosPersonalizados.map(ej => (
+              <div key={ej.id} className="flex items-center justify-between p-4">
+                <div className="min-w-0">
+                  <p className="text-body-sm font-semibold text-on-surface truncate">{ej.nombre}</p>
+                  <p className="text-label-md text-on-surface-variant truncate">{ej.grupo}</p>
+                </div>
+                <button
+                  onClick={() => eliminarEjercicioPersonalizado(ej.id)}
+                  className="w-8 h-8 rounded-md bg-error-container/40 text-error flex items-center justify-center shrink-0 ml-3"
+                  aria-label={`Eliminar ${ej.nombre}`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Ajustes de cuenta */}

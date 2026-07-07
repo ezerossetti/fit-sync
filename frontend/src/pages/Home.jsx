@@ -4,19 +4,7 @@ import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
-import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg } from '../utils/helpers'
-
-function calcularRacha(sesiones) {
-  if (!sesiones.length) return 0
-  const dias = new Set(sesiones.map(s => new Date(s.fecha).toDateString()))
-  let racha = 0
-  let cursor = new Date()
-  while (dias.has(cursor.toDateString())) {
-    racha += 1
-    cursor.setDate(cursor.getDate() - 1)
-  }
-  return racha
-}
+import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaDetalle, sugerirDeload } from '../utils/helpers'
 
 function inicioDeSemana() {
   const d = new Date()
@@ -106,7 +94,8 @@ export default function Home() {
 
   const inicio = inicioDeSemana()
   const sesionesSemana = sesiones.filter(s => new Date(s.fecha) >= inicio)
-  const racha = calcularRacha(sesiones)
+  const { racha, huboGracia } = calcularRachaDetalle(sesiones)
+  const deload = sugerirDeload(sesiones)
   const ultimaSesion = sesiones[0]
   const logros = calcularLogros({ sesiones, rutinas, racha })
   const logrosDesbloqueados = logros.filter(l => l.logrado).length
@@ -140,6 +129,17 @@ export default function Home() {
         <span className="material-symbols-outlined absolute -right-3 -bottom-3 text-[110px] text-white/5">bolt</span>
       </Link>
 
+      {/* Sugerencia de deload */}
+      {deload && (
+        <div className="card p-4 border-l-4 border-l-accent bg-accent/5 flex gap-3">
+          <span className="material-symbols-outlined text-accent text-[22px] shrink-0">self_improvement</span>
+          <div>
+            <p className="text-body-sm font-semibold text-on-surface mb-0.5">Sugerencia: semana de descarga</p>
+            <p className="text-body-sm text-on-surface-variant">{deload.mensaje}</p>
+          </div>
+        </div>
+      )}
+
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="card p-3 text-center">
@@ -152,7 +152,12 @@ export default function Home() {
         </div>
         <div className="card p-3 text-center">
           <p className="font-mono text-headline-md text-accent">{loading ? '–' : racha}</p>
-          <p className="text-label-md text-on-surface-variant mt-1">Racha (días)</p>
+          <p className="text-label-md text-on-surface-variant mt-1 flex items-center justify-center gap-1">
+            Racha (días)
+            {!loading && huboGracia && (
+              <span title="Tenés un día de gracia usado en esta racha" className="material-symbols-outlined text-[14px] text-accent">shield</span>
+            )}
+          </p>
         </div>
       </div>
 

@@ -701,18 +701,38 @@ export const EXERCISE_CATALOG = [
 ]
 
 
-export function searchExercises(query) {
+// Adapta un registro de la tabla ejercicios_personalizados (snake_case, viene del backend)
+// al mismo shape que usa el catálogo estático (camelCase) para que se puedan mezclar sin fricción.
+function normalizarPersonalizado(p) {
+  return {
+    nombre: p.nombre,
+    sinonimos: [],
+    grupo: p.grupo || 'Personalizado',
+    descripcion: p.descripcion || '',
+    puntosClave: p.puntos_clave || p.puntosClave || [],
+    personalizado: true,
+    id: p.id,
+  }
+}
+
+// `personalizados` es opcional: la lista de ejercicios propios del usuario (crudos del backend).
+// Si no se pasa, estas funciones se comportan exactamente igual que antes (solo catálogo estático).
+export function searchExercises(query, personalizados = []) {
+  const catalogoCompleto = [...EXERCISE_CATALOG, ...personalizados.map(normalizarPersonalizado)]
   const q = query.trim().toLowerCase()
-  if (!q) return EXERCISE_CATALOG
-  return EXERCISE_CATALOG.filter(e =>
+  if (!q) return catalogoCompleto
+  return catalogoCompleto.filter(e =>
     e.nombre.toLowerCase().includes(q) ||
-    e.sinonimos.some(s => s.toLowerCase().includes(q))
+    (e.sinonimos || []).some(s => s.toLowerCase().includes(q))
   )
 }
 
-// Busca metadata de un ejercicio por nombre exacto (o null si es un ejercicio personalizado sin catálogo)
-export function getExerciseInfo(nombre) {
+// Busca metadata de un ejercicio por nombre exacto (o null si es un ejercicio sin catálogo ni personalizado)
+export function getExerciseInfo(nombre, personalizados = []) {
   if (!nombre) return null
   const n = nombre.trim().toLowerCase()
-  return EXERCISE_CATALOG.find(e => e.nombre.toLowerCase() === n) || null
+  const enCatalogo = EXERCISE_CATALOG.find(e => e.nombre.toLowerCase() === n)
+  if (enCatalogo) return enCatalogo
+  const propio = personalizados.find(p => p.nombre.toLowerCase() === n)
+  return propio ? normalizarPersonalizado(propio) : null
 }

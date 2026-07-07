@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
+import usuarioService from '../services/usuario.service'
+import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import { getExerciseInfo } from '../data/exerciseCatalog'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
@@ -10,7 +12,7 @@ import {
 
 const SALTOS_PESO = [1.25, 2.5, 5]
 const SALTOS_REPS = [1, 2, 5]
-const DESCANSO_OBJETIVO_SEG = 90
+const DESCANSO_OBJETIVO_DEFAULT = 90
 
 // ---------- Stepper de carga rápida (peso / reps) ----------
 function CargaStepper({ label, value, onChange, saltos, unidad, min = 0 }) {
@@ -59,9 +61,9 @@ function CargaStepper({ label, value, onChange, saltos, unidad, min = 0 }) {
 }
 
 // ---------- Anillo circular de descanso ----------
-function DescansoRing({ segundos, descansando, onToggle }) {
-  const restante = Math.max(0, DESCANSO_OBJETIVO_SEG - segundos)
-  const progreso = Math.min(1, segundos / DESCANSO_OBJETIVO_SEG)
+function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJETIVO_DEFAULT }) {
+  const restante = Math.max(0, objetivo - segundos)
+  const progreso = objetivo > 0 ? Math.min(1, segundos / objetivo) : 1
   const size = 128
   const stroke = 8
   const r = (size - stroke) / 2
@@ -104,6 +106,8 @@ export default function EntrenamientoActivo() {
 
   const [rutinas, setRutinas] = useState([])
   const [historial, setHistorial] = useState([])
+  const [personalizados, setPersonalizados] = useState([])
+  const [descansoObjetivo, setDescansoObjetivo] = useState(DESCANSO_OBJETIVO_DEFAULT)
   const [loading, setLoading] = useState(true)
 
   const [rutina, setRutina] = useState(null)
@@ -119,13 +123,21 @@ export default function EntrenamientoActivo() {
   const inicioSesionRef = useRef(null)
   const [guardando, setGuardando] = useState(false)
   const [ultimaSesionGuardada, setUltimaSesionGuardada] = useState(null)
+  const [notas, setNotas] = useState('')
 
   useEffect(() => {
     (async () => {
       try {
-        const [r, s] = await Promise.all([rutinasService.getAll(), sesionesService.getAll()])
+        const [r, s, p, ep] = await Promise.all([
+          rutinasService.getAll(),
+          sesionesService.getAll(),
+          usuarioService.getMe().catch(() => null),
+          ejerciciosPersonalizadosService.getAll().catch(() => []),
+        ])
         setRutinas(r || [])
         setHistorial(s || [])
+        setPersonalizados(ep || [])
+        setDescansoObjetivo(p?.preferencias?.descansoDefault ?? DESCANSO_OBJETIVO_DEFAULT)
         if (rutinaId) {
           const encontrada = (r || []).find(x => String(x.id) === String(rutinaId))
           if (encontrada) {
@@ -236,6 +248,7 @@ export default function EntrenamientoActivo() {
         volumen_total: volumenSesion(sesionEjercicios),
         duracion_min: Math.max(1, Math.round(duracionMin)),
         completada: true,
+        notas: notas.trim() || null,
       }
       const creada = await sesionesService.create(payload)
       setUltimaSesionGuardada(creada || payload)
@@ -323,9 +336,21 @@ export default function EntrenamientoActivo() {
         )}
 
         {sesionEjercicios.length > 0 && (
-          <button onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
-            {guardando ? 'Guardando...' : 'Finalizar sesión'}
-          </button>
+          <>
+            <div className="mb-3">
+              <label className="text-label-md text-on-surface-variant uppercase">Notas de la sesión (opcional)</label>
+              <textarea
+                className="input-field mt-1"
+                rows={2}
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Ej: buena energía hoy, probé agarre más ancho en press..."
+              />
+            </div>
+            <button onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
+              {guardando ? 'Guardando...' : 'Finalizar sesión'}
+            </button>
+          </>
         )}
       </div>
     )
@@ -334,7 +359,7 @@ export default function EntrenamientoActivo() {
   if (step === 'pre-serie') {
     const previo = ultimoRegistroEjercicio(historial, ejercicioActual.nombre)
     const pr = prPersonalEjercicio(historial, ejercicioActual.nombre)
-    const info = getExerciseInfo(ejercicioActual.nombre)
+    const info = getExerciseInfo(ejercicioActual.nombre, personalizados)
 
     return (
       <div>
@@ -446,7 +471,7 @@ export default function EntrenamientoActivo() {
         <CargaStepper label="Repeticiones" value={reps} onChange={setReps} saltos={SALTOS_REPS} unidad="reps" min={0} />
 
         <div className="card py-6">
-          <DescansoRing segundos={segundosDescanso} descansando={descansando} onToggle={() => setDescansando(d => !d)} />
+          <DescansoRing segundos={segundosDescanso} descansando={descansando} onToggle={() => setDescansando(d => !d)} objetivo={descansoObjetivo} />
         </div>
 
         {pr && (
@@ -517,6 +542,15 @@ export default function EntrenamientoActivo() {
         <p className="text-label-md text-on-surface-variant text-center mb-6">
           Duración de la sesión: {formatDuracion(ultimaSesionGuardada?.duracion_min || 0)}
         </p>
+
+        {ultimaSesionGuardada?.notas && (
+          <div className="card p-4 mb-5">
+            <p className="text-label-md text-accent uppercase mb-1 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">sticky_note_2</span> Notas
+            </p>
+            <p className="text-body-sm text-on-surface-variant">{ultimaSesionGuardada.notas}</p>
+          </div>
+        )}
 
         <div className="card p-4 mb-5">
           <p className="text-body-sm font-semibold text-on-surface mb-3">Volumen semanal</p>

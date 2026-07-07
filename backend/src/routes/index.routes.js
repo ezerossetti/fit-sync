@@ -2,6 +2,7 @@ import { Router } from 'express';
 import sesionesRouter from './sesiones.routes.js';
 import rutinasRouter from './rutinas.routes.js';
 import usuarioRouter from './usuario.routes.js';
+import ejerciciosRouter from './ejercicios.routes.js';
 
 const router = Router();
 
@@ -22,5 +23,8 @@ router.use('/', rutinasRouter);
 
 // Rutas de usuarios
 router.use('/', usuarioRouter);
+
+// Rutas de ejercicios personalizados
+router.use('/', ejerciciosRouter);
 
 export default router;

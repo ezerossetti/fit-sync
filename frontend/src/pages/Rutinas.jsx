@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
+import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import { searchExercises, getExerciseInfo } from '../data/exerciseCatalog'
 import { sugerirAlternativas, tiposDeSplit, generarRutinaSugerida } from '../data/coach'
 
@@ -30,14 +31,19 @@ function NumberControl({ value, onChange, min = 1 }) {
 }
 
 // ---------- Constructor de ejercicios de la rutina ----------
-function ExerciseBuilder({ ejercicios, setEjercicios }) {
+function ExerciseBuilder({ ejercicios, setEjercicios, personalizados, onCrearPersonalizado }) {
   const [query, setQuery] = useState('')
   const [alternativasAbiertas, setAlternativasAbiertas] = useState(null) // índice del ejercicio con panel abierto
-  const sugerencias = query.trim() ? searchExercises(query).slice(0, 5) : []
+  const [creandoNuevo, setCreandoNuevo] = useState(false)
+  const [grupoNuevo, setGrupoNuevo] = useState('')
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false)
+  const sugerencias = query.trim() ? searchExercises(query, personalizados).slice(0, 5) : []
+  const qTrim = query.trim()
+  const hayMatchExacto = sugerencias.some(s => s.nombre.toLowerCase() === qTrim.toLowerCase())
 
   const agregar = (nombre, grupo) => {
     if (!nombre.trim()) return
-    const info = getExerciseInfo(nombre)
+    const info = getExerciseInfo(nombre, personalizados)
     setEjercicios([...ejercicios, {
       nombre: nombre.trim(),
       grupo: grupo || info?.grupo || 'Personalizado',
@@ -45,6 +51,8 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
       reps_objetivo: 10,
     }])
     setQuery('')
+    setCreandoNuevo(false)
+    setGrupoNuevo('')
   }
 
   const quitar = (idx) => setEjercicios(ejercicios.filter((_, i) => i !== idx))
@@ -62,6 +70,25 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
     setAlternativasAbiertas(null)
   }
 
+  // Ejercicio personalizado persistente: se guarda en el backend (para poder
+  // reutilizarlo, verlo en Perfil, y que aparezca en el pre-serie con su info)
+  // y se agrega de una a la rutina que se está armando.
+  const crearPersonalizado = async () => {
+    if (!qTrim) return
+    setGuardandoNuevo(true)
+    try {
+      const grupo = grupoNuevo.trim() || 'Personalizado'
+      const creado = await ejerciciosPersonalizadosService.create({ nombre: qTrim, grupo })
+      onCrearPersonalizado?.(creado)
+      agregar(creado.nombre, creado.grupo)
+    } catch (err) {
+      console.error(err)
+      alert('No se pudo crear el ejercicio personalizado.')
+    } finally {
+      setGuardandoNuevo(false)
+    }
+  }
+
   return (
     <div>
       <label className="text-label-md text-on-surface-variant uppercase">Ejercicios</label>
@@ -70,8 +97,8 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
           className="input-field"
           placeholder="Buscar ejercicio (ej: deadlift, sentadilla)"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregar(query))}
+          onChange={(e) => { setQuery(e.target.value); setCreandoNuevo(false) }}
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), hayMatchExacto ? agregar(query) : null)}
         />
         {sugerencias.length > 0 && (
           <div className="absolute z-10 w-full mt-1 card overflow-hidden">
@@ -80,14 +107,48 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
                 key={s.nombre}
                 type="button"
                 onClick={() => agregar(s.nombre, s.grupo)}
-                className="w-full text-left px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-high"
+                className="w-full text-left px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-high flex items-center justify-between"
               >
-                {s.nombre} <span className="text-on-surface-variant text-label-md">· {s.grupo}</span>
+                <span>{s.nombre} <span className="text-on-surface-variant text-label-md">· {s.grupo}</span></span>
+                {s.personalizado && <span className="material-symbols-outlined text-[14px] text-accent shrink-0 ml-2">star</span>}
               </button>
             ))}
           </div>
         )}
       </div>
+
+      {qTrim && !hayMatchExacto && (
+        <div className="mt-2">
+          {!creandoNuevo ? (
+            <button
+              type="button"
+              onClick={() => setCreandoNuevo(true)}
+              className="w-full text-left px-4 py-2.5 rounded-md border border-dashed border-accent/40 text-body-sm text-accent flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              Crear "{qTrim}" como ejercicio nuevo
+            </button>
+          ) : (
+            <div className="card p-3 space-y-2">
+              <p className="text-body-sm text-on-surface">Nuevo ejercicio: <span className="font-semibold">{qTrim}</span></p>
+              <input
+                className="input-field"
+                placeholder="Grupo muscular (ej: Piernas / Cuádriceps)"
+                value={grupoNuevo}
+                onChange={(e) => setGrupoNuevo(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setCreandoNuevo(false)} className="flex-1 py-2 text-body-sm text-on-surface-variant">
+                  Cancelar
+                </button>
+                <button type="button" onClick={crearPersonalizado} disabled={guardandoNuevo} className="btn-primary flex-1 py-2 text-body-sm">
+                  {guardandoNuevo ? 'Creando...' : 'Crear y agregar'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {ejercicios.length === 0 ? (
         <p className="text-body-sm text-on-surface-variant italic mt-3">Todavía no agregaste ejercicios.</p>
@@ -167,6 +228,7 @@ export default function Rutinas() {
   const [editando, setEditando] = useState(null)
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [personalizados, setPersonalizados] = useState([])
   const [ejercicios, setEjercicios] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -197,7 +259,10 @@ export default function Rutinas() {
     }
   }
 
-  useEffect(() => { cargar() }, [])
+  useEffect(() => {
+    cargar()
+    ejerciciosPersonalizadosService.getAll().then(setPersonalizados).catch(() => {})
+  }, [])
 
   const abrirNueva = () => {
     setEditando(null)
@@ -314,7 +379,12 @@ export default function Rutinas() {
             )}
           </div>
 
-          <ExerciseBuilder ejercicios={ejercicios} setEjercicios={setEjercicios} />
+          <ExerciseBuilder
+            ejercicios={ejercicios}
+            setEjercicios={setEjercicios}
+            personalizados={personalizados}
+            onCrearPersonalizado={(nuevo) => setPersonalizados(prev => [...prev, nuevo])}
+          />
 
           {error && <p className="text-body-sm text-error">{error}</p>}
 

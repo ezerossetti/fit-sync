@@ -238,6 +238,13 @@ export default function Historial() {
                         {s.ejercicios.map(e => e.nombre).join(' · ')}
                       </p>
                     )}
+
+                    {s.notas && (
+                      <p className="text-body-sm text-on-surface-variant mt-2 italic flex gap-1.5">
+                        <span className="material-symbols-outlined text-[14px] shrink-0 mt-0.5">sticky_note_2</span>
+                        {s.notas}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
