@@ -186,11 +186,16 @@ export default function Perfil() {
             Recordatorios diarios
           </span>
           <button
+            type="button"
             onClick={() => setRecordatorios(r => !r)}
-            className={`w-11 h-6 rounded-full relative transition-colors ${recordatorios ? 'bg-accent' : 'bg-surface-container-highest'}`}
+            className={`relative shrink-0 rounded-full border-0 p-0 transition-colors ${recordatorios ? 'bg-accent' : 'bg-surface-container-highest'}`}
+            style={{ width: 44, height: 24, minWidth: 44 }}
             aria-label="Recordatorios diarios"
           >
-            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-on-primary transition-transform ${recordatorios ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            <span
+              className="absolute rounded-full bg-on-primary transition-transform"
+              style={{ width: 20, height: 20, top: 2, left: 2, transform: recordatorios ? 'translateX(20px)' : 'translateX(0)' }}
+            />
           </button>
         </div>
       </div>
