@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import logo from '../assets/logo.png'
 
 export default function Login() {
   const { signIn, signUp } = useAuth()
@@ -50,8 +51,8 @@ export default function Login() {
         <div className="hidden md:flex flex-col justify-between bg-surface-container-low p-10 relative overflow-hidden">
           <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, rgba(41,176,232,0.12) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
           <div className="relative flex items-center gap-2">
-            <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-accent text-[20px] leading-none">bolt</span>
+            <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
+              <img src={logo} alt="FitSync" className="w-full h-full object-contain" />
             </div>
             <span className="font-display font-bold text-headline-sm text-on-surface tracking-tight">FitSync</span>
           </div>
@@ -70,8 +71,8 @@ export default function Login() {
         <div className="w-full bg-surface-container-lowest md:bg-surface-container-low/40 rounded-xl md:rounded-none border border-outline-variant md:border-0 p-6 md:p-10 backdrop-blur">
           {/* Logo — solo mobile, en desktop ya está en el panel de branding */}
           <div className="flex md:hidden flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-plate mb-3">
-              <span className="material-symbols-outlined text-accent text-[28px]">bolt</span>
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-plate mb-3 overflow-hidden">
+              <img src={logo} alt="FitSync" className="w-full h-full object-contain" />
             </div>
             <h1 className="font-display text-headline-lg-mobile text-on-surface">FitSync</h1>
             <p className="text-label-md text-accent tracking-widest mt-1 uppercase">Tu fuerza, en datos.</p>

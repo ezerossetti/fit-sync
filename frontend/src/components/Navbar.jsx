@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Dumbbell, Calendar, Users } from 'lucide-react'
+import { Calendar, Users, Dumbbell } from 'lucide-react'
+import logo from '../assets/logo.png'
 
 const F = "'Lexend', sans-serif"
 
@@ -22,12 +23,7 @@ export default function Navbar() {
       padding: '0 16px', height: '56px', fontFamily: F
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{
-          width: '32px', height: '32px', borderRadius: '8px',
-          backgroundColor: '#0A2E6E', display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <Dumbbell size={18} color="#29B0E8" />
-        </div>
+        <img src={logo} alt="FitSync" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
         <span style={{ fontFamily: F, fontSize: '20px', fontWeight: '700', color: '#b1c5ff', letterSpacing: '-0.01em' }}>
           FitSync
         </span>
