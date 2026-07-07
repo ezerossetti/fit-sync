@@ -1,11 +1,114 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import sesionesService from '../services/sesiones.service'
-import { formatFecha, formatFechaRelativa, volumenSesion, formatKg, formatDuracion } from '../utils/helpers'
+import {
+  formatFecha, formatFechaRelativa, volumenSesion, formatKg, formatDuracion,
+  ejerciciosEnHistorial, progresoPorEjercicio, datosHeatmap,
+} from '../utils/helpers'
 
 function mesAnioLabel(fechaISO) {
   const d = new Date(fechaISO)
   const label = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
   return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+// ---------- Heatmap de actividad (últimas 12 semanas) ----------
+function ActivityHeatmap({ sesiones }) {
+  const semanas = useMemo(() => datosHeatmap(sesiones, 12), [sesiones])
+  const colorPorIntensidad = [
+    'bg-surface-container-high',
+    'bg-accent/25',
+    'bg-accent/45',
+    'bg-accent/70',
+    'bg-accent',
+  ]
+
+  return (
+    <div className="card p-4 mb-6">
+      <p className="text-label-md text-accent uppercase tracking-wide mb-3">Actividad · últimas 12 semanas</p>
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {semanas.map((semana, i) => (
+          <div key={i} className="flex flex-col gap-1">
+            {semana.map((dia, j) => (
+              <div
+                key={j}
+                title={`${dia.fecha.toLocaleDateString('es-AR')} · ${formatKg(dia.volumen)} kg`}
+                className={`w-2.5 h-2.5 rounded-sm ${dia.intensidad < 0 ? 'bg-transparent' : colorPorIntensidad[dia.intensidad]}`}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1 mt-3 justify-end">
+        <span className="text-label-md text-on-surface-variant mr-1">Menos</span>
+        {colorPorIntensidad.map((c, i) => (
+          <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
+        ))}
+        <span className="text-label-md text-on-surface-variant ml-1">Más</span>
+      </div>
+    </div>
+  )
+}
+
+// ---------- Gráfico de progreso por ejercicio (SVG simple, sin librerías) ----------
+function ProgressChart({ sesiones }) {
+  const ejercicios = useMemo(() => ejerciciosEnHistorial(sesiones), [sesiones])
+  const [seleccionado, setSeleccionado] = useState(ejercicios[0] || '')
+
+  useEffect(() => {
+    if (!seleccionado && ejercicios.length) setSeleccionado(ejercicios[0])
+  }, [ejercicios])
+
+  const puntos = useMemo(() => progresoPorEjercicio(sesiones, seleccionado), [sesiones, seleccionado])
+
+  if (ejercicios.length === 0) return null
+
+  const W = 300, H = 120, PAD = 24
+  const pesos = puntos.map(p => p.peso)
+  const min = Math.min(...pesos)
+  const max = Math.max(...pesos)
+  const rango = max - min || 1
+
+  const coords = puntos.map((p, i) => {
+    const x = puntos.length > 1 ? PAD + (i / (puntos.length - 1)) * (W - PAD * 2) : W / 2
+    const y = H - PAD - ((p.peso - min) / rango) * (H - PAD * 2)
+    return { x, y, ...p }
+  })
+
+  const path = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ')
+
+  return (
+    <div className="card p-4 mb-6">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <p className="text-label-md text-accent uppercase tracking-wide">Progreso por ejercicio</p>
+        <select
+          className="input-field py-1 px-2 text-body-sm w-auto max-w-[55%]"
+          value={seleccionado}
+          onChange={(e) => setSeleccionado(e.target.value)}
+        >
+          {ejercicios.map(nombre => <option key={nombre} value={nombre}>{nombre}</option>)}
+        </select>
+      </div>
+
+      {puntos.length < 2 ? (
+        <p className="text-body-sm text-on-surface-variant italic py-4 text-center">
+          Necesitás al menos 2 sesiones con este ejercicio para ver el gráfico.
+        </p>
+      ) : (
+        <>
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+            <path d={path} fill="none" stroke="#29B0E8" strokeWidth="2" />
+            {coords.map((c, i) => (
+              <circle key={i} cx={c.x} cy={c.y} r="3" fill="#29B0E8" />
+            ))}
+          </svg>
+          <div className="flex items-center justify-between mt-2 text-label-md text-on-surface-variant">
+            <span>{formatFecha(coords[0].fecha)} · {formatKg(coords[0].peso)} kg</span>
+            <span>{formatFecha(coords[coords.length - 1].fecha)} · {formatKg(coords[coords.length - 1].peso)} kg</span>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 export default function Historial() {
@@ -70,6 +173,13 @@ export default function Historial() {
             <p className="text-label-md text-on-surface-variant mt-1 uppercase">Volumen histórico</p>
           </div>
         </div>
+      )}
+
+      {!loading && sesiones.length > 0 && (
+        <>
+          <ActivityHeatmap sesiones={sesiones} />
+          <ProgressChart sesiones={sesiones} />
+        </>
       )}
 
       {loading ? (

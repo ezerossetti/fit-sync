@@ -167,3 +167,74 @@ export function nivelPorSesiones(cantidadSesiones) {
   if (cantidadSesiones >= 1) return 'Principiante'
   return 'Recién llegado'
 }
+
+// ---------- Gráfico de progreso por ejercicio (Historial) ----------
+
+// Lista de nombres únicos de ejercicios que aparecen en el historial (para el selector)
+export function ejerciciosEnHistorial(sesiones = []) {
+  const nombres = new Set()
+  sesiones.forEach(s => (s.ejercicios || []).forEach(ej => nombres.add(ej.nombre)))
+  return Array.from(nombres).sort()
+}
+
+// Serie temporal del mejor set (mayor peso) de un ejercicio puntual, sesión por sesión
+export function progresoPorEjercicio(sesiones = [], nombreEjercicio) {
+  if (!nombreEjercicio) return []
+  const puntos = []
+  const ordenadas = [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+
+  for (const s of ordenadas) {
+    const ej = (s.ejercicios || []).find(e => e.nombre === nombreEjercicio)
+    if (!ej || !(ej.series || []).length) continue
+    const mejorSet = ej.series.reduce((mejor, set) => {
+      const peso = Number(set.peso) || 0
+      return peso > (mejor?.peso || 0) ? set : mejor
+    }, null)
+    if (mejorSet) {
+      puntos.push({ fecha: s.fecha, peso: Number(mejorSet.peso) || 0, reps: Number(mejorSet.reps) || 0 })
+    }
+  }
+  return puntos
+}
+
+// ---------- Heatmap de actividad (últimas N semanas, tipo GitHub) ----------
+
+// Devuelve una grilla de semanas x días con el volumen entrenado cada día,
+// terminando en la semana actual (domingo a sábado).
+export function datosHeatmap(sesiones = [], semanas = 12) {
+  const volumenPorDia = {}
+  sesiones.forEach(s => {
+    const key = new Date(s.fecha).toDateString()
+    const vol = Number(s.volumen_total ?? volumenSesion(s.ejercicios))
+    volumenPorDia[key] = (volumenPorDia[key] || 0) + vol
+  })
+
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  // Retrocedemos hasta el domingo de la semana actual, y de ahí `semanas` semanas hacia atrás
+  const finSemana = new Date(hoy)
+  finSemana.setDate(finSemana.getDate() + (6 - finSemana.getDay()))
+  const inicio = new Date(finSemana)
+  inicio.setDate(inicio.getDate() - (semanas * 7 - 1))
+
+  const maxVol = Math.max(1, ...Object.values(volumenPorDia))
+  const cols = []
+  let cursor = new Date(inicio)
+
+  for (let semana = 0; semana < semanas; semana++) {
+    const dias = []
+    for (let dia = 0; dia < 7; dia++) {
+      const key = cursor.toDateString()
+      const vol = volumenPorDia[key] || 0
+      const futura = cursor > hoy
+      dias.push({
+        fecha: new Date(cursor),
+        volumen: vol,
+        intensidad: futura ? -1 : vol === 0 ? 0 : Math.min(4, Math.ceil((vol / maxVol) * 4)),
+      })
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    cols.push(dias)
+  }
+  return cols
+}

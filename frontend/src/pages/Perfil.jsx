@@ -20,7 +20,6 @@ export default function Perfil() {
   // Preferencias — ahora persisten en usuarios.preferencias (jsonb) vía /usuario/me
   const [descansoDefault, setDescansoDefault] = useState(90)
   const [unidad, setUnidad] = useState('Kilogramos')
-  const [recordatorios, setRecordatorios] = useState(true)
   const [prefsListas, setPrefsListas] = useState(false)
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export default function Perfil() {
         if (p?.preferencias) {
           setDescansoDefault(p.preferencias.descansoDefault ?? 90)
           setUnidad(p.preferencias.unidad ?? 'Kilogramos')
-          setRecordatorios(p.preferencias.recordatorios ?? true)
         }
       } finally {
         setLoading(false)
@@ -49,9 +47,9 @@ export default function Perfil() {
   useEffect(() => {
     if (!prefsListas) return
     usuarioService.updateMe({
-      preferencias: { descansoDefault, unidad, recordatorios }
+      preferencias: { descansoDefault, unidad }
     }).catch(err => console.error('No se pudieron guardar las preferencias:', err))
-  }, [descansoDefault, unidad, recordatorios, prefsListas])
+  }, [descansoDefault, unidad, prefsListas])
 
   const guardarNombre = async (e) => {
     e.preventDefault()
@@ -195,24 +193,6 @@ export default function Perfil() {
             {unidad} <span className="material-symbols-outlined text-[16px]">chevron_right</span>
           </span>
         </button>
-        <div className="w-full flex items-center justify-between p-4">
-          <span className="flex items-center gap-2 text-body-sm text-on-surface">
-            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">notifications</span>
-            Recordatorios diarios
-          </span>
-          <button
-            type="button"
-            onClick={() => setRecordatorios(r => !r)}
-            className={`relative shrink-0 rounded-full border-0 p-0 transition-colors ${recordatorios ? 'bg-accent' : 'bg-surface-container-highest'}`}
-            style={{ width: 44, height: 24, minWidth: 44 }}
-            aria-label="Recordatorios diarios"
-          >
-            <span
-              className="absolute rounded-full bg-on-primary transition-transform"
-              style={{ width: 20, height: 20, top: 2, left: 2, transform: recordatorios ? 'translateX(20px)' : 'translateX(0)' }}
-            />
-          </button>
-        </div>
       </div>
 
       {/* Ajustes de cuenta */}

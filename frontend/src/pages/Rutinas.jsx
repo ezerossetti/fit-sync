@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
 import { searchExercises, getExerciseInfo } from '../data/exerciseCatalog'
+import { sugerirAlternativas, tiposDeSplit, generarRutinaSugerida } from '../data/coach'
 
 // ---------- Control numérico compacto (- valor +) ----------
 function NumberControl({ value, onChange, min = 1 }) {
@@ -31,6 +32,7 @@ function NumberControl({ value, onChange, min = 1 }) {
 // ---------- Constructor de ejercicios de la rutina ----------
 function ExerciseBuilder({ ejercicios, setEjercicios }) {
   const [query, setQuery] = useState('')
+  const [alternativasAbiertas, setAlternativasAbiertas] = useState(null) // índice del ejercicio con panel abierto
   const sugerencias = query.trim() ? searchExercises(query).slice(0, 5) : []
 
   const agregar = (nombre, grupo) => {
@@ -51,6 +53,13 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
     const copia = [...ejercicios]
     copia[idx] = { ...copia[idx], [campo]: valor }
     setEjercicios(copia)
+  }
+
+  const reemplazar = (idx, alternativa) => {
+    const copia = [...ejercicios]
+    copia[idx] = { ...copia[idx], nombre: alternativa.nombre, grupo: alternativa.grupo }
+    setEjercicios(copia)
+    setAlternativasAbiertas(null)
   }
 
   return (
@@ -87,32 +96,65 @@ function ExerciseBuilder({ ejercicios, setEjercicios }) {
       )}
 
       <div className="space-y-2.5">
-        {ejercicios.map((ej, idx) => (
-          <div key={idx} className="card p-4 relative">
-            <button
-              type="button"
-              onClick={() => quitar(idx)}
-              className="absolute top-3 right-3 w-7 h-7 rounded-md bg-error-container/40 text-error flex items-center justify-center"
-              aria-label="Quitar ejercicio"
-            >
-              <span className="material-symbols-outlined text-[16px]">delete</span>
-            </button>
+        {ejercicios.map((ej, idx) => {
+          const alternativas = ej.grupo ? sugerirAlternativas(ej.nombre, ej.grupo) : []
+          const panelAbierto = alternativasAbiertas === idx
 
-            <p className="text-body-md font-semibold text-on-surface pr-8">{ej.nombre}</p>
-            <p className="text-label-md text-on-surface-variant mb-3">{ej.grupo || 'Personalizado'}</p>
+          return (
+            <div key={idx} className="card p-4 relative">
+              <button
+                type="button"
+                onClick={() => quitar(idx)}
+                className="absolute top-3 right-3 w-7 h-7 rounded-md bg-error-container/40 text-error flex items-center justify-center"
+                aria-label="Quitar ejercicio"
+              >
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+              </button>
 
-            <div className="flex items-center gap-6">
-              <div>
-                <p className="text-label-md text-on-surface-variant uppercase mb-1">Series</p>
-                <NumberControl value={ej.series_objetivo} onChange={(v) => actualizar(idx, 'series_objetivo', v)} />
+              <p className="text-body-md font-semibold text-on-surface pr-8">{ej.nombre}</p>
+              <p className="text-label-md text-on-surface-variant mb-3">{ej.grupo || 'Personalizado'}</p>
+
+              <div className="flex items-center gap-6 mb-3">
+                <div>
+                  <p className="text-label-md text-on-surface-variant uppercase mb-1">Series</p>
+                  <NumberControl value={ej.series_objetivo} onChange={(v) => actualizar(idx, 'series_objetivo', v)} />
+                </div>
+                <div>
+                  <p className="text-label-md text-on-surface-variant uppercase mb-1">Reps</p>
+                  <NumberControl value={ej.reps_objetivo} onChange={(v) => actualizar(idx, 'reps_objetivo', v)} />
+                </div>
               </div>
-              <div>
-                <p className="text-label-md text-on-surface-variant uppercase mb-1">Reps</p>
-                <NumberControl value={ej.reps_objetivo} onChange={(v) => actualizar(idx, 'reps_objetivo', v)} />
-              </div>
+
+              {alternativas.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setAlternativasAbiertas(panelAbierto ? null : idx)}
+                    className="flex items-center gap-1 text-label-md text-accent uppercase"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+                    Sugerir alternativa
+                  </button>
+
+                  {panelAbierto && (
+                    <div className="mt-2 space-y-1.5">
+                      {alternativas.map(alt => (
+                        <button
+                          key={alt.nombre}
+                          type="button"
+                          onClick={() => reemplazar(idx, alt)}
+                          className="w-full text-left px-3 py-2 rounded-md bg-surface-container-high text-body-sm text-on-surface"
+                        >
+                          {alt.nombre} <span className="text-on-surface-variant text-label-md">· {alt.grupo}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -128,7 +170,19 @@ export default function Rutinas() {
   const [ejercicios, setEjercicios] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [showSplits, setShowSplits] = useState(false)
   const navigate = useNavigate()
+  const splits = tiposDeSplit()
+
+  const aplicarSplit = (splitId) => {
+    const sugerida = generarRutinaSugerida(splitId)
+    setEjercicios(sugerida)
+    if (!nombre.trim()) {
+      const label = splits.find(s => s.id === splitId)?.label
+      if (label) setNombre(`Día de ${label}`)
+    }
+    setShowSplits(false)
+  }
 
   const cargar = async () => {
     setLoading(true)
@@ -227,6 +281,37 @@ export default function Rutinas() {
           <div>
             <label className="text-label-md text-on-surface-variant uppercase">Descripción (opcional)</label>
             <textarea className="input-field mt-1" rows={2} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Notas sobre esta rutina" />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowSplits(s => !s)}
+              className="btn-secondary w-full py-2.5 text-body-sm flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+              Generar rutina sugerida
+            </button>
+            {showSplits && (
+              <div className="mt-2 space-y-1.5">
+                {splits.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => aplicarSplit(s.id)}
+                    className="w-full text-left px-3 py-2 rounded-md bg-surface-container-high"
+                  >
+                    <p className="text-body-sm font-semibold text-on-surface">{s.label}</p>
+                    <p className="text-label-md text-on-surface-variant">{s.descripcion}</p>
+                  </button>
+                ))}
+                {ejercicios.length > 0 && (
+                  <p className="text-label-md text-on-surface-variant italic px-1">
+                    Esto reemplaza los ejercicios que ya elegiste.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <ExerciseBuilder ejercicios={ejercicios} setEjercicios={setEjercicios} />
