@@ -1,3 +1,49 @@
+import { getExerciseInfo } from '../data/exerciseCatalog'
+
+// ---------- Alarma de fin de descanso ----------
+
+// Dispara una vibración corta (si el dispositivo lo soporta) y un beep audible
+// generado con Web Audio API (sin archivos de sonido externos), para avisar
+// que el descanso llegó a 0 sin que el usuario tenga que estar mirando la pantalla.
+export function dispararAlarmaDescanso() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([120, 80, 120])
+    }
+  } catch (e) {
+    // Algunos navegadores/dispositivos no soportan vibrate; no es crítico.
+  }
+
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const ahora = ctx.currentTime
+
+    const tocarBeep = (inicio, frecuencia) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(frecuencia, ahora + inicio)
+      gain.gain.setValueAtTime(0, ahora + inicio)
+      gain.gain.linearRampToValueAtTime(0.25, ahora + inicio + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ahora + inicio + 0.22)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(ahora + inicio)
+      osc.stop(ahora + inicio + 0.25)
+    }
+
+    tocarBeep(0, 880)
+    tocarBeep(0.25, 880)
+
+    // Cerramos el contexto cuando termina de sonar, para no dejar recursos colgando.
+    setTimeout(() => ctx.close().catch(() => {}), 700)
+  } catch (e) {
+    // Web Audio no disponible; el aviso por vibración (si existe) sigue funcionando.
+  }
+}
+
 export function saludoPorHora() {
   const h = new Date().getHours()
   if (h < 6) return 'Buenas noches'
@@ -503,4 +549,53 @@ export function sugerirDeload(sesiones = []) {
     semanasSostenidas: ultimas3.length,
     mensaje: `Llevás ${ultimas3.length} semanas entrenando fuerte sin bajar el volumen, y no sumaste ningún récord en tus últimas sesiones. Puede ser buen momento para una semana de descarga: bajá el peso ~10-20% y las series a la mitad.`,
   }
+}
+
+// ---------- Balance muscular semanal ----------
+
+// Colapsa los grupos musculares detallados del catálogo (ej. "Piernas / Cuádriceps",
+// "Hombros / Deltoides posterior") en 5 categorías amplias, para poder graficar
+// de un vistazo si algún patrón de movimiento quedó descuidado en la semana.
+function grupoAmplio(grupoDetallado = '') {
+  const g = grupoDetallado.toLowerCase()
+  if (g.includes('pierna')) return 'Piernas'
+  if (g.includes('core') || g.includes('abdomen') || g.includes('oblicuo')) return 'Core'
+  if (g.includes('empuje') || g.includes('tríceps') || g.includes('triceps') || g.includes('deltoides anterior')) return 'Empuje'
+  if (
+    g.includes('tracción') || g.includes('traccion') || g.includes('espalda') ||
+    g.includes('bíceps') || g.includes('biceps') || g.includes('trapecio') || g.includes('posterior')
+  ) return 'Tracción'
+  return 'Otro'
+}
+
+const CATEGORIAS_BALANCE = ['Empuje', 'Tracción', 'Piernas', 'Core', 'Otro']
+
+// Volumen total levantado en la semana actual (lunes a hoy), agrupado por
+// categoría de movimiento (Empuje / Tracción / Piernas / Core / Otro), usando
+// el catálogo de ejercicios (+ personalizados) para saber a qué grupo pertenece
+// cada ejercicio registrado.
+export function volumenPorGrupoSemana(sesiones = [], personalizados = []) {
+  const hoy = new Date()
+  const diaSemana = hoy.getDay() === 0 ? 7 : hoy.getDay() // 1 = lunes ... 7 = domingo
+  const inicio = new Date(hoy)
+  inicio.setHours(0, 0, 0, 0)
+  inicio.setDate(inicio.getDate() - (diaSemana - 1))
+
+  const totales = {}
+  CATEGORIAS_BALANCE.forEach(c => { totales[c] = 0 })
+
+  sesiones.forEach(s => {
+    const f = new Date(s.fecha)
+    if (f < inicio) return
+    ;(s.ejercicios || []).forEach(ej => {
+      const info = getExerciseInfo(ej.nombre, personalizados)
+      const categoria = grupoAmplio(info?.grupo || '')
+      const volumenEjercicio = (ej.series || []).reduce(
+        (acc, set) => acc + (Number(set.peso) || 0) * (Number(set.reps) || 0), 0
+      )
+      totales[categoria] += volumenEjercicio
+    })
+  })
+
+  return CATEGORIAS_BALANCE.map(categoria => ({ categoria, volumen: totales[categoria] }))
 }

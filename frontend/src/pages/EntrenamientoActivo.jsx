@@ -7,7 +7,8 @@ import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizado
 import { getExerciseInfo } from '../data/exerciseCatalog'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
-  volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio
+  volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
+  dispararAlarmaDescanso
 } from '../utils/helpers'
 
 const SALTOS_PESO = [1.25, 2.5, 5]
@@ -92,8 +93,9 @@ function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJ
       </svg>
       <div className="absolute flex flex-col items-center">
         <span className="font-mono text-headline-md text-on-surface tabular-nums">{formatTimer(restante)}</span>
-        <span className="text-label-md text-on-surface-variant mt-0.5">
+        <span className="text-label-md text-on-surface-variant mt-0.5 flex items-center gap-1">
           {descansando ? 'DESCANSO' : 'TOCÁ PARA DESCANSAR'}
+          {descansando && <span className="material-symbols-outlined text-[12px]" title="Te avisamos con vibración y sonido">notifications_active</span>}
         </span>
       </div>
     </button>
@@ -159,12 +161,23 @@ export default function EntrenamientoActivo() {
 
   useEffect(() => {
     if (descansando) {
-      intervalRef.current = setInterval(() => setSegundosDescanso(s => s + 1), 1000)
+      intervalRef.current = setInterval(() => {
+        setSegundosDescanso(s => {
+          const nuevo = s + 1
+          // Alarma de fin de descanso: se dispara UNA sola vez, justo cuando
+          // el contador cruza el objetivo (vibración + beep), sin necesidad
+          // de estar mirando la pantalla para darse cuenta.
+          if (nuevo >= descansoObjetivo && s < descansoObjetivo) {
+            dispararAlarmaDescanso()
+          }
+          return nuevo
+        })
+      }, 1000)
     } else {
       clearInterval(intervalRef.current)
     }
     return () => clearInterval(intervalRef.current)
-  }, [descansando])
+  }, [descansando, descansoObjetivo])
 
   const elegirRutina = (r) => {
     setRutina(r)

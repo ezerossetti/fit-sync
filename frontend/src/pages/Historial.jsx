@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import sesionesService from '../services/sesiones.service'
+import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import {
   formatFecha, formatFechaRelativa, volumenSesion, formatKg, formatDuracion,
-  ejerciciosEnHistorial, progresoPorEjercicio, datosHeatmap,
+  ejerciciosEnHistorial, progresoPorEjercicio, datosHeatmap, volumenPorGrupoSemana,
 } from '../utils/helpers'
 
 function mesAnioLabel(fechaISO) {
@@ -111,16 +112,106 @@ function ProgressChart({ sesiones }) {
   )
 }
 
+// ---------- Balance muscular de la semana (empuje / tracción / piernas / core) ----------
+function MuscleBalanceChart({ sesiones, personalizados }) {
+  const datos = useMemo(
+    () => volumenPorGrupoSemana(sesiones, personalizados),
+    [sesiones, personalizados]
+  )
+
+  const hayDatos = datos.some(d => d.volumen > 0)
+  const maxVol = Math.max(1, ...datos.map(d => d.volumen))
+
+  return (
+    <div className="card p-4 mb-6">
+      <p className="text-label-md text-accent uppercase tracking-wide mb-3">Balance muscular · esta semana</p>
+      {!hayDatos ? (
+        <p className="text-body-sm text-on-surface-variant italic py-2 text-center">
+          Todavía no registraste ejercicios esta semana.
+        </p>
+      ) : (
+        <div className="space-y-2.5">
+          {datos.filter(d => d.categoria !== 'Otro' || d.volumen > 0).map(d => (
+            <div key={d.categoria} className="flex items-center gap-3">
+              <span className="text-label-md text-on-surface-variant w-20 shrink-0">{d.categoria}</span>
+              <div className="flex-1 h-3 rounded-full bg-surface-container-high overflow-hidden">
+                <div
+                  className="h-full bg-accent rounded-full"
+                  style={{ width: `${Math.max(3, Math.round((d.volumen / maxVol) * 100))}%`, opacity: d.volumen === 0 ? 0.15 : 1 }}
+                />
+              </div>
+              <span className="font-mono text-label-md text-on-surface w-16 text-right shrink-0">{formatKg(d.volumen)} kg</span>
+            </div>
+          ))}
+          <p className="text-label-md text-on-surface-variant mt-1">
+            Lunes a hoy. Si algún grupo queda siempre en cero, puede valer la pena sumarlo a tu rutina.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Arma y dispara la descarga de un CSV con todas las sesiones del historial.
+function exportarHistorialCSV(sesiones) {
+  const encabezados = ['fecha', 'rutina', 'ejercicio', 'set_numero', 'peso_kg', 'reps', 'volumen_sesion_kg', 'duracion_min', 'notas']
+  const filas = []
+
+  const escapar = (valor) => {
+    const s = String(valor ?? '')
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+
+  sesiones.forEach(s => {
+    const volumenSesionTotal = s.volumen_total ?? volumenSesion(s.ejercicios)
+    const ejercicios = s.ejercicios || []
+    if (ejercicios.length === 0) {
+      filas.push([s.fecha, s.rutina_nombre || 'Sesión libre', '', '', '', '', volumenSesionTotal, s.duracion_min || 0, s.notas || ''])
+      return
+    }
+    ejercicios.forEach(ej => {
+      const series = ej.series || []
+      if (series.length === 0) {
+        filas.push([s.fecha, s.rutina_nombre || 'Sesión libre', ej.nombre, '', '', '', volumenSesionTotal, s.duracion_min || 0, s.notas || ''])
+        return
+      }
+      series.forEach((set, i) => {
+        filas.push([
+          s.fecha, s.rutina_nombre || 'Sesión libre', ej.nombre, i + 1,
+          set.peso ?? '', set.reps ?? '', volumenSesionTotal, s.duracion_min || 0, s.notas || '',
+        ])
+      })
+    })
+  })
+
+  const csv = [encabezados, ...filas].map(fila => fila.map(escapar).join(',')).join('\n')
+  const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const fechaArchivo = new Date().toISOString().slice(0, 10)
+  a.href = url
+  a.download = `fitsync-historial-${fechaArchivo}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export default function Historial() {
   const [sesiones, setSesiones] = useState([])
+  const [personalizados, setPersonalizados] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const cargar = async () => {
     setLoading(true)
     try {
-      const data = await sesionesService.getAll()
+      const [data, ep] = await Promise.all([
+        sesionesService.getAll(),
+        ejerciciosPersonalizadosService.getAll().catch(() => []),
+      ])
       setSesiones((data || []).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
+      setPersonalizados(ep || [])
     } catch (e) {
       console.error(e)
       setError('No se pudo cargar el historial.')
@@ -157,7 +248,19 @@ export default function Historial() {
 
   return (
     <div>
-      <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Historial</h1>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h1 className="font-display text-headline-lg-mobile text-on-surface">Historial</h1>
+        {!loading && sesiones.length > 0 && (
+          <button
+            type="button"
+            onClick={() => exportarHistorialCSV(sesiones)}
+            className="text-label-md text-accent border border-accent/30 rounded-full px-3 py-1.5 flex items-center gap-1 shrink-0"
+          >
+            <span className="material-symbols-outlined text-[16px]">download</span>
+            CSV
+          </button>
+        )}
+      </div>
       <p className="text-body-sm text-on-surface-variant mb-5">Tu progreso, siempre 100% libre.</p>
 
       {error && <p className="text-body-sm text-error mb-3">{error}</p>}
@@ -178,6 +281,7 @@ export default function Historial() {
       {!loading && sesiones.length > 0 && (
         <>
           <ActivityHeatmap sesiones={sesiones} />
+          <MuscleBalanceChart sesiones={sesiones} personalizados={personalizados} />
           <ProgressChart sesiones={sesiones} />
         </>
       )}
