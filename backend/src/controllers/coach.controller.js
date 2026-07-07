@@ -110,4 +110,61 @@ export const coachController = {
       res.status(500).json({ success: false, message: 'Error al generar sugerencias de ejercicios', error: error.message });
     }
   },
+
+  // Análisis de técnica de un ejercicio puntual. Body: { contexto, mensaje }
+  // contexto: ejercicio + puntos clave + historial (armado en el frontend con contextoCoach.js)
+  // mensaje: descripción en texto libre de cómo lo sintió el usuario
+  analizarTecnica: async (req, res) => {
+    try {
+      const { contexto, mensaje } = req.body;
+
+      if (!contexto || !mensaje) {
+        return res.status(400).json({ success: false, message: 'Faltan campos: contexto, mensaje' });
+      }
+
+      const respuesta = await groqService.generarRespuesta('analisis_tecnica', {
+        contextoJSON: JSON.stringify(contexto),
+        mensajeUsuario: mensaje,
+      });
+
+      res.status(200).json({ success: true, data: { analisis: respuesta } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error al analizar la técnica', error: error.message });
+    }
+  },
+
+  // Generador de rutina personalizada por IA. Body: { contexto }
+  // contexto: objetivo, días disponibles, nivel, balance muscular, rutinas actuales
+  // y la lista completa de ejercicios válidos (armado en el frontend con contextoCoach.js).
+  // Devuelve el JSON de la rutina generada sin guardarla: el frontend la previsualiza
+  // y decide si la guarda (vía el flujo normal de rutinas.service.js).
+  generarRutina: async (req, res) => {
+    try {
+      const { contexto } = req.body;
+
+      if (!contexto) {
+        return res.status(400).json({ success: false, message: 'Falta el contexto para generar la rutina' });
+      }
+
+      const respuesta = await groqService.generarRespuesta('generar_rutina', {
+        contextoJSON: JSON.stringify(contexto),
+        mensajeUsuario: 'Generá la rutina según ese contexto.',
+      });
+
+      let rutina;
+      try {
+        rutina = JSON.parse(respuesta);
+      } catch {
+        return res.status(502).json({ success: false, message: 'El coach devolvió un formato inválido, probá de nuevo' });
+      }
+
+      if (!rutina?.nombre || !Array.isArray(rutina.ejercicios) || rutina.ejercicios.length === 0) {
+        return res.status(502).json({ success: false, message: 'La rutina generada no tiene el formato esperado, probá de nuevo' });
+      }
+
+      res.status(200).json({ success: true, data: { rutina } });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error al generar la rutina', error: error.message });
+    }
+  },
 };

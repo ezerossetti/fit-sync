@@ -32,6 +32,19 @@ const coachService = {
     const response = await apiClient.post('/coach/sugerir-ejercicios', { contexto })
     return response.data.data
   },
+
+  // Análisis de técnica de un ejercicio puntual. contexto: armado con construirContextoTecnica.
+  // mensaje: descripción en texto libre de cómo lo sintió el usuario.
+  analizarTecnica: async (contexto, mensaje) => {
+    const response = await apiClient.post('/coach/analizar-tecnica', { contexto, mensaje })
+    return response.data.data
+  },
+
+  // Generador de rutina personalizada por IA. contexto: armado con construirContextoGenerarRutina.
+  generarRutina: async (contexto) => {
+    const response = await apiClient.post('/coach/generar-rutina', { contexto })
+    return response.data.data
+  },
 }
 
 export default coachService

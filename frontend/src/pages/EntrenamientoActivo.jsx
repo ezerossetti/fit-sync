@@ -5,6 +5,7 @@ import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import { getExerciseInfo } from '../data/exerciseCatalog'
+import ExerciseMedia from '../components/ExerciseMedia'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
@@ -385,19 +386,8 @@ export default function EntrenamientoActivo() {
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">{ejercicioActual.nombre}</h1>
         <p className="text-body-sm text-on-surface-variant mb-4">{info?.grupo || 'Ejercicio personalizado'}</p>
 
-        {/* Placeholder visual del ejercicio (miniatura + botón play) */}
-        <div className="card relative h-40 mb-4 overflow-hidden flex items-center justify-center bg-gradient-to-br from-surface-container-high to-surface-container">
-          <span className="material-symbols-outlined text-on-surface-variant/30 text-[96px]">fitness_center</span>
-          <button
-            type="button"
-            className="absolute inset-0 flex items-center justify-center group"
-            aria-label="Ver cómo se hace el ejercicio"
-          >
-            <span className="w-14 h-14 rounded-full bg-black/50 backdrop-blur flex items-center justify-center border border-white/20 group-active:scale-95 transition-transform">
-              <span className="material-symbols-outlined text-white text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
-            </span>
-          </button>
-        </div>
+        {/* Fotos reales del ejercicio (free-exercise-db) con fallback a ícono */}
+        <ExerciseMedia exerciseInfo={info} />
 
         {info?.descripcion && (
           <p className="text-body-sm text-on-surface-variant mb-4">{info.descripcion}</p>
