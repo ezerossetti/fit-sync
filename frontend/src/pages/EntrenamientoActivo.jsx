@@ -9,8 +9,41 @@ import ExerciseMedia from '../components/ExerciseMedia'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
-  dispararAlarmaDescanso
+  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion
 } from '../utils/helpers'
+
+const RPE_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+// ---------- Selector de RPE (esfuerzo percibido, 1-10) ----------
+// Discreto y opcional: no bloquea el flujo si el usuario no lo completa.
+function SelectorRPE({ value, onChange }) {
+  return (
+    <div className="card p-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-label-md text-on-surface-variant uppercase">RPE (esfuerzo, opcional)</p>
+        {value != null && (
+          <button type="button" onClick={() => onChange(null)} className="text-label-md text-on-surface-variant/70">
+            Quitar
+          </button>
+        )}
+      </div>
+      <div className="flex gap-1 overflow-x-auto">
+        {RPE_OPCIONES.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            className={`shrink-0 w-8 h-8 rounded-full text-label-md flex items-center justify-center border ${
+              value === n ? 'bg-accent text-on-primary border-accent' : 'border-outline-variant text-on-surface-variant'
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const SALTOS_PESO = [1.25, 2.5, 5]
 const SALTOS_REPS = [1, 2, 5]
@@ -120,6 +153,8 @@ export default function EntrenamientoActivo() {
   const [sesionEjercicios, setSesionEjercicios] = useState([]) // acumulado de toda la sesión
   const [peso, setPeso] = useState(20)
   const [reps, setReps] = useState(8)
+  const [rpe, setRpe] = useState(null)
+  const [pesoCorporalKg, setPesoCorporalKg] = useState(75)
   const [segundosDescanso, setSegundosDescanso] = useState(0)
   const [descansando, setDescansando] = useState(false)
   const intervalRef = useRef(null)
@@ -141,6 +176,7 @@ export default function EntrenamientoActivo() {
         setHistorial(s || [])
         setPersonalizados(ep || [])
         setDescansoObjetivo(p?.preferencias?.descansoDefault ?? DESCANSO_OBJETIVO_DEFAULT)
+        setPesoCorporalKg(Number(p?.preferencias?.pesoCorporalKg) || 75)
         if (rutinaId) {
           const encontrada = (r || []).find(x => String(x.id) === String(rutinaId))
           if (encontrada) {
@@ -190,6 +226,7 @@ export default function EntrenamientoActivo() {
     const previo = ultimoRegistroEjercicio(historial, ej.nombre)
     setPeso(previo?.mejorSet?.peso ?? 20)
     setReps(previo?.mejorSet?.reps ?? (ej.reps_objetivo || 8))
+    setRpe(null)
     setStep('pre-serie')
   }
 
@@ -207,23 +244,26 @@ export default function EntrenamientoActivo() {
   // BUGFIX: antes esta función no chequeaba el objetivo de series de la rutina,
   // así que se podían guardar series infinitas ("Serie 16 de 2"). Ahora corta
   // automáticamente al llegar al objetivo y vuelve a la lista de ejercicios.
-  const guardarSerie = (pesoOverride, repsOverride) => {
+  const guardarSerie = (pesoOverride, repsOverride, rpeOverride) => {
     const pesoFinal = pesoOverride ?? peso
     const repsFinal = repsOverride ?? reps
+    const rpeFinal = rpeOverride !== undefined ? rpeOverride : rpe
     let nuevoConteo = 0
 
     setSesionEjercicios(prev => {
       const idx = prev.findIndex(e => e.nombre === ejercicioActual.nombre)
       if (idx === -1) {
         nuevoConteo = 1
-        return [...prev, { nombre: ejercicioActual.nombre, series: [{ peso: pesoFinal, reps: repsFinal }] }]
+        return [...prev, { nombre: ejercicioActual.nombre, series: [{ peso: pesoFinal, reps: repsFinal, rpe: rpeFinal || null }] }]
       }
       const copia = [...prev]
-      const series = [...copia[idx].series, { peso: pesoFinal, reps: repsFinal }]
+      const series = [...copia[idx].series, { peso: pesoFinal, reps: repsFinal, rpe: rpeFinal || null }]
       nuevoConteo = series.length
       copia[idx] = { ...copia[idx], series }
       return copia
     })
+
+    setRpe(null)
 
     const objetivo = ejercicioActual.series_objetivo || 3
     if (nuevoConteo >= objetivo) {
@@ -245,7 +285,7 @@ export default function EntrenamientoActivo() {
     if (!ultima) return
     setPeso(ultima.peso)
     setReps(ultima.reps)
-    guardarSerie(ultima.peso, ultima.reps)
+    guardarSerie(ultima.peso, ultima.reps, ultima.rpe ?? null)
   }
 
   const volverASeleccionEjercicio = () => setStep('select-ejercicio')
@@ -254,15 +294,17 @@ export default function EntrenamientoActivo() {
     setGuardando(true)
     try {
       const duracionMin = (Date.now() - inicioSesionRef.current) / 1000 / 60
+      const duracionRedondeada = Math.max(1, Math.round(duracionMin))
       const payload = {
         fecha: new Date().toISOString(),
         rutina_id: rutina?.id,
         rutina_nombre: rutina?.nombre || 'Sesión libre',
         ejercicios: sesionEjercicios,
         volumen_total: volumenSesion(sesionEjercicios),
-        duracion_min: Math.max(1, Math.round(duracionMin)),
+        duracion_min: duracionRedondeada,
         completada: true,
         notas: notas.trim() || null,
+        calorias_estimadas: caloriasSesion(sesionEjercicios, duracionRedondeada, pesoCorporalKg),
       }
       const creada = await sesionesService.create(payload)
       setUltimaSesionGuardada(creada || payload)
@@ -486,9 +528,15 @@ export default function EntrenamientoActivo() {
         <CargaStepper label="Carga (kg)" value={peso} onChange={setPeso} saltos={SALTOS_PESO} unidad="kg" />
         <CargaStepper label="Repeticiones" value={reps} onChange={setReps} saltos={SALTOS_REPS} unidad="reps" min={0} />
 
+        <SelectorRPE value={rpe} onChange={setRpe} />
+
         <div className="card py-6">
           <DescansoRing segundos={segundosDescanso} descansando={descansando} onToggle={() => setDescansando(d => !d)} objetivo={descansoObjetivo} />
         </div>
+
+        <p className="text-label-md text-on-surface-variant/70 text-center -mt-2">
+          ~{Math.round(caloriasPorSerie(rpe, pesoCorporalKg))} kcal estimadas esta serie
+        </p>
 
         {pr && (
           <p className="text-body-sm text-center text-on-surface-variant">
@@ -557,6 +605,7 @@ export default function EntrenamientoActivo() {
 
         <p className="text-label-md text-on-surface-variant text-center mb-6">
           Duración de la sesión: {formatDuracion(ultimaSesionGuardada?.duracion_min || 0)}
+          {' · '}~{ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg)} kcal estimadas
         </p>
 
         {ultimaSesionGuardada?.notas && (

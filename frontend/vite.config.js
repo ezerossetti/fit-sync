@@ -19,6 +19,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Suma el manejo de push/notificationclick al SW autogenerado, sin
+        // tener que migrar a la estrategia injectManifest.
+        importScripts: ['/sw-push.js'],
         // Rutinas/historial/perfil: network-first para tener datos frescos con
         // internet, pero que no rompa si el celu se queda sin señal a mitad de
         // sesión (caso real: gimnasio en el sótano).

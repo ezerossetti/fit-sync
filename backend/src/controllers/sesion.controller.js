@@ -50,7 +50,7 @@ export const sesionController = {
   create: async (req, res) => {
     try {
       const usuarioId = req.params.usuarioId;
-      const { fecha, rutina_id, rutina_nombre, ejercicios, volumen_total, duracion_min, completada, notas } = req.body;
+      const { fecha, rutina_id, rutina_nombre, ejercicios, volumen_total, duracion_min, completada, notas, calorias_estimadas } = req.body;
 
       // Validaciones básicas
       if (!fecha || !rutina_id || !rutina_nombre) {
@@ -69,7 +69,8 @@ export const sesionController = {
         volumen_total,
         duracion_min,
         completada,
-        notas
+        notas,
+        calorias_estimadas
       });
 
       res.status(201).json({

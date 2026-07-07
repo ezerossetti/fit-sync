@@ -50,7 +50,8 @@ export const sesionModel = {
         volumen_total: dataSesion.volumen_total || 0,
         duracion_min: dataSesion.duracion_min || 0,
         completada: dataSesion.completada || false,
-        notas: dataSesion.notas || null
+        notas: dataSesion.notas || null,
+        calorias_estimadas: dataSesion.calorias_estimadas || 0
       };
 
       // Si viene un ID predefinido, lo incluimos (útil para tests o IDs específicos)

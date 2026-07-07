@@ -14,6 +14,25 @@ export function dispararAlarmaDescanso() {
     // Algunos navegadores/dispositivos no soportan vibrate; no es crítico.
   }
 
+  // Notificación real del sistema operativo (aparece aunque la pantalla esté
+  // apagada o la app en segundo plano), usando el service worker que ya
+  // registró la PWA. No requiere suscripción push: es local, disparada por el
+  // propio dispositivo al llegar el timer a 0, sin pasar por ningún servidor.
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification('Descanso terminado', {
+          body: 'Ya podés arrancar la próxima serie.',
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'fitsync-descanso',
+        })
+      }).catch(() => {})
+    }
+  } catch (e) {
+    // Notification/SW no disponible; el aviso por vibración/beep sigue funcionando.
+  }
+
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext
     if (!AudioCtx) return
@@ -74,6 +93,43 @@ export function volumenSesion(ejercicios = []) {
     const setsVol = (ej.series || []).reduce((s, set) => s + (Number(set.peso) || 0) * (Number(set.reps) || 0), 0)
     return total + setsVol
   }, 0)
+}
+
+// ---------- Estimación de calorías (fórmula MET) ----------
+// Estimación aproximada, no un dato médico exacto — se etiqueta como tal en la UI.
+// MET de fuerza/resistencia según intensidad percibida (RPE): a mayor esfuerzo,
+// mayor gasto por minuto. Valores estándar de compendio de actividad física.
+function metPorRpe(rpe) {
+  if (!rpe || rpe <= 0) return 5.0 // sin RPE registrado: intensidad moderada por defecto
+  if (rpe <= 3) return 3.5 // muy liviano
+  if (rpe <= 6) return 5.0 // moderado
+  if (rpe <= 8) return 6.0 // vigoroso
+  return 7.0 // máximo esfuerzo
+}
+
+// Calorías estimadas de UNA serie, asumiendo ~40s de esfuerzo activo por serie
+// (tiempo bajo tensión típico, sin contar el descanso). kcal/min = MET * 3.5 * kg / 200
+export function caloriasPorSerie(rpe, pesoCorporalKg = 75) {
+  const met = metPorRpe(rpe)
+  const minutosActivos = 40 / 60
+  return (met * 3.5 * pesoCorporalKg / 200) * minutosActivos
+}
+
+// Calorías estimadas de la sesión completa, a partir de la duración total y el
+// RPE promedio de todas las series registradas (más preciso que sumar por serie
+// porque incluye el tiempo de descanso real, a un MET más bajo).
+export function caloriasSesion(ejercicios = [], duracionMin = 0, pesoCorporalKg = 75) {
+  const todasLasSeries = ejercicios.flatMap(ej => ej.series || [])
+  const rpes = todasLasSeries.map(s => Number(s.rpe)).filter(r => r > 0)
+  const rpePromedio = rpes.length ? rpes.reduce((a, b) => a + b, 0) / rpes.length : 0
+
+  // Durante la sesión hay tramos activos (MET alto) y de descanso entre series
+  // (MET bajo, ~2.0). Repartimos 40% activo / 60% descanso como aproximación.
+  const metActivo = metPorRpe(rpePromedio)
+  const metDescanso = 2.0
+  const metPromedioSesion = metActivo * 0.4 + metDescanso * 0.6
+
+  return Math.round(metPromedioSesion * 3.5 * pesoCorporalKg / 200 * duracionMin)
 }
 
 export function formatKg(n) {

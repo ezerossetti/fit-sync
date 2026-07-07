@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import usuarioService from '../services/usuario.service'
 import sesionesService from '../services/sesiones.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
+import { pushNotifications } from '../utils/pushNotifications'
 import {
   calcularRachaDetalle, volumenTotalHistorico, sesionesCompletadas,
   horasActivasTotales, recordsPersonalesTotal, nivelPorSesiones, formatKg, formatTimer
@@ -24,7 +25,15 @@ export default function Perfil() {
   const [descansoDefault, setDescansoDefault] = useState(90)
   const [descansoInput, setDescansoInput] = useState('90')
   const [unidad, setUnidad] = useState('Kilogramos')
+  const [pesoCorporalKg, setPesoCorporalKg] = useState(75)
+  const [pesoCorporalInput, setPesoCorporalInput] = useState('75')
   const [prefsListas, setPrefsListas] = useState(false)
+
+  // Notificaciones push (chequeo de inactividad)
+  const [notifSoportado, setNotifSoportado] = useState(false)
+  const [notifActivas, setNotifActivas] = useState(false)
+  const [notifCargando, setNotifCargando] = useState(false)
+  const [notifError, setNotifError] = useState(null)
 
   // Ejercicios personalizados persistentes
   const [ejerciciosPersonalizados, setEjerciciosPersonalizados] = useState([])
@@ -47,6 +56,9 @@ export default function Perfil() {
           setDescansoDefault(d)
           setDescansoInput(String(d))
           setUnidad(p.preferencias.unidad ?? 'Kilogramos')
+          const peso = Number(p.preferencias.pesoCorporalKg) || 75
+          setPesoCorporalKg(peso)
+          setPesoCorporalInput(String(peso))
         }
       } finally {
         setLoading(false)
@@ -54,15 +66,20 @@ export default function Perfil() {
         setPrefsListas(true) // evita guardar de vuelta los valores por defecto antes de cargar los reales
       }
     })()
+
+    setNotifSoportado(pushNotifications.esSoportado())
+    pushNotifications.getSuscripcionActual()
+      .then((sub) => setNotifActivas(!!sub))
+      .catch(() => setNotifActivas(false))
   }, [])
 
   // Guarda las preferencias en el backend cada vez que cambian (después de la carga inicial)
   useEffect(() => {
     if (!prefsListas) return
     usuarioService.updateMe({
-      preferencias: { descansoDefault, unidad }
+      preferencias: { descansoDefault, unidad, pesoCorporalKg }
     }).catch(err => console.error('No se pudieron guardar las preferencias:', err))
-  }, [descansoDefault, unidad, prefsListas])
+  }, [descansoDefault, unidad, pesoCorporalKg, prefsListas])
 
   const guardarNombre = async (e) => {
     e.preventDefault()
@@ -105,6 +122,36 @@ export default function Perfil() {
   const confirmarDescansoInput = () => {
     const val = descansoInput === '' ? 0 : parseInt(descansoInput, 10)
     aplicarDescanso(val)
+  }
+
+  const onPesoCorporalInputChange = (e) => {
+    const val = e.target.value
+    if (val === '' || /^[0-9]+$/.test(val)) setPesoCorporalInput(val)
+  }
+
+  const confirmarPesoCorporalInput = () => {
+    const val = Math.max(30, Math.round(Number(pesoCorporalInput) || 75))
+    setPesoCorporalKg(val)
+    setPesoCorporalInput(String(val))
+  }
+
+  const toggleNotificaciones = async () => {
+    setNotifError(null)
+    setNotifCargando(true)
+    try {
+      if (notifActivas) {
+        await pushNotifications.desactivar()
+        setNotifActivas(false)
+      } else {
+        await pushNotifications.activar()
+        setNotifActivas(true)
+      }
+    } catch (err) {
+      console.error(err)
+      setNotifError(err.message || 'No se pudo cambiar el estado de las notificaciones.')
+    } finally {
+      setNotifCargando(false)
+    }
   }
 
   const eliminarEjercicioPersonalizado = async (id) => {
@@ -259,7 +306,7 @@ export default function Perfil() {
             Sin límite: escribí el valor exacto que quieras (ej: 45, 75, 240...).
           </p>
         </div>
-        <button onClick={() => setUnidad(u => (u === 'Kilogramos' ? 'Libras' : 'Kilogramos'))} className="w-full flex items-center justify-between p-4 text-left">
+        <button onClick={() => setUnidad(u => (u === 'Kilogramos' ? 'Libras' : 'Kilogramos'))} className="w-full flex items-center justify-between p-4 text-left border-b border-outline-variant">
           <span className="flex items-center gap-2 text-body-sm text-on-surface">
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant">scale</span>
             Unidades de peso
@@ -268,6 +315,65 @@ export default function Perfil() {
             {unidad} <span className="material-symbols-outlined text-[16px]">chevron_right</span>
           </span>
         </button>
+        <div className="p-4">
+          <span className="flex items-center gap-2 text-body-sm text-on-surface mb-3">
+            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">monitor_weight</span>
+            Peso corporal
+          </span>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={30}
+              className="input-field w-24 text-center font-mono"
+              value={pesoCorporalInput}
+              onChange={onPesoCorporalInputChange}
+              onBlur={confirmarPesoCorporalInput}
+              onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur())}
+              aria-label="Peso corporal en kg"
+            />
+            <span className="text-body-sm text-on-surface-variant">kg</span>
+          </div>
+          <p className="text-label-md text-on-surface-variant mt-2">
+            Se usa para estimar calorías quemadas en tus sesiones (aproximado, no es un dato médico).
+          </p>
+        </div>
+      </div>
+
+      {/* Notificaciones */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="material-symbols-outlined text-accent text-[20px]">notifications</span>
+        <h2 className="text-body-md font-semibold text-on-surface">Notificaciones</h2>
+      </div>
+      <div className="card mb-6 p-4">
+        {!notifSoportado ? (
+          <p className="text-body-sm text-on-surface-variant">
+            Tu navegador no soporta notificaciones push. En iPhone, agregá FitSync a la pantalla de inicio primero (Safari no permite push en una pestaña normal).
+          </p>
+        ) : (
+          <>
+            <button
+              onClick={toggleNotificaciones}
+              disabled={notifCargando}
+              className="w-full flex items-center justify-between text-left disabled:opacity-60"
+            >
+              <span className="flex items-center gap-2 text-body-sm text-on-surface">
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+                  {notifActivas ? 'notifications_active' : 'notifications_off'}
+                </span>
+                Avisos si pasan varios días sin entrenar
+              </span>
+              <span
+                className={`w-11 h-6 rounded-full relative transition-colors ${notifActivas ? 'bg-accent' : 'bg-surface-container-high'}`}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${notifActivas ? 'translate-x-5' : 'translate-x-0.5'}`}
+                />
+              </span>
+            </button>
+            {notifError && <p className="text-body-sm text-error mt-2">{notifError}</p>}
+          </>
+        )}
       </div>
 
       {/* Ejercicios personalizados */}

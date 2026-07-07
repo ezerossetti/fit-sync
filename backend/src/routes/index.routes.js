@@ -4,6 +4,7 @@ import rutinasRouter from './rutinas.routes.js';
 import usuarioRouter from './usuario.routes.js';
 import ejerciciosRouter from './ejercicios.routes.js';
 import coachRouter from './coach.routes.js';
+import notificacionRouter from './notificacion.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,8 @@ router.use('/', ejerciciosRouter);
 
 // Rutas del coach IA
 router.use('/', coachRouter);
+
+// Rutas de notificaciones push
+router.use('/', notificacionRouter);
 
 export default router;

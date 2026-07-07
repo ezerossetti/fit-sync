@@ -265,13 +265,16 @@ export default function CoachChat() {
 
       {/* Panel de chat */}
       {abierto && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-surface-container-lowest md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] md:rounded-xl md:border md:border-outline-variant md:shadow-plate">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant bg-primary">
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-surface-container-lowest md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] md:rounded-xl md:border md:border-outline-variant md:shadow-plate"
+          style={{ paddingTop: 'env(safe-area-inset-top)' }}
+        >
+          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-outline-variant bg-primary">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-accent text-[20px]">forum</span>
-              <span className="font-display font-bold text-on-primary-container">Coach FitSync</span>
+              <span className="font-display font-bold text-on-primary-container">Coach Chiche</span>
             </div>
-            <button onClick={() => setAbierto(false)} aria-label="Cerrar">
+            <button onClick={() => setAbierto(false)} aria-label="Cerrar" className="p-2 -m-2">
               <span className="material-symbols-outlined text-on-primary-container">close</span>
             </button>
           </div>
