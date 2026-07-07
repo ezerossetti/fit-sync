@@ -25,8 +25,18 @@ Desde la última actualización de este README, el proyecto pasó de scaffold CR
 
 > ⚠️ El backend está en el free tier de Render, que se "duerme" tras 15 min sin tráfico. La primera request después de estar inactiva puede tardar 30-60 seg en responder — es esperado, no es un error.
 
-<!-- 📸 TODO: reemplazar por la captura real de la app corriendo en producción -->
-![FitSync en producción](./screenshot.png)
+## 📸 Capturas
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/entrenamiento-activo.png" width="400"/><br/><sub>Entrenamiento activo — carga sin teclado</sub></td>
+    <td><img src="docs/screenshots/historial.png" width="400"/><br/><sub>Historial — heatmap y progreso</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/home.png" width="400"/><br/><sub>Home</sub></td>
+    <td><img src="docs/screenshots/rutinas.png" width="400"/><br/><sub>Seccion de rutinas creadas</sub></td>
+  </tr>
+</table>
 
 ---
 
