@@ -193,6 +193,21 @@ export default function Rutinas() {
     }
   }
 
+  const duplicar = async (r) => {
+    try {
+      await rutinasService.create({
+        nombre: `${r.nombre} (copia)`,
+        descripcion: r.descripcion || '',
+        ejercicios: r.ejercicios || [],
+        activa: true,
+      })
+      await cargar()
+    } catch (e) {
+      console.error(e)
+      setError('No se pudo duplicar la rutina.')
+    }
+  }
+
   if (showForm) {
     return (
       <div>
@@ -265,6 +280,9 @@ export default function Rutinas() {
                 </button>
                 <button onClick={() => abrirEditar(r)} className="px-3 py-2 text-on-surface-variant">
                   <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+                <button onClick={() => duplicar(r)} className="px-3 py-2 text-on-surface-variant" aria-label="Duplicar rutina">
+                  <span className="material-symbols-outlined text-[18px]">content_copy</span>
                 </button>
                 <button onClick={() => eliminar(r.id)} className="px-3 py-2 text-error">
                   <span className="material-symbols-outlined text-[18px]">delete</span>

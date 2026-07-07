@@ -17,10 +17,11 @@ export default function Perfil() {
   const [nombreForm, setNombreForm] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  // Preferencias — demo local, no persisten en el backend todavía
+  // Preferencias — ahora persisten en usuarios.preferencias (jsonb) vía /usuario/me
   const [descansoDefault, setDescansoDefault] = useState(90)
   const [unidad, setUnidad] = useState('Kilogramos')
   const [recordatorios, setRecordatorios] = useState(true)
+  const [prefsListas, setPrefsListas] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -32,11 +33,25 @@ export default function Perfil() {
         setPerfil(p)
         setNombreForm(p?.nombre || '')
         setHistorial(s || [])
+        if (p?.preferencias) {
+          setDescansoDefault(p.preferencias.descansoDefault ?? 90)
+          setUnidad(p.preferencias.unidad ?? 'Kilogramos')
+          setRecordatorios(p.preferencias.recordatorios ?? true)
+        }
       } finally {
         setLoading(false)
+        setPrefsListas(true) // evita guardar de vuelta los valores por defecto antes de cargar los reales
       }
     })()
   }, [])
+
+  // Guarda las preferencias en el backend cada vez que cambian (después de la carga inicial)
+  useEffect(() => {
+    if (!prefsListas) return
+    usuarioService.updateMe({
+      preferencias: { descansoDefault, unidad, recordatorios }
+    }).catch(err => console.error('No se pudieron guardar las preferencias:', err))
+  }, [descansoDefault, unidad, recordatorios, prefsListas])
 
   const guardarNombre = async (e) => {
     e.preventDefault()

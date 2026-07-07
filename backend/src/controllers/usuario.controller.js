@@ -16,16 +16,20 @@ export const usuarioController = {
     }
   },
 
-  // Actualizar datos del propio perfil (por ahora, nombre)
+  // Actualizar datos del propio perfil (nombre y/o preferencias de entrenamiento)
   updateMe: async (req, res) => {
     try {
-      const { nombre } = req.body;
+      const { nombre, preferencias } = req.body;
 
-      if (!nombre) {
-        return res.status(400).json({ success: false, message: 'Falta el campo obligatorio: nombre' });
+      if (nombre === undefined && preferencias === undefined) {
+        return res.status(400).json({ success: false, message: 'No se envió ningún campo para actualizar (nombre o preferencias)' });
       }
 
-      const usuarioActualizado = await usuarioModel.update(req.usuarioId, { nombre });
+      const cambios = {};
+      if (nombre !== undefined) cambios.nombre = nombre;
+      if (preferencias !== undefined) cambios.preferencias = preferencias;
+
+      const usuarioActualizado = await usuarioModel.update(req.usuarioId, cambios);
 
       if (!usuarioActualizado) {
         return res.status(404).json({ success: false, message: 'Perfil no encontrado' });

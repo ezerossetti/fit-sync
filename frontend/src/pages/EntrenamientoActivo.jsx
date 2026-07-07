@@ -199,8 +199,8 @@ export default function EntrenamientoActivo() {
       return copia
     })
 
-    const objetivo = ejercicioActual.series_objetivo || 0
-    if (objetivo && nuevoConteo >= objetivo) {
+    const objetivo = ejercicioActual.series_objetivo || 3
+    if (nuevoConteo >= objetivo) {
       setDescansando(false)
       setSegundosDescanso(0)
       setStep('select-ejercicio')
@@ -405,7 +405,12 @@ export default function EntrenamientoActivo() {
 
   if (step === 'activo') {
     const hechas = seriesGuardadasEjercicioActual()
-    const objetivo = ejercicioActual.series_objetivo || 0
+    // BUGFIX real: si la rutina se guardó sin `series_objetivo` (rutinas viejas,
+    // o ejercicios cargados a mano sin ese campo), esto daba 0 y el chequeo de
+    // arriba (`if (objetivo && nuevoConteo >= objetivo)`) nunca cortaba porque
+    // 0 es falsy. Como resultado, "Siguiente" quedaba habilitado para siempre.
+    // Default sensato: 3 series (el mismo que usa el ExerciseBuilder al crear).
+    const objetivo = ejercicioActual.series_objetivo || 3
     const pr = prPersonalEjercicio(historial, ejercicioActual.nombre)
     const previo = ultimoRegistroEjercicio(historial, ejercicioActual.nombre)
     const faltaParaPR = pr ? +(pr.peso - peso).toFixed(2) : null
