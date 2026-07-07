@@ -2,7 +2,10 @@
 // La API key es gratuita: se saca en https://console.groq.com/keys
 // y se guarda en el .env del backend como GROQ_API_KEY (nunca se manda al frontend).
 
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+// Modelo actualizado: Groq deprecó llama-3.3-70b-versatile el 17/6/2026.
+// openai/gpt-oss-120b es el reemplazo recomendado por Groq (mejor rendimiento,
+// inferencia más rápida). Ver https://console.groq.com/docs/deprecations
+const GROQ_MODEL = 'openai/gpt-oss-120b';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Instrucciones de sistema por tipo de interacción. Todas comparten la misma
@@ -143,6 +146,11 @@ export const groqService = {
       messages,
       temperature: config.temperature,
       max_tokens: config.maxTokens,
+      // openai/gpt-oss-120b es un modelo de razonamiento: sin esto, puede gastar
+      // el presupuesto de tokens "pensando" antes de escribir la respuesta final,
+      // sobre todo en modos con maxTokens chico (analisis_tecnica, chequeo_inactividad).
+      // 'low' alcanza de sobra para estas respuestas cortas y estructuradas.
+      reasoning_effort: 'low',
     };
 
     // Modo estructurado (generar_rutina): fuerza que Groq devuelva únicamente

@@ -148,7 +148,8 @@ export default function Perfil() {
       }
     } catch (err) {
       console.error(err)
-      setNotifError(err.message || 'No se pudo cambiar el estado de las notificaciones.')
+      const mensajeBackend = err.response?.data?.message
+      setNotifError(mensajeBackend || err.message || 'No se pudo cambiar el estado de las notificaciones.')
     } finally {
       setNotifCargando(false)
     }
