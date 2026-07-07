@@ -4,7 +4,7 @@ import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
-import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaDetalle, sugerirDeload } from '../utils/helpers'
+import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaDetalle, sugerirDeload, ejerciciosAbandonados } from '../utils/helpers'
 
 function inicioDeSemana() {
   const d = new Date()
@@ -96,6 +96,7 @@ export default function Home() {
   const sesionesSemana = sesiones.filter(s => new Date(s.fecha) >= inicio)
   const { racha, huboGracia } = calcularRachaDetalle(sesiones)
   const deload = sugerirDeload(sesiones)
+  const abandonados = ejerciciosAbandonados(sesiones, rutinas)
   const ultimaSesion = sesiones[0]
   const logros = calcularLogros({ sesiones, rutinas, racha })
   const logrosDesbloqueados = logros.filter(l => l.logrado).length
@@ -136,6 +137,19 @@ export default function Home() {
           <div>
             <p className="text-body-sm font-semibold text-on-surface mb-0.5">Sugerencia: semana de descarga</p>
             <p className="text-body-sm text-on-surface-variant">{deload.mensaje}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Ejercicio abandonado */}
+      {abandonados.length > 0 && (
+        <div className="card p-4 border-l-4 border-l-accent bg-accent/5 flex gap-3">
+          <span className="material-symbols-outlined text-accent text-[22px] shrink-0">history_toggle_off</span>
+          <div>
+            <p className="text-body-sm font-semibold text-on-surface mb-0.5">Coach · Ejercicio abandonado</p>
+            <p className="text-body-sm text-on-surface-variant">
+              Hace {abandonados[0].dias} días que no hacés <span className="font-semibold text-on-surface">{abandonados[0].nombre}</span>, y sigue en tus rutinas activas.
+            </p>
           </div>
         </div>
       )}

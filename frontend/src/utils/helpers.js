@@ -83,6 +83,144 @@ export function prPersonalEjercicio(sesiones = [], nombreEjercicio) {
   return mejor
 }
 
+// ---------- Coach por ejercicio (pantalla de pre-serie) ----------
+
+// Historial de un ejercicio puntual, un registro por sesión donde apareció,
+// ordenado de más viejo a más nuevo.
+function registrosEjercicio(sesiones = [], nombreEjercicio) {
+  return sesiones
+    .filter(s => (s.ejercicios || []).some(e => e.nombre === nombreEjercicio))
+    .map(s => {
+      const ej = s.ejercicios.find(e => e.nombre === nombreEjercicio)
+      const series = ej.series || []
+      const maxPeso = Math.max(0, ...series.map(set => Number(set.peso) || 0))
+      return { fecha: s.fecha, series, maxPeso }
+    })
+    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+}
+
+// Analiza el historial reciente de un ejercicio y devuelve UNA sola señal de
+// coach (la más relevante, según prioridad), o null si no hay nada para decir.
+// `ejercicio` es el objeto de la rutina: { nombre, series_objetivo, reps_objetivo }.
+export function analizarCoachEjercicio(sesiones = [], ejercicio) {
+  if (!ejercicio?.nombre) return null
+  const registros = registrosEjercicio(sesiones, ejercicio.nombre)
+  if (registros.length < 2) return null // no hay suficiente historial para comparar
+
+  const objetivoSeries = ejercicio.series_objetivo || 0
+  const objetivoReps = ejercicio.reps_objetivo || 0
+  const ultimos2 = registros.slice(-2)
+  const ultimos3 = registros.slice(-3)
+  const ultimos4 = registros.slice(-4)
+
+  const cumpleObjetivo = (r) =>
+    objetivoSeries > 0 && objetivoReps > 0 &&
+    r.series.length >= objetivoSeries &&
+    r.series.every(s => Number(s.reps) >= objetivoReps)
+
+  const firma = (r) => r.series.map(s => `${s.peso}x${s.reps}`).join(',')
+
+  // 1) Listo para subir peso: mismo peso y cumplió el objetivo de reps en las
+  //    últimas 2 sesiones seguidas.
+  if (
+    objetivoReps > 0 &&
+    ultimos2.length === 2 &&
+    ultimos2[0].maxPeso > 0 &&
+    ultimos2.every(r => r.maxPeso === ultimos2[0].maxPeso) &&
+    ultimos2.every(cumpleObjetivo)
+  ) {
+    return {
+      tipo: 'listo_subir',
+      icono: 'trending_up',
+      titulo: 'Listo para subir peso',
+      mensaje: `Cumpliste de sobra el objetivo de reps con ${formatKg(ultimos2[0].maxPeso)} kg las últimas ${ultimos2.length} veces. Probá subir la carga en esta sesión.`,
+    }
+  }
+
+  // 2) Repetición idéntica sin variación: mismo peso Y mismas reps exactas,
+  //    3 sesiones seguidas (ni siquiera una micro-variación).
+  if (ultimos3.length === 3) {
+    const primeraFirma = firma(ultimos3[0])
+    if (primeraFirma && ultimos3.every(r => firma(r) === primeraFirma) && ultimos3[0].maxPeso > 0) {
+      return {
+        tipo: 'repeticion_identica',
+        icono: 'repeat',
+        titulo: 'Siempre la misma carga',
+        mensaje: `Repetiste exactamente la misma carga y reps las últimas ${ultimos3.length} veces. Metele algo de variación: subí el peso, las reps, o probá una alternativa.`,
+      }
+    }
+  }
+
+  // 3) Estancamiento de peso: mismo peso máximo en las últimas 3 sesiones
+  //    (aunque las reps hayan variado un poco).
+  if (ultimos3.length === 3 && ultimos3[0].maxPeso > 0 && ultimos3.every(r => r.maxPeso === ultimos3[0].maxPeso)) {
+    return {
+      tipo: 'estancamiento',
+      icono: 'trending_flat',
+      titulo: 'Peso estancado',
+      mensaje: `Hace ${ultimos3.length} sesiones que hacés ${ejercicio.nombre} con ${formatKg(ultimos3[0].maxPeso)} kg. Probá subir un escalón la próxima serie.`,
+    }
+  }
+
+  // 4) Objetivo difícil: hace varias sesiones que no completás series/reps objetivo.
+  if (objetivoSeries > 0 && objetivoReps > 0 && ultimos4.length >= 3) {
+    const todasIncompletas = ultimos4.every(r => !cumpleObjetivo(r))
+    if (todasIncompletas) {
+      return {
+        tipo: 'objetivo_dificil',
+        icono: 'flag',
+        titulo: 'Objetivo difícil de alcanzar',
+        mensaje: `Hace ${ultimos4.length} sesiones que no completás ${objetivoSeries}×${objetivoReps} en este ejercicio. Puede convenir bajar un poco el objetivo o el peso.`,
+      }
+    }
+  }
+
+  // 5) Regresión: bajó el peso máximo respecto a la sesión inmediatamente anterior.
+  const masReciente = registros[registros.length - 1]
+  const anterior = registros[registros.length - 2]
+  if (masReciente.maxPeso > 0 && anterior.maxPeso > 0 && masReciente.maxPeso < anterior.maxPeso) {
+    return {
+      tipo: 'regresion',
+      icono: 'trending_down',
+      titulo: 'Bajaste un poco',
+      mensaje: `Bajaste de ${formatKg(anterior.maxPeso)} kg a ${formatKg(masReciente.maxPeso)} kg respecto a la sesión anterior. Puede ser una mala recuperación puntual, o fue a propósito — vos sabés.`,
+    }
+  }
+
+  return null
+}
+
+// ---------- Ejercicios abandonados (Home) ----------
+
+// Detecta ejercicios que forman parte de las rutinas activas del usuario pero
+// que hace más de `diasUmbral` días que no se registran en ninguna sesión.
+// Solo avisa sobre ejercicios que alguna vez se hicieron (si nunca se hizo,
+// no es "abandono", es que todavía no arrancó).
+export function ejerciciosAbandonados(sesiones = [], rutinas = [], diasUmbral = 14) {
+  const nombresEnRutinas = new Set()
+  rutinas.forEach(r => (r.ejercicios || []).forEach(e => nombresEnRutinas.add(e.nombre)))
+  if (nombresEnRutinas.size === 0) return []
+
+  const ultimaFechaPorEjercicio = {}
+  sesiones.forEach(s => (s.ejercicios || []).forEach(ej => {
+    const f = new Date(s.fecha)
+    if (!ultimaFechaPorEjercicio[ej.nombre] || f > ultimaFechaPorEjercicio[ej.nombre]) {
+      ultimaFechaPorEjercicio[ej.nombre] = f
+    }
+  }))
+
+  const hoy = new Date()
+  const resultado = []
+  nombresEnRutinas.forEach(nombre => {
+    const ultima = ultimaFechaPorEjercicio[nombre]
+    if (!ultima) return
+    const dias = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24))
+    if (dias >= diasUmbral) resultado.push({ nombre, dias })
+  })
+
+  return resultado.sort((a, b) => b.dias - a.dias)
+}
+
 const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 // Devuelve el volumen total levantado por cada día de la semana actual (lunes a domingo)

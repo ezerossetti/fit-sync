@@ -7,7 +7,7 @@ import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizado
 import { getExerciseInfo } from '../data/exerciseCatalog'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
-  volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana
+  volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio
 } from '../utils/helpers'
 
 const SALTOS_PESO = [1.25, 2.5, 5]
@@ -360,6 +360,7 @@ export default function EntrenamientoActivo() {
     const previo = ultimoRegistroEjercicio(historial, ejercicioActual.nombre)
     const pr = prPersonalEjercicio(historial, ejercicioActual.nombre)
     const info = getExerciseInfo(ejercicioActual.nombre, personalizados)
+    const coach = analizarCoachEjercicio(historial, ejercicioActual)
 
     return (
       <div>
@@ -404,6 +405,18 @@ export default function EntrenamientoActivo() {
           <p className="text-body-sm text-on-surface-variant mb-4 -mt-2">
             {previo.mejorSet.peso} kg × {previo.mejorSet.reps} reps · {formatFechaRelativa(previo.fecha)}
           </p>
+        )}
+
+        {coach && (
+          <div className={`card p-4 mb-4 flex gap-3 ${coach.tipo === 'listo_subir' ? 'border-success/40 bg-success-container/10' : 'border-accent/30 bg-accent/5'}`}>
+            <span className={`material-symbols-outlined text-[22px] shrink-0 ${coach.tipo === 'listo_subir' ? 'text-success' : 'text-accent'}`}>{coach.icono}</span>
+            <div>
+              <p className="text-body-sm font-semibold text-on-surface mb-0.5 flex items-center gap-1.5">
+                <span className="text-label-md text-accent uppercase tracking-wide">Coach</span> · {coach.titulo}
+              </p>
+              <p className="text-body-sm text-on-surface-variant">{coach.mensaje}</p>
+            </div>
+          </div>
         )}
 
         {info?.puntosClave?.length > 0 && (
