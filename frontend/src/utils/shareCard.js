@@ -6,6 +6,10 @@
 // No usamos el logo como imagen (evita líos de fondo/transparencia al
 // componer sobre el canvas): el wordmark se dibuja como texto en Space
 // Grotesk, que es como ya se ve la marca en el resto de la app.
+//
+// v2: versión más completa — suma racha, calorías, logros desbloqueados en
+// la sesión y el desglose de los ejercicios top por volumen, además del
+// resumen de siempre (volumen, series, PRs, gráfico semanal).
 
 import { formatKg, formatDuracion } from './helpers'
 
@@ -28,6 +32,19 @@ const COLORS = {
   success: '#1D9E75',
   successContainer: '#00291d',
   onSuccessContainer: '#68dbae',
+  gold: '#E3B341',
+  goldContainer: '#2b2210',
+}
+
+// Los logros usan nombres de Material Symbols (para la UI de React), pero acá
+// dibujamos sobre un <canvas> plano sin esa fuente de íconos cargada — así
+// que los traducimos a un emoji equivalente, nada más que para la tarjeta.
+const EMOJI_LOGRO = {
+  flag: '🚩', event_repeat: '📅', calendar_month: '🗓️', shield: '🛡️',
+  workspace_premium: '👑', local_fire_department: '🔥', whatshot: '🔥',
+  fitness_center: '🏋️', trophy: '🏆', schedule: '⏱️', explore: '🧭',
+  travel_explore: '🗺️', weekend: '🌴', wb_twilight: '🌅', bedtime: '🌙',
+  bolt: '⚡',
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -40,7 +57,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x + w, y + h, x + w - radius.br, y + h, radius.br)
   ctx.lineTo(x + radius.bl, y + h)
   ctx.arcTo(x, y + h, x, y + h - radius.bl, radius.bl)
-  ctx.lineTo(x, y + radius.tl)
+  ctx.lineTo(x + radius.tl, y)
   ctx.arcTo(x, y, x + radius.tl, y, radius.tl)
   ctx.closePath()
 }
@@ -68,13 +85,37 @@ function drawWordmark(ctx, x, y) {
   ctx.fillStyle = COLORS.accent
   ctx.font = '700 56px "Space Grotesk"'
   ctx.fillText('FitSync', x, y)
-  const wordmarkWidth = ctx.measureText('FitSync').width
 
   ctx.font = '600 22px "Plus Jakarta Sans"'
   ctx.fillStyle = COLORS.onSurfaceVariant
   ctx.fillText('TU FUERZA, EN DATOS', x, y + 38)
+}
 
-  return wordmarkWidth
+// Pill de racha, alineado al margen derecho, a la misma altura que el wordmark.
+function drawStreakChip(ctx, xRight, yBaseline, racha) {
+  if (!racha || racha < 1) return
+  const label = `${racha} ${racha === 1 ? 'día' : 'días'}`
+  ctx.font = '700 30px "Plus Jakarta Sans"'
+  const textW = ctx.measureText(`🔥 ${label}`).width
+  const padX = 24
+  const h = 56
+  const w = textW + padX * 2
+  const x = xRight - w
+  const y = yBaseline - h + 8
+
+  ctx.fillStyle = COLORS.goldContainer
+  roundRect(ctx, x, y, w, h, h / 2)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(227, 179, 65, 0.5)'
+  ctx.lineWidth = 2
+  roundRect(ctx, x, y, w, h, h / 2)
+  ctx.stroke()
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = COLORS.gold
+  ctx.fillText(`🔥 ${label}`, x + padX, y + h / 2 + 2)
+  ctx.textBaseline = 'alphabetic'
 }
 
 function wrapText(ctx, text, maxWidth) {
@@ -152,6 +193,93 @@ function drawWeeklyChart(ctx, x, y, w, h, semana) {
   })
 }
 
+// Tarjeta de "nuevos logros" desbloqueados en esta sesión (hasta 3, para no
+// saturar). Cada uno con su emoji equivalente + título corto.
+function drawAchievementsRow(ctx, x, y, w, logros) {
+  const items = logros.slice(0, 3)
+  const h = 168
+  ctx.fillStyle = COLORS.goldContainer
+  roundRect(ctx, x, y, w, h, 24)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(227, 179, 65, 0.35)'
+  ctx.lineWidth = 2
+  roundRect(ctx, x, y, w, h, 24)
+  ctx.stroke()
+
+  ctx.textAlign = 'left'
+  ctx.fillStyle = COLORS.gold
+  ctx.font = '700 26px "Plus Jakarta Sans"'
+  ctx.fillText(`🎉 ${items.length > 1 ? 'Nuevos logros' : 'Nuevo logro'}`, x + 32, y + 44)
+
+  const colW = (w - 64) / items.length
+  items.forEach((logro, i) => {
+    const cx = x + 32 + colW * i + colW / 2
+    ctx.textAlign = 'center'
+    ctx.font = '40px "Plus Jakarta Sans"'
+    ctx.fillStyle = COLORS.onSurface
+    ctx.fillText(EMOJI_LOGRO[logro.icono] || '🏅', cx, y + 104)
+
+    ctx.font = '600 20px "Plus Jakarta Sans"'
+    ctx.fillStyle = COLORS.onSurfaceVariant
+    const lineas = wrapText(ctx, logro.titulo, colW - 12).slice(0, 2)
+    lineas.forEach((linea, li) => {
+      ctx.fillText(linea, cx, y + 132 + li * 24)
+    })
+  })
+}
+
+// Desglose de los ejercicios con más volumen de la sesión, con una mini barra
+// proporcional al máximo — da contexto de "en qué se fue" el volumen total.
+function drawTopExercises(ctx, x, y, w, topEjercicios) {
+  const items = topEjercicios.slice(0, 3)
+  const rowH = 60
+  const headerH = 52
+  const h = headerH + items.length * rowH + 20
+
+  ctx.fillStyle = COLORS.surfaceContainer
+  roundRect(ctx, x, y, w, h, 24)
+  ctx.fill()
+  ctx.strokeStyle = COLORS.outlineVariant
+  ctx.lineWidth = 2
+  roundRect(ctx, x, y, w, h, 24)
+  ctx.stroke()
+
+  ctx.textAlign = 'left'
+  ctx.fillStyle = COLORS.onSurface
+  ctx.font = '600 26px "Plus Jakarta Sans"'
+  ctx.fillText('Desglose de la sesión', x + 36, y + 42)
+
+  const maxVol = Math.max(1, ...items.map(i => i.volumen))
+  const barMaxW = w - 72 - 220 // deja espacio al nombre (izq) y al valor (der)
+
+  items.forEach((ej, i) => {
+    const rowY = y + headerH + i * rowH + 14
+
+    ctx.font = '600 24px "Plus Jakarta Sans"'
+    ctx.fillStyle = COLORS.onSurface
+    const nombreTrunc = ctx.measureText(ej.nombre).width > 260
+      ? `${ej.nombre.slice(0, 24)}…`
+      : ej.nombre
+    ctx.fillText(nombreTrunc, x + 36, rowY)
+
+    // barra mini debajo del nombre
+    const barY = rowY + 12
+    const barW = Math.max(8, (ej.volumen / maxVol) * barMaxW)
+    ctx.fillStyle = COLORS.outlineVariant
+    roundRect(ctx, x + 36, barY, barMaxW, 8, 4)
+    ctx.fill()
+    ctx.fillStyle = COLORS.accent
+    roundRect(ctx, x + 36, barY, barW, 8, 4)
+    ctx.fill()
+
+    ctx.textAlign = 'right'
+    ctx.font = '700 24px "Plus Jakarta Sans"'
+    ctx.fillStyle = COLORS.accent
+    ctx.fillText(`${formatKg(ej.volumen)} kg`, x + w - 36, rowY)
+    ctx.textAlign = 'left'
+  })
+}
+
 /**
  * Dibuja la tarjeta de resumen sobre el canvas dado.
  * @param {HTMLCanvasElement} canvas
@@ -161,8 +289,12 @@ function drawWeeklyChart(ctx, x, y, w, h, semana) {
  *   volumenTotal: number,
  *   totalSeries: number,
  *   duracionMin: number,
+ *   calorias?: number,
+ *   racha?: number,
  *   prs: string[],
  *   semana: {label:string, volumen:number, esHoy:boolean}[],
+ *   topEjercicios?: {nombre:string, volumen:number}[],
+ *   logrosNuevos?: {titulo:string, icono:string}[],
  * }} data
  */
 export function dibujarTarjetaResumen(canvas, data) {
@@ -172,8 +304,12 @@ export function dibujarTarjetaResumen(canvas, data) {
     volumenTotal = 0,
     totalSeries = 0,
     duracionMin = 0,
+    calorias = null,
+    racha = 0,
     prs = [],
     semana = [],
+    topEjercicios = [],
+    logrosNuevos = [],
   } = data
 
   canvas.width = W
@@ -186,6 +322,7 @@ export function dibujarTarjetaResumen(canvas, data) {
   let cursorY = 140
 
   drawWordmark(ctx, marginX, cursorY)
+  drawStreakChip(ctx, W - marginX, cursorY, racha)
   cursorY += 130
 
   // Encabezado: check de sesión completada
@@ -227,9 +364,9 @@ export function dibujarTarjetaResumen(canvas, data) {
       ? `🏅 Nuevo récord en ${prs[0]}`
       : `🏅 Nuevos récords: ${prs.slice(0, 2).join(', ')}${prs.length > 2 ? ` +${prs.length - 2}` : ''}`
     ctx.fillText(prText, marginX + 28, cursorY + badgeH / 2 + 9)
-    cursorY += badgeH + 40
+    cursorY += badgeH + 32
   } else {
-    cursorY += 30
+    cursorY += 20
   }
 
   // Stats principales: volumen total + series
@@ -239,18 +376,33 @@ export function dibujarTarjetaResumen(canvas, data) {
   drawStatCard(ctx, marginX + statW + 24, cursorY, statW, statH, { value: totalSeries, unit: '', label: 'Series totales' })
   cursorY += statH + 24
 
-  // Duración
+  // Mini stats secundarias: duración + calorías
   ctx.textAlign = 'center'
   ctx.font = '600 26px "Plus Jakarta Sans"'
   ctx.fillStyle = COLORS.onSurfaceVariant
-  ctx.fillText(`Duración: ${formatDuracion(duracionMin)}`, W / 2, cursorY + 10)
-  cursorY += 64
+  const calText = calorias != null ? ` · ~${Math.round(calorias)} kcal estimadas` : ''
+  ctx.fillText(`Duración: ${formatDuracion(duracionMin)}${calText}`, W / 2, cursorY + 10)
+  cursorY += 56
 
   // Gráfico semanal
   if (semana.length > 0) {
     const chartH = 320
     drawWeeklyChart(ctx, marginX, cursorY, W - marginX * 2, chartH, semana)
-    cursorY += chartH + 40
+    cursorY += chartH + 32
+  }
+
+  // Logros nuevos desbloqueados en esta sesión
+  if (logrosNuevos.length > 0) {
+    drawAchievementsRow(ctx, marginX, cursorY, W - marginX * 2, logrosNuevos)
+    cursorY += 168 + 32
+  }
+
+  // Desglose de ejercicios top por volumen
+  if (topEjercicios.length > 0) {
+    const items = Math.min(3, topEjercicios.length)
+    const blockH = 52 + items * 60 + 20
+    drawTopExercises(ctx, marginX, cursorY, W - marginX * 2, topEjercicios)
+    cursorY += blockH + 32
   }
 
   // Footer

@@ -410,6 +410,44 @@ export function calcularRachaDetalle(sesiones = []) {
   return { racha, huboGracia: racha > 0 && huboGracia }
 }
 
+// Racha más larga registrada en TODA la historia (no solo la actual). A
+// diferencia de calcularRacha (que se corta si hoy no entrenaste todavía),
+// esto mira todo el historial de fechas y busca la corrida consecutiva más
+// larga — útil para logros, que una vez conseguidos no deberían "perderse"
+// solo porque la racha actual se cortó.
+export function calcularRachaMaxima(sesiones = []) {
+  if (!sesiones.length) return 0
+  const dias = Array.from(new Set(sesiones.map(s => new Date(s.fecha).setHours(0, 0, 0, 0))))
+    .sort((a, b) => a - b)
+
+  let mejor = 1
+  let actual = 1
+  for (let i = 1; i < dias.length; i++) {
+    const diffDias = Math.round((dias[i] - dias[i - 1]) / (1000 * 60 * 60 * 24))
+    if (diffDias === 1) {
+      actual += 1
+      mejor = Math.max(mejor, actual)
+    } else if (diffDias > 1) {
+      actual = 1
+    }
+  }
+  return mejor
+}
+
+// Top N ejercicios de una sesión puntual, ordenados por volumen descendente
+// (peso x reps sumado de todas sus series). Se usa en la tarjeta compartible
+// para mostrar el desglose de "qué se entrenó" sin listar todo.
+export function topEjerciciosPorVolumen(ejercicios = [], n = 3) {
+  return ejercicios
+    .map(ej => ({
+      nombre: ej.nombre,
+      volumen: (ej.series || []).reduce((acc, s) => acc + (Number(s.peso) || 0) * (Number(s.reps) || 0), 0),
+      series: (ej.series || []).length,
+    }))
+    .sort((a, b) => b.volumen - a.volumen)
+    .slice(0, n)
+}
+
 // Volumen total levantado en toda la vida del usuario (todas las sesiones)
 export function volumenTotalHistorico(sesiones = []) {
   return sesiones.reduce((acc, s) => acc + Number(s.volumen_total ?? volumenSesion(s.ejercicios)), 0)

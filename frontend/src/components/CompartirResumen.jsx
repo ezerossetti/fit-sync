@@ -5,7 +5,10 @@ import { dibujarTarjetaResumen, esperarFuentes } from '../utils/shareCard'
 // similares). Renderiza a canvas offscreen, muestra una preview en un modal
 // y comparte vía Web Share API (con archivo) si el navegador lo soporta;
 // si no, cae a descarga directa del PNG.
-export default function CompartirResumen({ rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana }) {
+export default function CompartirResumen({
+  rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana,
+  calorias, racha, topEjercicios, logrosNuevos,
+}) {
   const [abierto, setAbierto] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [generando, setGenerando] = useState(false)
@@ -13,7 +16,10 @@ export default function CompartirResumen({ rutinaNombre, fecha, volumenTotal, to
   const canvasRef = useRef(null)
   const blobRef = useRef(null)
 
-  const datosTarjeta = { rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana }
+  const datosTarjeta = {
+    rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana,
+    calorias, racha, topEjercicios, logrosNuevos,
+  }
 
   const puedeCompartirArchivos = typeof navigator !== 'undefined'
     && typeof navigator.canShare === 'function'

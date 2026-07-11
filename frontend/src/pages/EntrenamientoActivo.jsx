@@ -11,8 +11,9 @@ import CompartirResumen from '../components/CompartirResumen'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
-  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion
+  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaDetalle, topEjerciciosPorVolumen
 } from '../utils/helpers'
+import { logrosNuevos as calcularLogrosNuevos, NIVEL_COLOR } from '../data/achievements'
 import { guardarBorrador, leerBorrador, borrarBorrador, guardarSesionPendiente } from '../utils/sesionDraft'
 
 const RPE_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -565,17 +566,27 @@ export default function EntrenamientoActivo() {
               const hechos = sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0
               const objetivo = ej.series_objetivo || 0
               const completo = objetivo > 0 && hechos >= objetivo
+              // Quick win: mostramos la señal del coach acá también (antes de
+              // arrancar), no solo en la pantalla de pre-serie — así el
+              // usuario ya sabe qué esperar antes de tocar el ejercicio.
+              const coachHint = analizarCoachEjercicio(historial, ej)
               return (
                 <button key={i} onClick={() => elegirEjercicio(ej)} className="w-full card p-4 flex items-center justify-between text-left">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-accent">fitness_center</span>
-                    <div>
-                      <p className="text-body-md font-semibold text-on-surface">{ej.nombre}</p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="material-symbols-outlined text-accent shrink-0">fitness_center</span>
+                    <div className="min-w-0">
+                      <p className="text-body-md font-semibold text-on-surface truncate">{ej.nombre}</p>
                       <p className="text-label-md text-on-surface-variant">Objetivo: {ej.series_objetivo}×{ej.reps_objetivo}</p>
+                      {coachHint && (
+                        <p className={`text-label-md flex items-center gap-1 mt-0.5 ${coachHint.tipo === 'listo_subir' ? 'text-success' : 'text-accent'}`}>
+                          <span className="material-symbols-outlined text-[13px]">{coachHint.icono}</span>
+                          {coachHint.titulo}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {hechos > 0 && (
-                    <span className={`text-label-md px-2 py-1 rounded-full ${completo ? 'text-success bg-success-container' : 'text-accent bg-accent/15'}`}>
+                    <span className={`text-label-md px-2 py-1 rounded-full shrink-0 ${completo ? 'text-success bg-success-container' : 'text-accent bg-accent/15'}`}>
                       {completo ? 'Completo ✓' : `${hechos}/${objetivo || '—'}`}
                     </span>
                   )}
@@ -801,6 +812,10 @@ export default function EntrenamientoActivo() {
 
     const semana = volumenPorDiaSemana(historial, ultimaSesionGuardada)
     const maxSemana = Math.max(1, ...semana.map(d => d.volumen))
+    const { racha: rachaActual } = calcularRachaDetalle([...historial, ultimaSesionGuardada].filter(Boolean))
+    const calorias = ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg)
+    const topEjercicios = topEjerciciosPorVolumen(sesionEjercicios, 3)
+    const logrosDeEstaSesion = calcularLogrosNuevos(historial, ultimaSesionGuardada)
 
     return (
       <div>
@@ -849,6 +864,23 @@ export default function EntrenamientoActivo() {
           {' · '}~{ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg)} kcal estimadas
         </p>
 
+        {logrosDeEstaSesion.length > 0 && (
+          <div className="card p-4 mb-5 border-[#E3B341]/40" style={{ background: 'rgba(227, 179, 65, 0.08)' }}>
+            <p className="text-body-sm font-semibold mb-3 flex items-center gap-1.5" style={{ color: '#E3B341' }}>
+              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>celebration</span>
+              {logrosDeEstaSesion.length > 1 ? 'Nuevos logros desbloqueados' : 'Nuevo logro desbloqueado'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {logrosDeEstaSesion.map(l => (
+                <div key={l.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-container-high">
+                  <span className="material-symbols-outlined text-[18px]" style={{ color: NIVEL_COLOR[l.nivel] }}>{l.icono}</span>
+                  <span className="text-body-sm text-on-surface">{l.titulo}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mb-6">
           <CompartirResumen
             rutinaNombre={rutina?.nombre || 'Sesión libre'}
@@ -858,6 +890,10 @@ export default function EntrenamientoActivo() {
             duracionMin={ultimaSesionGuardada?.duracion_min || 0}
             prs={pbs.map(p => p.nombre)}
             semana={semana}
+            calorias={calorias}
+            racha={rachaActual}
+            topEjercicios={topEjercicios}
+            logrosNuevos={logrosDeEstaSesion}
           />
         </div>
 

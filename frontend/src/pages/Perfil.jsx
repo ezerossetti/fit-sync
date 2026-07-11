@@ -7,8 +7,10 @@ import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizado
 import { pushNotifications } from '../utils/pushNotifications'
 import {
   calcularRachaDetalle, volumenTotalHistorico, sesionesCompletadas,
-  horasActivasTotales, recordsPersonalesTotal, nivelPorSesiones, formatKg, formatTimer
+  horasActivasTotales, recordsPersonalesTotal, nivelPorSesiones, formatKg, formatTimer,
+  volumenPorSemana
 } from '../utils/helpers'
+import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
 
 const PRESETS_DESCANSO = [30, 60, 90, 120, 180]
 
@@ -175,6 +177,11 @@ export default function Perfil() {
   const horas = horasActivasTotales(historial)
   const prs = recordsPersonalesTotal(historial)
   const nivel = nivelPorSesiones(completados)
+  const logros = calcularLogros(historial)
+  const logrosDesbloqueados = logros.filter(l => l.desbloqueado)
+  const tendenciaSemanal = volumenPorSemana(historial, 6)
+  const maxTendencia = Math.max(1, ...tendenciaSemanal.map(s => s.volumen))
+  const [mostrarTodosLosLogros, setMostrarTodosLosLogros] = useState(false)
 
   if (loading) {
     return <p className="text-body-sm text-on-surface-variant">Cargando perfil...</p>
@@ -261,6 +268,74 @@ export default function Perfil() {
           <p className="text-label-md text-on-surface-variant">Superados en total</p>
         </div>
       </div>
+
+      {/* Quick win: tendencia de volumen semanal (últimas 6 semanas) — más
+          útil que el heatmap solo para ver si estás progresando mes a mes,
+          usando volumenPorSemana() que ya estaba calculado pero sin pantalla. */}
+      <div className="card p-4 mb-6">
+        <p className="text-body-sm font-semibold text-on-surface mb-3">Tendencia de volumen (últimas 6 semanas)</p>
+        {tendenciaSemanal.every(s => s.volumen === 0) ? (
+          <p className="text-label-md text-on-surface-variant">Todavía no hay suficientes semanas entrenadas para mostrar una tendencia.</p>
+        ) : (
+          <div className="flex items-end justify-between gap-2 h-28">
+            {tendenciaSemanal.map((s, i) => {
+              const esUltima = i === tendenciaSemanal.length - 1
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                  <div
+                    className={`w-full rounded-t-md ${esUltima ? 'bg-accent' : 'bg-primary-container'}`}
+                    style={{ height: `${Math.max(4, (s.volumen / maxTendencia) * 100)}%` }}
+                    title={`${formatKg(s.volumen)} kg`}
+                  />
+                  <span className={`text-label-md mt-1 ${esUltima ? 'text-accent' : 'text-on-surface-variant'}`}>
+                    {s.inicio.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Logros */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-accent text-[20px]">military_tech</span>
+          <h2 className="text-body-md font-semibold text-on-surface">Logros</h2>
+        </div>
+        <span className="text-label-md text-on-surface-variant">{logrosDesbloqueados.length}/{logros.length}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        {(mostrarTodosLosLogros ? logros : logros.slice(0, 9)).map(l => (
+          <div
+            key={l.id}
+            className={`card p-3 flex flex-col items-center text-center gap-1 ${l.desbloqueado ? '' : 'opacity-45'}`}
+            title={l.descripcion}
+          >
+            <span
+              className="material-symbols-outlined text-[26px]"
+              style={{ color: l.desbloqueado ? NIVEL_COLOR[l.nivel] : '#c4c6d2', fontVariationSettings: l.desbloqueado ? "'FILL' 1" : "'FILL' 0" }}
+            >
+              {l.icono}
+            </span>
+            <p className="text-label-md text-on-surface leading-tight">{l.titulo}</p>
+            {!l.desbloqueado && (
+              <div className="w-full h-1 rounded-full bg-surface-container-high overflow-hidden mt-0.5">
+                <div className="h-full bg-accent/60" style={{ width: `${Math.round(l.progreso * 100)}%` }} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {logros.length > 9 && (
+        <button
+          onClick={() => setMostrarTodosLosLogros(v => !v)}
+          className="w-full py-2 text-body-sm text-accent mb-6"
+        >
+          {mostrarTodosLosLogros ? 'Ver menos' : `Ver los ${logros.length - 9} logros restantes`}
+        </button>
+      )}
+      {logros.length <= 9 && <div className="mb-6" />}
 
       {/* Preferencias */}
       <div className="flex items-center gap-2 mb-3">
