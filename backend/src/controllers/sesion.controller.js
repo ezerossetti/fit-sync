@@ -52,11 +52,14 @@ export const sesionController = {
       const usuarioId = req.params.usuarioId;
       const { fecha, rutina_id, rutina_nombre, ejercicios, volumen_total, duracion_min, completada, notas, calorias_estimadas } = req.body;
 
-      // Validaciones básicas
-      if (!fecha || !rutina_id || !rutina_nombre) {
+      // Validaciones básicas.
+      // rutina_id es opcional: una "Sesión libre" (sin rutina precargada, ej.
+      // cuando el entrenador da los ejercicios sobre la marcha) no tiene rutina
+      // asociada. rutina_nombre sí es obligatorio (cae a 'Sesión libre' desde el front).
+      if (!fecha || !rutina_nombre) {
         return res.status(400).json({
           success: false,
-          message: 'Faltan campos obligatorios: fecha, rutina_id, rutina_nombre'
+          message: 'Faltan campos obligatorios: fecha, rutina_nombre'
         });
       }
 

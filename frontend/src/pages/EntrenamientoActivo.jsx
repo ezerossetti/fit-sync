@@ -4,7 +4,7 @@ import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
-import { getExerciseInfo } from '../data/exerciseCatalog'
+import { getExerciseInfo, searchExercises } from '../data/exerciseCatalog'
 import ExerciseMedia from '../components/ExerciseMedia'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
@@ -162,6 +162,10 @@ export default function EntrenamientoActivo() {
   const [guardando, setGuardando] = useState(false)
   const [ultimaSesionGuardada, setUltimaSesionGuardada] = useState(null)
   const [notas, setNotas] = useState('')
+  const [busquedaEjercicio, setBusquedaEjercicio] = useState('')
+  const [nombreRutinaNueva, setNombreRutinaNueva] = useState('')
+  const [guardandoRutina, setGuardandoRutina] = useState(false)
+  const [rutinaGuardadaOk, setRutinaGuardadaOk] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -265,8 +269,12 @@ export default function EntrenamientoActivo() {
 
     setRpe(null)
 
-    const objetivo = ejercicioActual.series_objetivo || 3
-    if (nuevoConteo >= objetivo) {
+    // En sesión libre (sin rutina, ej. cuando el entrenador da los ejercicios
+    // sobre la marcha) no hay objetivo de series predefinido: no cortamos
+    // automáticamente, ella vuelve a "Ejercicios" cuando quiera con el botón
+    // de atrás. Con rutina, mantenemos el default de 3.
+    const objetivo = ejercicioActual.series_objetivo || (rutina ? 3 : null)
+    if (objetivo && nuevoConteo >= objetivo) {
       setDescansando(false)
       setSegundosDescanso(0)
       setStep('select-ejercicio')
@@ -289,6 +297,38 @@ export default function EntrenamientoActivo() {
   }
 
   const volverASeleccionEjercicio = () => setStep('select-ejercicio')
+
+  // Convierte lo que se hizo en una sesión libre en una rutina reutilizable:
+  // series_objetivo = cuántas series se hicieron realmente de cada ejercicio,
+  // reps_objetivo = las reps de la última serie (la carga "de trabajo" ya asentada).
+  const guardarComoRutina = async () => {
+    if (!nombreRutinaNueva.trim() || sesionEjercicios.length === 0) return
+    setGuardandoRutina(true)
+    try {
+      const ejerciciosRutina = sesionEjercicios.map(ej => {
+        const info = getExerciseInfo(ej.nombre, personalizados)
+        const ultimaSerie = ej.series[ej.series.length - 1]
+        return {
+          nombre: ej.nombre,
+          grupo: info?.grupo || 'Personalizado',
+          series_objetivo: ej.series.length,
+          reps_objetivo: ultimaSerie?.reps || 8,
+        }
+      })
+      await rutinasService.create({
+        nombre: nombreRutinaNueva.trim(),
+        descripcion: 'Generada desde una sesión libre',
+        ejercicios: ejerciciosRutina,
+        activa: true,
+      })
+      setRutinaGuardadaOk(true)
+    } catch (e) {
+      console.error(e)
+      alert('No se pudo guardar la rutina. Revisá la conexión con el backend.')
+    } finally {
+      setGuardandoRutina(false)
+    }
+  }
 
   const finalizarSesion = async () => {
     setGuardando(true)
@@ -327,7 +367,23 @@ export default function EntrenamientoActivo() {
     return (
       <div>
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Entrenar</h1>
-        <p className="text-body-sm text-on-surface-variant mb-5">Elegí la rutina de hoy.</p>
+        <p className="text-body-sm text-on-surface-variant mb-5">¿Cómo vas a entrenar hoy?</p>
+
+        <button
+          onClick={() => { setRutina(null); setStep('select-ejercicio') }}
+          className="w-full card p-4 flex items-center justify-between text-left mb-5 border-accent/40 bg-accent/5"
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-accent">bolt</span>
+            <div>
+              <p className="text-body-md font-semibold text-on-surface">Sesión libre</p>
+              <p className="text-label-md text-on-surface-variant">Sin rutina armada. Vas cargando cada ejercicio a medida que te lo dan.</p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-accent">chevron_right</span>
+        </button>
+
+        <p className="text-label-md text-on-surface-variant uppercase mb-2">Con rutina cargada</p>
         {rutinas.length === 0 ? (
           <div className="card p-6 text-center">
             <p className="text-body-md text-on-surface mb-1">Todavía no tenés rutinas</p>
@@ -345,6 +401,91 @@ export default function EntrenamientoActivo() {
               </button>
             ))}
           </div>
+        )}
+      </div>
+    )
+  }
+
+  if (step === 'select-ejercicio' && !rutina) {
+    // Sesión libre: no hay lista fija de ejercicios. Se buscan en el catálogo
+    // (o se cargan como texto libre si el entrenador usa un nombre que no está
+    // catalogado) y se van agregando a medida que se los dan, uno por uno.
+    const resultados = searchExercises(busquedaEjercicio, personalizados)
+    const nombreExacto = busquedaEjercicio.trim()
+    const yaExisteExacto = resultados.some(e => e.nombre.toLowerCase() === nombreExacto.toLowerCase())
+
+    return (
+      <div>
+        <button onClick={() => setStep('select-rutina')} className="flex items-center gap-1 text-accent text-body-sm mb-4">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span> Cambiar modo
+        </button>
+        <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Sesión libre</h1>
+        <p className="text-body-sm text-on-surface-variant mb-4">Buscá el ejercicio que te acaban de dar y registralo.</p>
+
+        <div className="relative mb-3">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+          <input
+            type="text"
+            className="input-field pl-10"
+            placeholder="Ej: press banca, deadlift, remo..."
+            value={busquedaEjercicio}
+            onChange={(e) => setBusquedaEjercicio(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2 mb-6">
+          {resultados.slice(0, 8).map((ej, i) => (
+            <button key={i} onClick={() => { elegirEjercicio(ej); setBusquedaEjercicio('') }} className="w-full card p-4 flex items-center justify-between text-left">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-accent">fitness_center</span>
+                <div>
+                  <p className="text-body-md font-semibold text-on-surface">{ej.nombre}</p>
+                  <p className="text-label-md text-on-surface-variant">{ej.grupo || 'Personalizado'}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-accent">chevron_right</span>
+            </button>
+          ))}
+
+          {nombreExacto && !yaExisteExacto && (
+            <button
+              onClick={() => { elegirEjercicio({ nombre: nombreExacto }); setBusquedaEjercicio('') }}
+              className="w-full card p-4 flex items-center gap-3 text-left border-dashed"
+            >
+              <span className="material-symbols-outlined text-accent">add_circle</span>
+              <p className="text-body-md text-on-surface">Agregar "<span className="font-semibold">{nombreExacto}</span>" como ejercicio nuevo</p>
+            </button>
+          )}
+        </div>
+
+        {sesionEjercicios.length > 0 && (
+          <>
+            <p className="text-label-md text-on-surface-variant uppercase mb-2">Ya cargado en esta sesión</p>
+            <div className="space-y-2 mb-6">
+              {sesionEjercicios.map((ej, i) => (
+                <button key={i} onClick={() => elegirEjercicio({ nombre: ej.nombre })} className="w-full card p-3 flex items-center justify-between text-left">
+                  <p className="text-body-sm font-semibold text-on-surface">{ej.nombre}</p>
+                  <span className="text-label-md text-accent bg-accent/15 px-2 py-1 rounded-full">
+                    {ej.series.length} serie{ej.series.length > 1 ? 's' : ''} · agregar otra
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-3">
+              <label className="text-label-md text-on-surface-variant uppercase">Notas de la sesión (opcional)</label>
+              <textarea
+                className="input-field mt-1"
+                rows={2}
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Ej: buena energía hoy, probé agarre más ancho en press..."
+              />
+            </div>
+            <button onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
+              {guardando ? 'Guardando...' : 'Finalizar sesión'}
+            </button>
+          </>
         )}
       </div>
     )
@@ -649,6 +790,38 @@ export default function EntrenamientoActivo() {
             ))}
           </div>
         </div>
+
+        {!rutina && sesionEjercicios.length > 0 && (
+          <div className="card p-4 mb-6">
+            {rutinaGuardadaOk ? (
+              <p className="text-body-sm text-success flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                Rutina "{nombreRutinaNueva.trim()}" guardada. Ya la vas a ver en Rutinas.
+              </p>
+            ) : (
+              <>
+                <p className="text-body-sm font-semibold text-on-surface mb-1">¿Guardar estos ejercicios como rutina?</p>
+                <p className="text-label-md text-on-surface-variant mb-3">Opcional. La próxima vez que te den los mismos ejercicios, la vas a tener ya armada.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="input-field flex-1"
+                    placeholder="Nombre de la rutina"
+                    value={nombreRutinaNueva}
+                    onChange={(e) => setNombreRutinaNueva(e.target.value)}
+                  />
+                  <button
+                    onClick={guardarComoRutina}
+                    disabled={guardandoRutina || !nombreRutinaNueva.trim()}
+                    className="btn-primary px-4 py-2 text-body-sm shrink-0 disabled:opacity-50"
+                  >
+                    {guardandoRutina ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <button
           onClick={() => navigate('/')}
