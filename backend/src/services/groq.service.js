@@ -2,10 +2,17 @@
 // La API key es gratuita: se saca en https://console.groq.com/keys
 // y se guarda en el .env del backend como GROQ_API_KEY (nunca se manda al frontend).
 
+// Dos modelos, según cuánta "inteligencia" necesita cada modo:
+// - GROQ_MODEL_LIGERO: para todo lo conversacional (chat, comentarios, resúmenes,
+//   sugerencias, técnica). Free tier: 30 RPM / 14.400 RPD / mucho más TPD que el 120b.
+//   Es el que se usa todo el tiempo, así que necesita el límite más generoso.
+// - GROQ_MODEL_RUTINA: solo para generar_rutina, que exige devolver un JSON
+//   estricto con nombres de ejercicios exactos — ahí conviene el modelo más
+//   grande. Se usa poco (es una acción puntual, no conversación), así que su
+//   límite más chico (1.000 RPD / 200K TPD) alcanza de sobra.
 // Modelo actualizado: Groq deprecó llama-3.3-70b-versatile el 17/6/2026.
-// openai/gpt-oss-120b es el reemplazo recomendado por Groq (mejor rendimiento,
-// inferencia más rápida). Ver https://console.groq.com/docs/deprecations
-const GROQ_MODEL = 'openai/gpt-oss-120b';
+const GROQ_MODEL_LIGERO = 'llama-3.1-8b-instant';
+const GROQ_MODEL_RUTINA = 'openai/gpt-oss-120b';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Instrucciones de sistema por tipo de interacción. Todas comparten la misma
@@ -98,13 +105,13 @@ Devolvé solo el texto de la notificación, sin comillas ni prefijos.`,
 // tiene que ser. generar_rutina necesita más tokens (es un JSON con varios
 // ejercicios) y menos temperatura (queremos formato consistente, no creatividad).
 const MODOS_CONFIG = {
-  chat: { maxTokens: 650, temperature: 0.35 },
-  comentario_sesion: { maxTokens: 650, temperature: 0.35 },
-  resumen: { maxTokens: 650, temperature: 0.35 },
-  sugerir_ejercicios: { maxTokens: 650, temperature: 0.35 },
-  analisis_tecnica: { maxTokens: 400, temperature: 0.35 },
-  generar_rutina: { maxTokens: 1400, temperature: 0.25, json: true },
-  chequeo_inactividad: { maxTokens: 120, temperature: 0.4 },
+  chat: { maxTokens: 650, temperature: 0.35, model: GROQ_MODEL_LIGERO },
+  comentario_sesion: { maxTokens: 650, temperature: 0.35, model: GROQ_MODEL_LIGERO },
+  resumen: { maxTokens: 650, temperature: 0.35, model: GROQ_MODEL_LIGERO },
+  sugerir_ejercicios: { maxTokens: 650, temperature: 0.35, model: GROQ_MODEL_LIGERO },
+  analisis_tecnica: { maxTokens: 400, temperature: 0.35, model: GROQ_MODEL_LIGERO },
+  generar_rutina: { maxTokens: 1400, temperature: 0.25, json: true, model: GROQ_MODEL_RUTINA },
+  chequeo_inactividad: { maxTokens: 120, temperature: 0.4, model: GROQ_MODEL_LIGERO },
 };
 
 /**
@@ -142,7 +149,7 @@ export const groqService = {
     messages.push({ role: 'user', content: textoFinal });
 
     const body = {
-      model: GROQ_MODEL,
+      model: config.model || GROQ_MODEL_LIGERO,
       messages,
       temperature: config.temperature,
       max_tokens: config.maxTokens,
@@ -150,6 +157,8 @@ export const groqService = {
       // el presupuesto de tokens "pensando" antes de escribir la respuesta final,
       // sobre todo en modos con maxTokens chico (analisis_tecnica, chequeo_inactividad).
       // 'low' alcanza de sobra para estas respuestas cortas y estructuradas.
+      // (llama-3.1-8b-instant ignora este parámetro sin romperse: no es un modelo
+      // de razonamiento, así que no hace falta condicionarlo por modo.)
       reasoning_effort: 'low',
     };
 
@@ -171,7 +180,16 @@ export const groqService = {
 
     if (!resp.ok) {
       const errText = await resp.text();
-      throw new Error(`Error de Groq (${resp.status}): ${errText}`);
+      const error = new Error(`Error de Groq (${resp.status}): ${errText}`);
+      error.status = resp.status;
+      // Cuando Groq corta por límite de la cuota gratis (429), el controller
+      // necesita distinguir esto de un error real para mostrarle al usuario
+      // un mensaje de "probá en unos minutos" en vez de un error genérico.
+      if (resp.status === 429) {
+        const retryAfter = resp.headers.get('retry-after');
+        error.retryAfterSeconds = retryAfter ? Number(retryAfter) : null;
+      }
+      throw error;
     }
 
     const data = await resp.json();

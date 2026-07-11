@@ -15,6 +15,17 @@ import {
 
 const OBJETIVOS_RUTINA = ['Hipertrofia', 'Fuerza', 'Resistencia', 'General']
 
+// El backend marca rateLimited: true cuando Groq corta por límite de la IA
+// gratuita (429). En ese caso mostramos un mensaje específico en vez del
+// genérico "no se pudo conectar" — no es una falla, es que se está usando
+// mucho el coach en este momento.
+const mensajeError = (err, fallback) => {
+  if (err?.response?.status === 429 || err?.response?.data?.rateLimited) {
+    return 'El coach está muy pedido ahora mismo (se usó mucho hoy). Probá de nuevo en unos minutos.'
+  }
+  return fallback
+}
+
 // Widget flotante: un botón (FAB) que abre un panel de chat con el coach IA.
 // Se monta una sola vez en App.jsx, así queda disponible en toda la app.
 export default function CoachChat() {
@@ -83,7 +94,7 @@ export default function CoachChat() {
       const { respuesta } = await coachService.chat(texto, contexto)
       setMensajes((prev) => [...prev, { rol: 'model', contenido: respuesta }])
     } catch (err) {
-      setError('No se pudo conectar con el coach. Probá de nuevo en un momento.')
+      setError(mensajeError(err, 'No se pudo conectar con el coach. Probá de nuevo en un momento.'))
     } finally {
       setCargando(false)
     }
@@ -119,7 +130,7 @@ export default function CoachChat() {
         setMensajes((prev) => [...prev, { rol: 'model', contenido: resumen }])
       }
     } catch (err) {
-      setError('No se pudo generar eso ahora. Probá de nuevo en un momento.')
+      setError(mensajeError(err, 'No se pudo generar eso ahora. Probá de nuevo en un momento.'))
     } finally {
       setCargando(false)
     }
@@ -166,7 +177,7 @@ export default function CoachChat() {
       setMensajes((prev) => [...prev, { rol: 'model', contenido: analisis }])
       setTecnicaDescripcion('')
     } catch (err) {
-      setError('No se pudo analizar la técnica ahora. Probá de nuevo en un momento.')
+      setError(mensajeError(err, 'No se pudo analizar la técnica ahora. Probá de nuevo en un momento.'))
     } finally {
       setCargando(false)
     }
@@ -222,7 +233,7 @@ export default function CoachChat() {
         },
       ])
     } catch (err) {
-      setError('No se pudo generar la rutina ahora. Probá de nuevo en un momento.')
+      setError(mensajeError(err, 'No se pudo generar la rutina ahora. Probá de nuevo en un momento.'))
     } finally {
       setCargando(false)
     }

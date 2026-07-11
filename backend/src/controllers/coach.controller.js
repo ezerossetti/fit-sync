@@ -1,6 +1,31 @@
 import { groqService } from '../services/groq.service.js';
 import { coachModel } from '../models/coach.model.js';
 
+// Cuántos turnos de historial se le mandan a Groq como contexto de la
+// conversación. OJO: esto NO es cuánto se guarda en la base (eso sigue
+// siendo ilimitado, para poder mostrar el chat completo al abrir el
+// widget) — es cuánto se re-manda en cada mensaje nuevo. Con conversaciones
+// largas, mandar todo el historial completo cada vez infla el consumo de
+// tokens por día de forma innecesaria; 8 turnos alcanzan para que el coach
+// no repita lo que ya dijo, sin gastar de más.
+const TURNOS_HISTORIAL_PARA_CONTEXTO = 8;
+
+// Distingue un 429 de Groq (se acabó la cuota gratis del día/minuto) de un
+// error real, para no mostrarle al usuario un mensaje de "algo se rompió"
+// cuando en realidad es "hay mucha gente usando el coach ahora mismo".
+const manejarErrorCoach = (error, res, mensajeGenerico) => {
+  if (error?.status === 429) {
+    return res.status(429).json({
+      success: false,
+      rateLimited: true,
+      message: 'El coach está muy pedido ahora mismo (límite de la IA gratuita). Probá de nuevo en unos minutos.',
+      retryAfterSeconds: error.retryAfterSeconds ?? null,
+    });
+  }
+  console.error(mensajeGenerico, error);
+  res.status(500).json({ success: false, message: mensajeGenerico, error: error.message });
+};
+
 export const coachController = {
   // Chat libre. Body: { mensaje, contexto }
   chat: async (req, res) => {
@@ -13,11 +38,14 @@ export const coachController = {
       }
 
       const historial = await coachModel.obtenerHistorialChat(usuarioId, 20);
+      // Al modelo solo le mandamos los últimos N turnos (no los 20 que
+      // guardamos para pintar el historial completo en la UI).
+      const historialParaContexto = historial.slice(-TURNOS_HISTORIAL_PARA_CONTEXTO);
 
       const respuesta = await groqService.generarRespuesta('chat', {
         contextoJSON: JSON.stringify(contexto || {}),
         mensajeUsuario: mensaje,
-        historial: historial.map((h) => ({ rol: h.rol, contenido: h.contenido })),
+        historial: historialParaContexto.map((h) => ({ rol: h.rol, contenido: h.contenido })),
       });
 
       // Persistimos ambos turnos para mantener memoria de la conversación
@@ -26,7 +54,7 @@ export const coachController = {
 
       res.status(200).json({ success: true, data: { respuesta } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error en el chat del coach', error: error.message });
+      manejarErrorCoach(error, res, 'Error en el chat del coach');
     }
   },
 
@@ -57,7 +85,7 @@ export const coachController = {
 
       res.status(200).json({ success: true, data: { comentario: respuesta } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error al generar el comentario de la sesión', error: error.message });
+      manejarErrorCoach(error, res, 'Error al generar el comentario de la sesión');
     }
   },
 
@@ -87,7 +115,7 @@ export const coachController = {
 
       res.status(200).json({ success: true, data: { resumen: respuesta, cache: false } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error al generar el resumen', error: error.message });
+      manejarErrorCoach(error, res, 'Error al generar el resumen');
     }
   },
 
@@ -107,7 +135,7 @@ export const coachController = {
 
       res.status(200).json({ success: true, data: { sugerencia: respuesta } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error al generar sugerencias de ejercicios', error: error.message });
+      manejarErrorCoach(error, res, 'Error al generar sugerencias de ejercicios');
     }
   },
 
@@ -129,7 +157,7 @@ export const coachController = {
 
       res.status(200).json({ success: true, data: { analisis: respuesta } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error al analizar la técnica', error: error.message });
+      manejarErrorCoach(error, res, 'Error al analizar la técnica');
     }
   },
 
@@ -164,7 +192,7 @@ export const coachController = {
 
       res.status(200).json({ success: true, data: { rutina } });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error al generar la rutina', error: error.message });
+      manejarErrorCoach(error, res, 'Error al generar la rutina');
     }
   },
 };
