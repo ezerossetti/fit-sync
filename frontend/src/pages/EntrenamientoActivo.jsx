@@ -11,7 +11,8 @@ import CompartirResumen from '../components/CompartirResumen'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
-  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaDetalle, topEjerciciosPorVolumen
+  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaDetalle, topEjerciciosPorVolumen,
+  notificarLogroDesbloqueado
 } from '../utils/helpers'
 import { logrosNuevos as calcularLogrosNuevos, NIVEL_COLOR } from '../data/achievements'
 import { guardarBorrador, leerBorrador, borrarBorrador, guardarSesionPendiente } from '../utils/sesionDraft'
@@ -250,6 +251,20 @@ export default function EntrenamientoActivo() {
       inicioSesion: inicioSesionRef.current,
     })
   }, [sesionEjercicios, notas, step, rutina])
+
+  // Notificación local de "logro importante desbloqueado" (oro/platino). Se
+  // recalcula lo mismo que ya se muestra en la tarjeta de resumen
+  // (calcularLogrosNuevos), pero acá vive en un efecto para poder disparar
+  // el side-effect (notificación del sistema) una sola vez apenas se entra
+  // a 'resumen' — no en cada render del branch condicional de abajo.
+  const notificacionLogrosEnviada = useRef(false)
+  useEffect(() => {
+    if (step !== 'resumen' || !ultimaSesionGuardada) return
+    if (notificacionLogrosEnviada.current) return
+    notificacionLogrosEnviada.current = true
+    const nuevos = calcularLogrosNuevos(historial, ultimaSesionGuardada)
+    nuevos.filter(l => l.nivel === 'oro' || l.nivel === 'platino').forEach(notificarLogroDesbloqueado)
+  }, [step, ultimaSesionGuardada, historial])
 
   const elegirRutina = (r) => {
     setRutina(r)

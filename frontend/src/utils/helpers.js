@@ -63,6 +63,32 @@ export function dispararAlarmaDescanso() {
   }
 }
 
+// ---------- Notificación de logro desbloqueado ----------
+
+// Igual que dispararAlarmaDescanso: notificación LOCAL vía el service worker
+// ya registrado, sin pasar por el sistema de push por inactividad (que sí
+// requiere suscripción + servidor). Se dispara en el momento en que el
+// cliente detecta el desbloqueo (ver logrosNuevos en data/achievements.js),
+// por lo que no necesita ningún viaje al backend. Solo suena si el usuario
+// ya había otorgado el permiso de notificaciones (activado desde Perfil).
+export function notificarLogroDesbloqueado(logro) {
+  if (!logro) return
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification('🏆 Nuevo logro desbloqueado', {
+          body: `${logro.titulo} — ${logro.descripcion}`,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: `fitsync-logro-${logro.id}`,
+        })
+      }).catch(() => {})
+    }
+  } catch (e) {
+    // Notification/SW no disponible; no es crítico, el logro sigue viéndose en la app.
+  }
+}
+
 export function saludoPorHora() {
   const h = new Date().getHours()
   if (h < 6) return 'Buenas noches'

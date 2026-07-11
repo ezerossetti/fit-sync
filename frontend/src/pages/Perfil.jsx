@@ -11,6 +11,7 @@ import {
   volumenPorSemana
 } from '../utils/helpers'
 import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
+import CompartirLogro from '../components/CompartirLogro'
 
 const PRESETS_DESCANSO = [30, 60, 90, 120, 180]
 
@@ -182,6 +183,19 @@ export default function Perfil() {
   const tendenciaSemanal = volumenPorSemana(historial, 6)
   const maxTendencia = Math.max(1, ...tendenciaSemanal.map(s => s.volumen))
   const [mostrarTodosLosLogros, setMostrarTodosLosLogros] = useState(false)
+  const [filtroLogros, setFiltroLogros] = useState('todos') // 'todos' | 'desbloqueados'
+  const [ordenLogros, setOrdenLogros] = useState('default') // 'default' | 'progreso'
+  const [logroACompartir, setLogroACompartir] = useState(null)
+  // Grilla filtrada/ordenada: el progreso (0-1) ya viene calculado en cada
+  // logro desde calcularLogros, así que ordenar "por más cerca de completar"
+  // es puro UI, sin recalcular nada.
+  const logrosFiltrados = logros
+    .filter(l => (filtroLogros === 'desbloqueados' ? l.desbloqueado : true))
+    .slice()
+    .sort((a, b) => {
+      if (ordenLogros !== 'progreso') return 0
+      return b.progreso - a.progreso
+    })
 
   if (loading) {
     return <p className="text-body-sm text-on-surface-variant">Cargando perfil...</p>
@@ -305,37 +319,84 @@ export default function Perfil() {
         </div>
         <span className="text-label-md text-on-surface-variant">{logrosDesbloqueados.length}/{logros.length}</span>
       </div>
-      <div className="grid grid-cols-3 gap-2 mb-2">
-        {(mostrarTodosLosLogros ? logros : logros.slice(0, 9)).map(l => (
-          <div
-            key={l.id}
-            className={`card p-3 flex flex-col items-center text-center gap-1 ${l.desbloqueado ? '' : 'opacity-45'}`}
-            title={l.descripcion}
-          >
-            <span
-              className="material-symbols-outlined text-[26px]"
-              style={{ color: l.desbloqueado ? NIVEL_COLOR[l.nivel] : '#c4c6d2', fontVariationSettings: l.desbloqueado ? "'FILL' 1" : "'FILL' 0" }}
-            >
-              {l.icono}
-            </span>
-            <p className="text-label-md text-on-surface leading-tight">{l.titulo}</p>
-            {!l.desbloqueado && (
-              <div className="w-full h-1 rounded-full bg-surface-container-high overflow-hidden mt-0.5">
-                <div className="h-full bg-accent/60" style={{ width: `${Math.round(l.progreso * 100)}%` }} />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      {logros.length > 9 && (
+
+      <div className="flex items-center gap-2 mb-3 overflow-x-auto">
         <button
-          onClick={() => setMostrarTodosLosLogros(v => !v)}
-          className="w-full py-2 text-body-sm text-accent mb-6"
+          onClick={() => setFiltroLogros(f => (f === 'desbloqueados' ? 'todos' : 'desbloqueados'))}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-label-md border transition-colors ${
+            filtroLogros === 'desbloqueados'
+              ? 'bg-accent/15 border-accent text-accent'
+              : 'border-outline-variant text-on-surface-variant'
+          }`}
         >
-          {mostrarTodosLosLogros ? 'Ver menos' : `Ver los ${logros.length - 9} logros restantes`}
+          Ver solo desbloqueados
         </button>
+        <button
+          onClick={() => setOrdenLogros(o => (o === 'progreso' ? 'default' : 'progreso'))}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-label-md border transition-colors flex items-center gap-1 ${
+            ordenLogros === 'progreso'
+              ? 'bg-accent/15 border-accent text-accent'
+              : 'border-outline-variant text-on-surface-variant'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">trending_up</span>
+          Más cerca de completar
+        </button>
+      </div>
+
+      {logrosFiltrados.length === 0 ? (
+        <p className="text-body-sm text-on-surface-variant mb-6">Todavía no desbloqueaste ningún logro.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {(mostrarTodosLosLogros ? logrosFiltrados : logrosFiltrados.slice(0, 9)).map(l => (
+              <div
+                key={l.id}
+                className={`relative card p-3 flex flex-col items-center text-center gap-1 ${l.desbloqueado ? '' : 'opacity-45'}`}
+                title={l.descripcion}
+              >
+                {l.desbloqueado && (
+                  <button
+                    onClick={() => setLogroACompartir(l)}
+                    className="absolute top-1.5 right-1.5 p-1 rounded-full text-on-surface-variant hover:text-accent hover:bg-surface-container-high"
+                    aria-label={`Compartir logro ${l.titulo}`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">ios_share</span>
+                  </button>
+                )}
+                <span
+                  className="material-symbols-outlined text-[26px]"
+                  style={{ color: l.desbloqueado ? NIVEL_COLOR[l.nivel] : '#c4c6d2', fontVariationSettings: l.desbloqueado ? "'FILL' 1" : "'FILL' 0" }}
+                >
+                  {l.icono}
+                </span>
+                <p className="text-label-md text-on-surface leading-tight">{l.titulo}</p>
+                {!l.desbloqueado && (
+                  <div className="w-full h-1 rounded-full bg-surface-container-high overflow-hidden mt-0.5">
+                    <div className="h-full bg-accent/60" style={{ width: `${Math.round(l.progreso * 100)}%` }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {logrosFiltrados.length > 9 && (
+            <button
+              onClick={() => setMostrarTodosLosLogros(v => !v)}
+              className="w-full py-2 text-body-sm text-accent mb-6"
+            >
+              {mostrarTodosLosLogros ? 'Ver menos' : `Ver los ${logrosFiltrados.length - 9} logros restantes`}
+            </button>
+          )}
+          {logrosFiltrados.length <= 9 && <div className="mb-6" />}
+        </>
       )}
-      {logros.length <= 9 && <div className="mb-6" />}
+
+      <CompartirLogro
+        logro={logroACompartir}
+        nombreUsuario={nombre}
+        abierto={!!logroACompartir}
+        onCerrar={() => setLogroACompartir(null)}
+      />
 
       {/* Preferencias */}
       <div className="flex items-center gap-2 mb-3">

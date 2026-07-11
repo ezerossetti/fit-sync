@@ -12,6 +12,7 @@
 // resumen de siempre (volumen, series, PRs, gráfico semanal).
 
 import { formatKg, formatDuracion } from './helpers'
+import { NIVEL_COLOR } from '../data/achievements'
 
 const W = 1080
 const H = 1920
@@ -45,6 +46,18 @@ const EMOJI_LOGRO = {
   fitness_center: '🏋️', trophy: '🏆', schedule: '⏱️', explore: '🧭',
   travel_explore: '🗺️', weekend: '🌴', wb_twilight: '🌅', bedtime: '🌙',
   bolt: '⚡',
+}
+
+// Convierte un hex de NIVEL_COLOR a rgba() para poder usarlo en gradientes
+// con transparencia (glow detrás de la insignia del logro).
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '')
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+  const bigint = parseInt(full, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -423,6 +436,166 @@ export function dibujarTarjetaResumen(canvas, data) {
   ctx.fillStyle = COLORS.accent
   ctx.font = '600 24px "Plus Jakarta Sans"'
   ctx.fillText('fitsync.app', W - marginX, footerY)
+}
+
+// ---------- Tarjeta de un logro individual ----------
+// Formato post (4:5, más cuadrado que la historia de resumen) pensado para
+// compartir un solo logro desde la grilla de Perfil, no necesariamente
+// recién desbloqueado en la sesión activa.
+
+const LOGRO_W = 1080
+const LOGRO_H = 1350
+
+const NIVEL_LABEL = { bronce: 'BRONCE', plata: 'PLATA', oro: 'ORO', platino: 'PLATINO' }
+
+function drawBackgroundLogro(ctx, color) {
+  const grad = ctx.createLinearGradient(0, 0, 0, LOGRO_H)
+  grad.addColorStop(0, '#0F1420')
+  grad.addColorStop(0.5, COLORS.background)
+  grad.addColorStop(1, '#0A0B0D')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, LOGRO_W, LOGRO_H)
+
+  const glow = ctx.createRadialGradient(LOGRO_W / 2, LOGRO_H * 0.4, 0, LOGRO_W / 2, LOGRO_H * 0.4, LOGRO_W * 0.85)
+  glow.addColorStop(0, hexToRgba(color, 0.24))
+  glow.addColorStop(1, hexToRgba(color, 0))
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 0, LOGRO_W, LOGRO_H)
+}
+
+// Insignia circular grande con el emoji del logro y anillo del color de nivel.
+function drawBadge(ctx, cx, cy, radius, color, emoji) {
+  const glow = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, radius * 1.35)
+  glow.addColorStop(0, hexToRgba(color, 0.35))
+  glow.addColorStop(1, hexToRgba(color, 0))
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius * 1.35, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.fillStyle = COLORS.surfaceContainer
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.strokeStyle = color
+  ctx.lineWidth = 6
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+  ctx.stroke()
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = `${Math.round(radius * 1.1)}px "Plus Jakarta Sans"`
+  ctx.fillStyle = COLORS.onSurface
+  ctx.fillText(emoji, cx, cy + radius * 0.06)
+  ctx.textBaseline = 'alphabetic'
+}
+
+/**
+ * Dibuja la tarjeta de un logro individual (para compartir desde Perfil).
+ * @param {HTMLCanvasElement} canvas
+ * @param {{
+ *   logro: {titulo:string, descripcion:string, icono:string, nivel:string},
+ *   nombreUsuario?: string,
+ *   statsContext?: string,
+ * }} data
+ */
+export function dibujarTarjetaLogro(canvas, data) {
+  const { logro, nombreUsuario = '', statsContext = '' } = data
+  const color = NIVEL_COLOR[logro.nivel] || COLORS.accent
+
+  canvas.width = LOGRO_W
+  canvas.height = LOGRO_H
+  const ctx = canvas.getContext('2d')
+
+  drawBackgroundLogro(ctx, color)
+
+  const marginX = 90
+  let cursorY = 130
+
+  drawWordmark(ctx, marginX, cursorY)
+  cursorY += 170
+
+  // Insignia central
+  const badgeCx = LOGRO_W / 2
+  const badgeCy = cursorY + 190
+  drawBadge(ctx, badgeCx, badgeCy, 170, color, EMOJI_LOGRO[logro.icono] || '🏅')
+  cursorY = badgeCy + 170 + 70
+
+  // Pill de nivel
+  const nivelTexto = NIVEL_LABEL[logro.nivel] || logro.nivel.toUpperCase()
+  ctx.font = '700 26px "Plus Jakarta Sans"'
+  const nivelW = ctx.measureText(nivelTexto).width
+  const pillPadX = 28
+  const pillH = 52
+  const pillW = nivelW + pillPadX * 2
+  const pillX = LOGRO_W / 2 - pillW / 2
+  ctx.fillStyle = hexToRgba(color, 0.16)
+  roundRect(ctx, pillX, cursorY, pillW, pillH, pillH / 2)
+  ctx.fill()
+  ctx.strokeStyle = hexToRgba(color, 0.5)
+  ctx.lineWidth = 2
+  roundRect(ctx, pillX, cursorY, pillW, pillH, pillH / 2)
+  ctx.stroke()
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = color
+  ctx.fillText(nivelTexto, LOGRO_W / 2, cursorY + pillH / 2 + 2)
+  ctx.textBaseline = 'alphabetic'
+  cursorY += pillH + 44
+
+  // Título
+  ctx.font = '700 58px "Space Grotesk"'
+  ctx.fillStyle = COLORS.onSurface
+  ctx.textAlign = 'center'
+  const tituloLines = wrapText(ctx, logro.titulo, LOGRO_W - marginX * 2)
+  tituloLines.slice(0, 2).forEach((line) => {
+    ctx.fillText(line, LOGRO_W / 2, cursorY)
+    cursorY += 64
+  })
+  cursorY += 12
+
+  // Descripción
+  ctx.font = '500 30px "Plus Jakarta Sans"'
+  ctx.fillStyle = COLORS.onSurfaceVariant
+  const descLines = wrapText(ctx, logro.descripcion, LOGRO_W - marginX * 2 - 60)
+  descLines.slice(0, 3).forEach((line) => {
+    ctx.fillText(line, LOGRO_W / 2, cursorY)
+    cursorY += 40
+  })
+
+  // Contexto opcional (p. ej. "Desbloqueado el 12 de julio" o nombre de usuario)
+  if (statsContext) {
+    cursorY += 20
+    ctx.font = '600 26px "Plus Jakarta Sans"'
+    ctx.fillStyle = color
+    ctx.fillText(statsContext, LOGRO_W / 2, cursorY)
+  }
+
+  if (nombreUsuario) {
+    ctx.font = '500 24px "Plus Jakarta Sans"'
+    ctx.fillStyle = COLORS.onSurfaceVariant
+    ctx.fillText(nombreUsuario, LOGRO_W / 2, LOGRO_H - 150)
+  }
+
+  // Footer
+  const footerY = LOGRO_H - 90
+  ctx.strokeStyle = COLORS.outlineVariant
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(marginX, footerY - 34)
+  ctx.lineTo(LOGRO_W - marginX, footerY - 34)
+  ctx.stroke()
+
+  ctx.textAlign = 'left'
+  ctx.font = '600 24px "Plus Jakarta Sans"'
+  ctx.fillStyle = COLORS.onSurfaceVariant
+  ctx.fillText('Registrado con FitSync', marginX, footerY)
+
+  ctx.textAlign = 'right'
+  ctx.fillStyle = COLORS.accent
+  ctx.font = '600 24px "Plus Jakarta Sans"'
+  ctx.fillText('fitsync.app', LOGRO_W - marginX, footerY)
 }
 
 // Espera a que las fuentes web (Space Grotesk / Plus Jakarta Sans) estén
