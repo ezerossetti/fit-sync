@@ -7,6 +7,7 @@ import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizado
 import { getExerciseInfo } from '../data/exerciseCatalog'
 import ExerciseMedia from '../components/ExerciseMedia'
 import BuscadorEjercicio from '../components/BuscadorEjercicio'
+import CompartirResumen from '../components/CompartirResumen'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
@@ -847,6 +848,18 @@ export default function EntrenamientoActivo() {
           Duración de la sesión: {formatDuracion(ultimaSesionGuardada?.duracion_min || 0)}
           {' · '}~{ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg)} kcal estimadas
         </p>
+
+        <div className="mb-6">
+          <CompartirResumen
+            rutinaNombre={rutina?.nombre || 'Sesión libre'}
+            fecha={new Date(ultimaSesionGuardada?.fecha || Date.now())}
+            volumenTotal={vol}
+            totalSeries={totalSeries}
+            duracionMin={ultimaSesionGuardada?.duracion_min || 0}
+            prs={pbs.map(p => p.nombre)}
+            semana={semana}
+          />
+        </div>
 
         {ultimaSesionGuardada?.notas && (
           <div className="card p-4 mb-5">
