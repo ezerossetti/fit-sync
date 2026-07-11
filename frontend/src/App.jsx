@@ -9,6 +9,7 @@ import EntrenamientoActivo from './pages/EntrenamientoActivo'
 import Historial from './pages/Historial'
 import Perfil from './pages/Perfil'
 import CoachChat from './components/CoachChat'
+import InstallGate from './components/InstallGate'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -22,11 +23,17 @@ export default function App() {
   }
 
   if (!session) {
-    return <Login />
+    return (
+      <>
+        <InstallGate />
+        <Login />
+      </>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
+      <InstallGate />
       <TopBar />
       <main
         className="max-w-container-max mx-auto px-margin-mobile pb-28"
