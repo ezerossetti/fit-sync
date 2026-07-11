@@ -4,13 +4,15 @@ import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
-import { getExerciseInfo, searchExercises } from '../data/exerciseCatalog'
+import { getExerciseInfo } from '../data/exerciseCatalog'
 import ExerciseMedia from '../components/ExerciseMedia'
+import BuscadorEjercicio from '../components/BuscadorEjercicio'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
   dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion
 } from '../utils/helpers'
+import { guardarBorrador, leerBorrador, borrarBorrador, guardarSesionPendiente } from '../utils/sesionDraft'
 
 const RPE_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -162,10 +164,12 @@ export default function EntrenamientoActivo() {
   const [guardando, setGuardando] = useState(false)
   const [ultimaSesionGuardada, setUltimaSesionGuardada] = useState(null)
   const [notas, setNotas] = useState('')
-  const [busquedaEjercicio, setBusquedaEjercicio] = useState('')
   const [nombreRutinaNueva, setNombreRutinaNueva] = useState('')
   const [guardandoRutina, setGuardandoRutina] = useState(false)
   const [rutinaGuardadaOk, setRutinaGuardadaOk] = useState(false)
+  const [borradorPendiente, setBorradorPendiente] = useState(null) // borrador detectado al entrar, esperando "Retomar" o "Descartar"
+  const [guardadaOffline, setGuardadaOffline] = useState(false) // la última sesión finalizada se guardó localmente porque falló el POST
+  const [mostrandoBuscadorExtra, setMostrandoBuscadorExtra] = useState(false) // toggle "+ agregar otro ejercicio" dentro del flujo con rutina
 
   useEffect(() => {
     (async () => {
@@ -182,10 +186,18 @@ export default function EntrenamientoActivo() {
         setDescansoObjetivo(p?.preferencias?.descansoDefault ?? DESCANSO_OBJETIVO_DEFAULT)
         setPesoCorporalKg(Number(p?.preferencias?.pesoCorporalKg) || 75)
         if (rutinaId) {
+          // Si viene por link directo a una rutina, eso manda: no interrumpimos
+          // con la pantalla de "retomar borrador".
           const encontrada = (r || []).find(x => String(x.id) === String(rutinaId))
           if (encontrada) {
             setRutina(encontrada)
             setStep('select-ejercicio')
+          }
+        } else {
+          const borrador = leerBorrador()
+          if (borrador?.sesionEjercicios?.length > 0) {
+            setBorradorPendiente(borrador)
+            setStep('retomar')
           }
         }
       } catch (e) {
@@ -219,6 +231,23 @@ export default function EntrenamientoActivo() {
     }
     return () => clearInterval(intervalRef.current)
   }, [descansando, descansoObjetivo])
+
+  // Autosave del borrador: se pisa en cada serie guardada (o cambio de notas)
+  // mientras hay una sesión en curso. No se guarda en 'select-rutina' (todavía
+  // no hay nada que perder) ni en 'retomar'/'resumen' (ahí ya se decidió o ya
+  // terminó). Así, si se cuelga el teléfono o se pierde señal en el sótano del
+  // gym, al volver a entrar aparece "Retomar sesión".
+  useEffect(() => {
+    if (sesionEjercicios.length === 0) return
+    if (!['select-ejercicio', 'pre-serie', 'activo'].includes(step)) return
+    guardarBorrador({
+      rutinaId: rutina?.id ?? null,
+      rutinaNombre: rutina?.nombre ?? null,
+      sesionEjercicios,
+      notas,
+      inicioSesion: inicioSesionRef.current,
+    })
+  }, [sesionEjercicios, notas, step, rutina])
 
   const elegirRutina = (r) => {
     setRutina(r)
@@ -298,6 +327,27 @@ export default function EntrenamientoActivo() {
 
   const volverASeleccionEjercicio = () => setStep('select-ejercicio')
 
+  // El borrador guarda solo el rutinaId (no la rutina completa) porque la
+  // lista de rutinas ya está cargada acá mismo al montar el componente.
+  const retomarBorrador = () => {
+    if (!borradorPendiente) return
+    const rutinaGuardada = borradorPendiente.rutinaId
+      ? rutinas.find(r => String(r.id) === String(borradorPendiente.rutinaId))
+      : null
+    setRutina(rutinaGuardada || null)
+    setSesionEjercicios(borradorPendiente.sesionEjercicios || [])
+    setNotas(borradorPendiente.notas || '')
+    inicioSesionRef.current = borradorPendiente.inicioSesion || Date.now()
+    setBorradorPendiente(null)
+    setStep(rutinaGuardada || !borradorPendiente.rutinaId ? 'select-ejercicio' : 'select-rutina')
+  }
+
+  const descartarBorrador = () => {
+    borrarBorrador()
+    setBorradorPendiente(null)
+    setStep('select-rutina')
+  }
+
   // Convierte lo que se hizo en una sesión libre en una rutina reutilizable:
   // series_objetivo = cuántas series se hicieron realmente de cada ejercicio,
   // reps_objetivo = las reps de la última serie (la carga "de trabajo" ya asentada).
@@ -348,10 +398,19 @@ export default function EntrenamientoActivo() {
       }
       const creada = await sesionesService.create(payload)
       setUltimaSesionGuardada(creada || payload)
+      setGuardadaOffline(false)
+      borrarBorrador()
       setStep('resumen')
     } catch (e) {
       console.error(e)
-      alert('No se pudo guardar la sesión. Revisá la conexión con el backend.')
+      // Sin conexión (u otro error de red): no perdemos el entrenamiento.
+      // Se guarda localmente como "pendiente" y el banner en App.jsx la
+      // reintenta subir sola cuando vuelve la señal. El borrador NO se
+      // borra todavía: recién se limpia cuando el POST realmente entra.
+      guardarSesionPendiente(payload)
+      setUltimaSesionGuardada(payload)
+      setGuardadaOffline(true)
+      setStep('resumen')
     } finally {
       setGuardando(false)
     }
@@ -361,6 +420,30 @@ export default function EntrenamientoActivo() {
 
   if (loading) {
     return <p className="text-body-sm text-on-surface-variant">Cargando...</p>
+  }
+
+  if (step === 'retomar') {
+    const cantEjercicios = borradorPendiente?.sesionEjercicios?.length || 0
+    const cantSeries = (borradorPendiente?.sesionEjercicios || []).reduce((a, e) => a + e.series.length, 0)
+    return (
+      <div>
+        <div className="text-center mb-6">
+          <span className="material-symbols-outlined text-accent text-[52px]">history</span>
+          <h1 className="font-display text-headline-lg-mobile text-on-surface mt-2">Tenés una sesión sin terminar</h1>
+          <p className="text-body-sm text-on-surface-variant mt-1">
+            {borradorPendiente?.rutinaNombre || 'Sesión libre'} · {cantEjercicios} ejercicio{cantEjercicios > 1 ? 's' : ''} · {cantSeries} serie{cantSeries > 1 ? 's' : ''} cargada{cantSeries > 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <button onClick={retomarBorrador} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-[20px]">play_arrow</span> Retomar sesión
+          </button>
+          <button onClick={descartarBorrador} className="w-full py-3 text-body-sm text-on-surface-variant">
+            Descartar y empezar de nuevo
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (step === 'select-rutina') {
@@ -410,10 +493,6 @@ export default function EntrenamientoActivo() {
     // Sesión libre: no hay lista fija de ejercicios. Se buscan en el catálogo
     // (o se cargan como texto libre si el entrenador usa un nombre que no está
     // catalogado) y se van agregando a medida que se los dan, uno por uno.
-    const resultados = searchExercises(busquedaEjercicio, personalizados)
-    const nombreExacto = busquedaEjercicio.trim()
-    const yaExisteExacto = resultados.some(e => e.nombre.toLowerCase() === nombreExacto.toLowerCase())
-
     return (
       <div>
         <button onClick={() => setStep('select-rutina')} className="flex items-center gap-1 text-accent text-body-sm mb-4">
@@ -422,40 +501,8 @@ export default function EntrenamientoActivo() {
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Sesión libre</h1>
         <p className="text-body-sm text-on-surface-variant mb-4">Buscá el ejercicio que te acaban de dar y registralo.</p>
 
-        <div className="relative mb-3">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-          <input
-            type="text"
-            className="input-field pl-10"
-            placeholder="Ej: press banca, deadlift, remo..."
-            value={busquedaEjercicio}
-            onChange={(e) => setBusquedaEjercicio(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2 mb-6">
-          {resultados.slice(0, 8).map((ej, i) => (
-            <button key={i} onClick={() => { elegirEjercicio(ej); setBusquedaEjercicio('') }} className="w-full card p-4 flex items-center justify-between text-left">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-accent">fitness_center</span>
-                <div>
-                  <p className="text-body-md font-semibold text-on-surface">{ej.nombre}</p>
-                  <p className="text-label-md text-on-surface-variant">{ej.grupo || 'Personalizado'}</p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-accent">chevron_right</span>
-            </button>
-          ))}
-
-          {nombreExacto && !yaExisteExacto && (
-            <button
-              onClick={() => { elegirEjercicio({ nombre: nombreExacto }); setBusquedaEjercicio('') }}
-              className="w-full card p-4 flex items-center gap-3 text-left border-dashed"
-            >
-              <span className="material-symbols-outlined text-accent">add_circle</span>
-              <p className="text-body-md text-on-surface">Agregar "<span className="font-semibold">{nombreExacto}</span>" como ejercicio nuevo</p>
-            </button>
-          )}
+        <div className="mb-6">
+          <BuscadorEjercicio personalizados={personalizados} onElegir={elegirEjercicio} />
         </div>
 
         {sesionEjercicios.length > 0 && (
@@ -493,6 +540,11 @@ export default function EntrenamientoActivo() {
 
   if (step === 'select-ejercicio') {
     const ejerciciosDisponibles = rutina?.ejercicios || []
+    const nombresRutina = new Set(ejerciciosDisponibles.map(e => e.nombre))
+    // Ejercicios que están en sesionEjercicios pero NO en la rutina cargada:
+    // el caso real más común es mixto — vino con la rutina, pero el profe
+    // agregó algo sobre la marcha. Se muestran aparte, con la misma chip UI.
+    const ejerciciosAgregados = sesionEjercicios.filter(e => !nombresRutina.has(e.nombre))
     return (
       <div>
         <button onClick={() => setStep('select-rutina')} className="flex items-center gap-1 text-accent text-body-sm mb-4">
@@ -530,6 +582,44 @@ export default function EntrenamientoActivo() {
               )
             })}
           </div>
+        )}
+
+        {ejerciciosAgregados.length > 0 && (
+          <>
+            <p className="text-label-md text-on-surface-variant uppercase mb-2">Agregados en esta sesión</p>
+            <div className="space-y-2 mb-6">
+              {ejerciciosAgregados.map((ej, i) => (
+                <button key={i} onClick={() => elegirEjercicio({ nombre: ej.nombre })} className="w-full card p-3 flex items-center justify-between text-left">
+                  <p className="text-body-sm font-semibold text-on-surface">{ej.nombre}</p>
+                  <span className="text-label-md text-accent bg-accent/15 px-2 py-1 rounded-full">
+                    {ej.series.length} serie{ej.series.length > 1 ? 's' : ''} · agregar otra
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {mostrandoBuscadorExtra ? (
+          <div className="mb-6">
+            <p className="text-label-md text-on-surface-variant uppercase mb-2">Buscar ejercicio para agregar</p>
+            <BuscadorEjercicio
+              personalizados={personalizados}
+              autoFocus
+              onElegir={(ej) => { setMostrandoBuscadorExtra(false); elegirEjercicio(ej) }}
+            />
+            <button onClick={() => setMostrandoBuscadorExtra(false)} className="w-full py-2 text-body-sm text-on-surface-variant mt-2">
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setMostrandoBuscadorExtra(true)}
+            className="w-full card p-4 flex items-center gap-3 text-left border-dashed mb-6"
+          >
+            <span className="material-symbols-outlined text-accent">add_circle</span>
+            <p className="text-body-md text-on-surface">+ Agregar otro ejercicio</p>
+          </button>
         )}
 
         {sesionEjercicios.length > 0 && (
@@ -720,6 +810,15 @@ export default function EntrenamientoActivo() {
             {pbs.length > 0 ? 'Superaste tus límites hoy. ¡A seguir así!' : `${rutina?.nombre || 'Sesión libre'} · buen trabajo`}
           </p>
         </div>
+
+        {guardadaOffline && (
+          <div className="card p-3 mb-5 border-accent/30 bg-accent/5 flex items-center gap-2">
+            <span className="material-symbols-outlined text-accent text-[20px]">cloud_off</span>
+            <p className="text-body-sm text-on-surface-variant">
+              Se guardó en tu teléfono porque no había conexión. Se va a subir sola en cuanto vuelva la señal — no hace falta que hagas nada.
+            </p>
+          </div>
+        )}
 
         {pbs.length > 0 && (
           <div className="card p-4 mb-5 border-success/40 bg-success-container/20">

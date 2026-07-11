@@ -10,6 +10,7 @@ import Historial from './pages/Historial'
 import Perfil from './pages/Perfil'
 import CoachChat from './components/CoachChat'
 import InstallGate from './components/InstallGate'
+import PendingSyncBanner from './components/PendingSyncBanner'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <InstallGate />
+      <PendingSyncBanner />
       <TopBar />
       <main
         className="max-w-container-max mx-auto px-margin-mobile pb-28"
