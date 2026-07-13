@@ -14,14 +14,14 @@ import {
 import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
 import CompartirLogro from '../components/CompartirLogro'
 import { useTour } from '../context/TourContext'
-import { TOURS_REPLAYABLES } from '../data/tours'
+import { TOURS, TOURS_REPLAYABLES } from '../data/tours'
 
 const PRESETS_DESCANSO = [30, 60, 90, 120, 180]
 
 export default function Perfil() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const { resetTour, resetAllTours } = useTour()
+  const { resetTour, resetAllTours, startTour } = useTour()
   const [perfil, setPerfil] = useState(null)
   const [historial, setHistorial] = useState([])
   const [loading, setLoading] = useState(true)
@@ -79,6 +79,13 @@ export default function Perfil() {
     pushNotifications.getSuscripcionActual()
       .then((sub) => setNotifActivas(!!sub))
       .catch(() => setNotifActivas(false))
+  }, [])
+
+  // Tutorial de esta pantalla: recorre logros, tutoriales y ajustes de cuenta.
+  // Se dispara una sola vez por usuario (startTour ya chequea localStorage).
+  useEffect(() => {
+    startTour('perfil', TOURS.perfil.steps)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Guarda las preferencias en el backend cada vez que cambian (después de la carga inicial)
@@ -317,6 +324,7 @@ export default function Perfil() {
       </div>
 
       {/* Logros */}
+      <div data-tour="perfil-logros">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-accent text-[20px]">military_tech</span>
@@ -395,6 +403,7 @@ export default function Perfil() {
           {logrosFiltrados.length <= 9 && <div className="mb-6" />}
         </>
       )}
+      </div>
 
       <CompartirLogro
         logro={logroACompartir}
@@ -552,6 +561,7 @@ export default function Perfil() {
       </div>
 
       {/* Tutoriales */}
+      <div data-tour="perfil-tutoriales">
       <div className="flex items-center gap-2 mb-3">
         <span className="material-symbols-outlined text-accent text-[20px]">school</span>
         <h2 className="text-body-md font-semibold text-on-surface">Tutoriales</h2>
@@ -588,8 +598,10 @@ export default function Perfil() {
         <span className="material-symbols-outlined text-[16px]">restart_alt</span>
         Reiniciar todos los tutoriales
       </button>
+      </div>
 
       {/* Ajustes de cuenta */}
+      <div data-tour="perfil-ajustes">
       <div className="flex items-center gap-2 mb-3">
         <span className="material-symbols-outlined text-accent text-[20px]">manage_accounts</span>
         <h2 className="text-body-md font-semibold text-on-surface">Ajustes de Cuenta</h2>
@@ -609,6 +621,7 @@ export default function Perfil() {
           </span>
           <span className="material-symbols-outlined text-[16px] text-on-surface-variant">chevron_right</span>
         </button>
+      </div>
       </div>
 
       <button

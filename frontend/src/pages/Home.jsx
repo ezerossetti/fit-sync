@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTour } from '../context/TourContext'
 import { TOURS } from '../data/tours'
 import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaDetalle, sugerirDeload, ejerciciosAbandonados } from '../utils/helpers'
+import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
 
 function inicioDeSemana() {
   const d = new Date()
@@ -16,54 +17,18 @@ function inicioDeSemana() {
   return d
 }
 
-// ---------- Logros (Sugerencia #1) ----------
-function calcularLogros({ sesiones, rutinas, racha }) {
-  const volumenTotal = sesiones.reduce((acc, s) => acc + Number(s.volumen_total ?? volumenSesion(s.ejercicios)), 0)
-
-  return [
-    {
-      id: 'primera-sesion',
-      icon: 'emoji_events',
-      titulo: 'Primer paso',
-      desc: 'Completá tu primera sesión',
-      logrado: sesiones.length >= 1,
-    },
-    {
-      id: 'racha-3',
-      icon: 'local_fire_department',
-      titulo: 'En racha',
-      desc: '3 días seguidos entrenando',
-      logrado: racha >= 3,
-    },
-    {
-      id: 'racha-7',
-      icon: 'whatshot',
-      titulo: 'Imparable',
-      desc: '7 días seguidos entrenando',
-      logrado: racha >= 7,
-    },
-    {
-      id: 'sesiones-10',
-      icon: 'military_tech',
-      titulo: 'Constancia',
-      desc: '10 sesiones completadas',
-      logrado: sesiones.length >= 10,
-    },
-    {
-      id: 'volumen-10k',
-      icon: 'fitness_center',
-      titulo: 'Tonelada',
-      desc: '10.000 kg de volumen acumulado',
-      logrado: volumenTotal >= 10000,
-    },
-    {
-      id: 'primera-rutina',
-      icon: 'checklist',
-      titulo: 'Organizado',
-      desc: 'Creá tu primera rutina',
-      logrado: rutinas.length >= 1,
-    },
-  ]
+// Vista previa de 6 logros para Home, usando el mismo catálogo central que
+// Perfil (data/achievements.js) — así nunca se desincronizan entre pantallas.
+// Prioriza mostrar primero los ya desbloqueados y, si sobra lugar, completa
+// con los que están más cerca de desbloquearse (mayor progreso).
+function logrosPreview(sesiones) {
+  const todos = calcularLogros(sesiones)
+  const desbloqueados = todos.filter(l => l.desbloqueado)
+  const bloqueados = todos
+    .filter(l => !l.desbloqueado)
+    .slice()
+    .sort((a, b) => b.progreso - a.progreso)
+  return [...desbloqueados, ...bloqueados].slice(0, 6)
 }
 
 export default function Home() {
@@ -114,8 +79,9 @@ export default function Home() {
   const deload = sugerirDeload(sesiones)
   const abandonados = ejerciciosAbandonados(sesiones, rutinas)
   const ultimaSesion = sesiones[0]
-  const logros = calcularLogros({ sesiones, rutinas, racha })
-  const logrosDesbloqueados = logros.filter(l => l.logrado).length
+  const logrosTotales = calcularLogros(sesiones)
+  const logrosDesbloqueados = logrosTotales.filter(l => l.desbloqueado).length
+  const logros = logrosPreview(sesiones)
   const nombre = perfil?.nombre || user?.user_metadata?.nombre || 'Deportista'
   const primerNombre = nombre.split(' ')[0]
 
@@ -244,24 +210,32 @@ export default function Home() {
       <div data-tour="home-logros">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-headline-sm font-display text-on-surface">Logros</h3>
-          <span className="text-label-md text-on-surface-variant">{logrosDesbloqueados}/{logros.length}</span>
+          <Link to="/perfil" className="text-label-md text-accent">{logrosDesbloqueados}/{logrosTotales.length} · Ver todos</Link>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {logros.map(l => (
-            <div
+            <Link
+              to="/perfil"
               key={l.id}
-              className={`card p-3 text-center flex flex-col items-center gap-1.5 ${l.logrado ? 'border-accent/40' : 'opacity-50'}`}
+              className={`card p-3 text-center flex flex-col items-center gap-1.5 ${l.desbloqueado ? 'border-accent/40' : 'opacity-50'}`}
             >
               <span
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${l.logrado ? 'bg-accent/15 text-accent' : 'bg-surface-container-high text-on-surface-variant'}`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${l.desbloqueado ? '' : 'bg-surface-container-high'}`}
+                style={{
+                  backgroundColor: l.desbloqueado ? `${NIVEL_COLOR[l.nivel]}26` : undefined,
+                  color: l.desbloqueado ? NIVEL_COLOR[l.nivel] : undefined,
+                }}
               >
-                <span className="material-symbols-outlined text-[20px]" style={l.logrado ? { fontVariationSettings: "'FILL' 1" } : undefined}>
-                  {l.icon}
+                <span
+                  className={`material-symbols-outlined text-[20px] ${l.desbloqueado ? '' : 'text-on-surface-variant'}`}
+                  style={l.desbloqueado ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  {l.icono}
                 </span>
               </span>
               <p className="text-label-md font-semibold text-on-surface leading-tight">{l.titulo}</p>
-              <p className="text-label-md text-on-surface-variant leading-tight">{l.desc}</p>
-            </div>
+              <p className="text-label-md text-on-surface-variant leading-tight">{l.descripcion}</p>
+            </Link>
           ))}
         </div>
       </div>

@@ -29,12 +29,12 @@ export const TOURS = {
       {
         target: 'nav-rutinas',
         title: 'Tus rutinas',
-        body: 'Acá armás y organizás tus rutinas. En el plan gratis podés tener hasta 3 activas a la vez.',
+        body: 'Acá armás y organizás todas tus rutinas.',
       },
       {
         target: 'nav-historial',
         title: 'Tu progreso',
-        body: 'Todo lo que entrenaste queda acá, siempre 100% libre, sin límites ni paywall.',
+        body: 'Todo lo que entrenaste queda acá, siempre disponible.',
       },
       {
         target: 'nav-perfil',
@@ -82,7 +82,7 @@ export const TOURS = {
       {
         target: 'rutinas-nueva',
         title: 'Creá tu primera rutina',
-        body: 'Tocá acá para armar una rutina con tus ejercicios. Plan gratis: hasta 3 rutinas activas al mismo tiempo.',
+        body: 'Tocá acá para armar una rutina con tus ejercicios.',
       },
       {
         target: 'rutinas-entrenar-btn',
@@ -154,7 +154,103 @@ export const TOURS = {
       {
         target: 'historial-lista',
         title: 'Tus sesiones pasadas',
-        body: 'El registro completo de todo lo que entrenaste. Siempre disponible, incluso en el plan gratis.',
+        body: 'El registro completo de todo lo que entrenaste, siempre disponible.',
+      },
+    ],
+  },
+
+  seleccionRutina: {
+    id: 'seleccionRutina',
+    label: 'Elegir cómo entrenar',
+    route: null,
+    replayable: false,
+    steps: [
+      {
+        target: 'select-rutina-libre',
+        title: 'Sesión libre',
+        body: 'Si no tenés una rutina armada, empezá acá y vas cargando cada ejercicio a medida que te lo dan.',
+      },
+      {
+        target: 'select-rutina-lista',
+        title: 'Con rutina cargada',
+        body: 'O elegí una de tus rutinas guardadas para entrenar con los ejercicios y objetivos ya definidos.',
+      },
+    ],
+  },
+
+  seleccionEjercicio: {
+    id: 'seleccionEjercicio',
+    label: 'Elegir ejercicio',
+    route: null,
+    replayable: false,
+    steps: [
+      {
+        target: 'select-ejercicio-buscador',
+        title: 'Buscá el ejercicio',
+        body: 'Escribí el nombre del ejercicio que te acaban de dar y elegilo de la lista.',
+      },
+      {
+        target: 'select-ejercicio-lista',
+        title: 'Ejercicios de la rutina',
+        body: 'Tocá cualquiera para empezar a registrar sus series.',
+      },
+      {
+        target: 'select-ejercicio-agregar',
+        title: 'Agregar algo extra',
+        body: 'Si el profe te suma un ejercicio que no estaba en la rutina, agregalo desde acá.',
+      },
+      {
+        target: 'select-ejercicio-finalizar',
+        title: 'Terminar la sesión',
+        body: 'Cuando termines todos los ejercicios, tocá acá para cerrar y guardar la sesión.',
+      },
+    ],
+  },
+
+  resumen: {
+    id: 'resumen',
+    label: 'Resumen de sesión',
+    route: null,
+    replayable: false,
+    steps: [
+      {
+        target: 'resumen-stats',
+        title: 'Tu sesión en números',
+        body: 'Volumen total y series completadas, de un vistazo.',
+      },
+      {
+        target: 'resumen-compartir',
+        title: 'Compartí tu progreso',
+        body: 'Generá una tarjeta con el resumen de la sesión para mandar por WhatsApp o subir a tu historia.',
+      },
+      {
+        target: 'resumen-volver',
+        title: 'Volver al inicio',
+        body: 'Tocá acá cuando termines de revisar el resumen.',
+      },
+    ],
+  },
+
+  perfil: {
+    id: 'perfil',
+    label: 'Pantalla de perfil',
+    route: '/perfil',
+    replayable: true,
+    steps: [
+      {
+        target: 'perfil-logros',
+        title: 'Tus logros',
+        body: 'Se van desbloqueando solos a medida que entrenás. Tocá el ícono de compartir en cualquiera ya desbloqueado para mandarlo por WhatsApp o subirlo a tu historia.',
+      },
+      {
+        target: 'perfil-tutoriales',
+        title: 'Tutoriales',
+        body: 'Si querés repasar cualquiera de estos recorridos, tocalo acá y lo volvés a ver.',
+      },
+      {
+        target: 'perfil-ajustes',
+        title: 'Ajustes de cuenta',
+        body: 'Tu email y la opción para cambiar la contraseña están acá.',
       },
     ],
   },

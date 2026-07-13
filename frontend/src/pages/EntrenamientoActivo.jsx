@@ -185,8 +185,11 @@ export default function EntrenamientoActivo() {
   // (registrando series). Como startTour ya chequea localStorage, entrar y
   // salir de estos steps varias veces no vuelve a mostrar nada una vez visto.
   useEffect(() => {
+    if (step === 'select-rutina') startTour('seleccionRutina', TOURS.seleccionRutina.steps)
+    if (step === 'select-ejercicio') startTour('seleccionEjercicio', TOURS.seleccionEjercicio.steps)
     if (step === 'pre-serie') startTour('preserie', TOURS.preserie.steps)
     if (step === 'activo') startTour('activo', TOURS.activo.steps)
+    if (step === 'resumen') startTour('resumen', TOURS.resumen.steps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
@@ -486,6 +489,7 @@ export default function EntrenamientoActivo() {
         <p className="text-body-sm text-on-surface-variant mb-5">¿Cómo vas a entrenar hoy?</p>
 
         <button
+          data-tour="select-rutina-libre"
           onClick={() => { setRutina(null); setStep('select-ejercicio') }}
           className="w-full card p-4 flex items-center justify-between text-left mb-5 border-accent/40 bg-accent/5"
         >
@@ -506,7 +510,7 @@ export default function EntrenamientoActivo() {
             <button onClick={() => navigate('/rutinas')} className="btn-primary px-4 py-2 text-body-sm mt-2">Crear rutina</button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div data-tour="select-rutina-lista" className="space-y-2">
             {rutinas.map(r => (
               <button key={r.id} onClick={() => elegirRutina(r)} className="w-full card p-4 flex items-center justify-between text-left">
                 <div>
@@ -534,7 +538,7 @@ export default function EntrenamientoActivo() {
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Sesión libre</h1>
         <p className="text-body-sm text-on-surface-variant mb-4">Buscá el ejercicio que te acaban de dar y registralo.</p>
 
-        <div className="mb-6">
+        <div data-tour="select-ejercicio-buscador" className="mb-6">
           <BuscadorEjercicio personalizados={personalizados} onElegir={elegirEjercicio} />
         </div>
 
@@ -562,7 +566,7 @@ export default function EntrenamientoActivo() {
                 placeholder="Ej: buena energía hoy, probé agarre más ancho en press..."
               />
             </div>
-            <button onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
+            <button data-tour="select-ejercicio-finalizar" onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
               {guardando ? 'Guardando...' : 'Finalizar sesión'}
             </button>
           </>
@@ -592,7 +596,7 @@ export default function EntrenamientoActivo() {
             <button onClick={() => navigate('/rutinas')} className="btn-primary px-4 py-2 text-body-sm mt-2">Editar rutina</button>
           </div>
         ) : (
-          <div className="space-y-2 mb-6">
+          <div data-tour="select-ejercicio-lista" className="space-y-2 mb-6">
             {ejerciciosDisponibles.map((ej, i) => {
               const hechos = sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0
               const objetivo = ej.series_objetivo || 0
@@ -657,6 +661,7 @@ export default function EntrenamientoActivo() {
           </div>
         ) : (
           <button
+            data-tour="select-ejercicio-agregar"
             onClick={() => setMostrandoBuscadorExtra(true)}
             className="w-full card p-4 flex items-center gap-3 text-left border-dashed mb-6"
           >
@@ -677,7 +682,7 @@ export default function EntrenamientoActivo() {
                 placeholder="Ej: buena energía hoy, probé agarre más ancho en press..."
               />
             </div>
-            <button onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
+            <button data-tour="select-ejercicio-finalizar" onClick={finalizarSesion} disabled={guardando} className="btn-primary w-full py-3 text-body-md">
               {guardando ? 'Guardando...' : 'Finalizar sesión'}
             </button>
           </>
@@ -893,7 +898,7 @@ export default function EntrenamientoActivo() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-5">
+        <div data-tour="resumen-stats" className="grid grid-cols-2 gap-3 mb-5">
           <div className="card p-4 text-center">
             <p className="font-mono text-headline-md text-accent">{formatKg(vol)} kg</p>
             <p className="text-label-md text-on-surface-variant mt-1 uppercase">Volumen total</p>
@@ -926,7 +931,7 @@ export default function EntrenamientoActivo() {
           </div>
         )}
 
-        <div className="mb-6">
+        <div data-tour="resumen-compartir" className="mb-6">
           <CompartirResumen
             rutinaNombre={rutina?.nombre || 'Sesión libre'}
             fecha={new Date(ultimaSesionGuardada?.fecha || Date.now())}
@@ -1017,6 +1022,7 @@ export default function EntrenamientoActivo() {
         )}
 
         <button
+          data-tour="resumen-volver"
           onClick={() => navigate('/')}
           className="w-full py-3 text-body-md rounded font-semibold bg-success text-on-primary flex items-center justify-center gap-2 active:opacity-80 transition-opacity"
         >
