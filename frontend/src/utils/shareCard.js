@@ -293,6 +293,221 @@ function drawTopExercises(ctx, x, y, w, topEjercicios) {
   })
 }
 
+// ---------- Sticker transparente (texto directo sobre la foto) ----------
+// Formato historia (1080x1920), canvas transparente de punta a punta: NO
+// hay ninguna caja/panel de fondo. Pensado para compartirse vía
+// navigator.share: cuando Instagram recibe un PNG con zonas transparentes
+// desde el share sheet nativo, lo coloca como sticker sobre la foto/cámara
+// que el usuario elija en el editor de Historia. Como no sabemos qué foto
+// va a quedar detrás, la legibilidad se resuelve con dos degradés (scrim)
+// arriba y abajo — igual que hacen Instagram/Strava con sus propios
+// stickers — más una sombra de texto suave, nunca con un rectángulo de
+// fondo: el texto tiene que sentirse pegado a la foto, no flotando en una
+// tarjeta aparte.
+
+const STICKER_MARGIN_X = 84
+const STICKER_TOP_SAFE = 110 // franja arriba, para la barra de progreso/cierre de IG
+const STICKER_BOTTOM_SAFE = 190 // franja abajo, para los controles propios de IG
+
+// Formatea el número hero con separador de miles estilo es-AR (punto),
+// conservando los decimales de formatKg con coma: 2450 -> "2.450",
+// 2450.5 -> "2.450,5". formatKg ya resuelve el redondeo; acá solo agrupamos.
+function formatHeroKg(valor) {
+  const crudo = formatKg(valor)
+  const [entero, decimales] = crudo.split('.')
+  const enteroFormateado = new Intl.NumberFormat('es-AR').format(Number(entero))
+  return decimales ? `${enteroFormateado},${decimales}` : enteroFormateado
+}
+
+// Degradés (scrim) arriba y abajo del canvas, igual que el mockup: NO hay
+// ninguna caja detrás del texto. El texto va directo sobre la foto que el
+// usuario elija en Instagram; estos degradés son lo único que garantiza
+// legibilidad, oscureciendo un poco arriba (para el wordmark) y bastante
+// más abajo (donde va el bloque de datos), sin tapar la foto con un panel.
+function drawStickerScrims(ctx) {
+  const scrimTop = ctx.createLinearGradient(0, 0, 0, H * 0.32)
+  scrimTop.addColorStop(0, 'rgba(0, 0, 0, 0.45)')
+  scrimTop.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  ctx.fillStyle = scrimTop
+  ctx.fillRect(0, 0, W, H * 0.32)
+
+  const scrimBottom = ctx.createLinearGradient(0, H * 0.45, 0, H)
+  scrimBottom.addColorStop(0, 'rgba(0, 0, 0, 0)')
+  scrimBottom.addColorStop(1, 'rgba(0, 0, 0, 0.82)')
+  ctx.fillStyle = scrimBottom
+  ctx.fillRect(0, H * 0.45, W, H * 0.55)
+}
+
+function truncateToWidth(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text
+  let out = text
+  while (out.length > 1 && ctx.measureText(`${out}…`).width > maxWidth) {
+    out = out.slice(0, -1)
+  }
+  return `${out}…`
+}
+
+/**
+ * Dibuja el sticker transparente de resumen de sesión.
+ * @param {HTMLCanvasElement} canvas
+ * @param {{
+ *   rutinaNombre: string, fecha: Date, volumenTotal: number,
+ *   totalSeries: number, duracionMin: number, racha?: number, prs: string[],
+ * }} data
+ */
+export function dibujarStickerResumen(canvas, data) {
+  const {
+    rutinaNombre = 'Sesión libre',
+    fecha = new Date(),
+    volumenTotal = 0,
+    totalSeries = 0,
+    duracionMin = 0,
+    racha = 0,
+    prs = [],
+  } = data
+
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, W, H) // el canvas queda transparente salvo lo que dibujemos
+
+  const hayPR = prs.length > 0
+  const marginX = STICKER_MARGIN_X
+  const innerW = W - marginX * 2
+
+  drawStickerScrims(ctx)
+
+  // Sombra de texto suave y constante para todo el bloque de datos: es lo
+  // que reemplaza a la caja de fondo, dándole legibilidad sin taparle la
+  // foto al usuario.
+  const conSombra = (dibujar) => {
+    ctx.save()
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)'
+    ctx.shadowBlur = 18
+    ctx.shadowOffsetY = 2
+    dibujar()
+    ctx.restore()
+  }
+
+  // ---- Header: wordmark centrado arriba, fijo, como en el mockup ----
+  conSombra(() => {
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillStyle = COLORS.accent
+    ctx.font = '700 44px "Space Grotesk"'
+    ctx.fillText('FitSync', W / 2, STICKER_TOP_SAFE + 44)
+  })
+
+  // ---- Bloque inferior: PR (si hay) + hero + subtítulo + metadata ----
+  const hPill = hayPR ? 50 : 0
+  const gapAfterPill = hayPR ? 22 : 0
+  const hHero = 128
+  const gapAfterHero = 14
+  const hSubtitle = 40
+  const gapAfterSubtitle = 28
+  const hMetadata = 40
+
+  const bloqueH = hPill + gapAfterPill + hHero + gapAfterHero + hSubtitle + gapAfterSubtitle + hMetadata
+  let cy = H - STICKER_BOTTOM_SAFE - bloqueH
+
+  // PR: pill chico tipo "glass", sin fondo pesado — un tag suelto, no una caja.
+  if (hayPR) {
+    const pillLabel = prs.length === 1 ? '🏅 NUEVO RÉCORD' : `🏅 ${prs.length} RÉCORDS NUEVOS`
+    conSombra(() => {
+      ctx.font = '700 22px "Plus Jakarta Sans"'
+      const textW = ctx.measureText(pillLabel).width
+      const padX = 22
+      const pillW = textW + padX * 2
+      ctx.fillStyle = 'rgba(227, 179, 65, 0.16)'
+      roundRect(ctx, marginX, cy, pillW, hPill, hPill / 2)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(227, 179, 65, 0.55)'
+      ctx.lineWidth = 2
+      roundRect(ctx, marginX, cy, pillW, hPill, hPill / 2)
+      ctx.stroke()
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = COLORS.gold
+      ctx.fillText(pillLabel, marginX + pillW / 2, cy + hPill / 2 + 2)
+      ctx.textBaseline = 'alphabetic'
+    })
+    cy += hPill + gapAfterPill
+  }
+
+  // Hero: número gigante + unidad, alineado a la izquierda, directo sobre la foto.
+  const valorTexto = formatHeroKg(volumenTotal)
+  conSombra(() => {
+    ctx.textAlign = 'left'
+    ctx.font = '700 116px "Space Grotesk"'
+    const valorW = ctx.measureText(valorTexto).width
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(valorTexto, marginX, cy + hHero - 22)
+    ctx.font = '700 48px "Space Grotesk"'
+    ctx.fillStyle = COLORS.accent
+    ctx.fillText(' kg', marginX + valorW, cy + hHero - 22)
+  })
+  cy += hHero + gapAfterHero
+
+  // Subtítulo: rutina + fecha en una sola línea, gris claro, truncado si no entra.
+  const fechaTexto = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+  const subtitulo = `${rutinaNombre} · ${fechaTexto}`
+  conSombra(() => {
+    ctx.textAlign = 'left'
+    ctx.font = '500 32px "Plus Jakarta Sans"'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.82)'
+    ctx.fillText(truncateToWidth(ctx, subtitulo, innerW), marginX, cy + hSubtitle - 8)
+  })
+  cy += hSubtitle + gapAfterSubtitle
+
+  // Metadata: fila de ítems con ícono + texto, separados por divisores finos,
+  // en una sola línea (ancho dinámico, no columnas fijas) — igual que el mockup.
+  const items = [
+    { icon: '📋', text: `${totalSeries} Series` },
+    { icon: '⏱️', text: formatDuracion(duracionMin) },
+  ]
+  if (racha > 0) items.push({ icon: '🔥', text: `Racha ${racha} ${racha === 1 ? 'día' : 'días'}` })
+
+  conSombra(() => {
+    ctx.textAlign = 'left'
+    ctx.font = '700 30px "Plus Jakarta Sans"'
+    let x = marginX
+    const dividerGap = 28
+    items.forEach((item, i) => {
+      const texto = `${item.icon} ${item.text}`
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(texto, x, cy + hMetadata - 8)
+      const w = ctx.measureText(texto).width
+      x += w + dividerGap / 2 + dividerGap / 2
+
+      if (i < items.length - 1) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(x - dividerGap / 2, cy + hMetadata - 30)
+        ctx.lineTo(x - dividerGap / 2, cy + hMetadata - 6)
+        ctx.stroke()
+      }
+    })
+  })
+
+  // Footer: caption chica y centrada, muy pegada al piso del safe-zone.
+  ctx.textAlign = 'center'
+  ctx.font = '600 20px "Plus Jakarta Sans"'
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)'
+  ctx.fillText('REGISTRADO CON FITSYNC', W / 2, H - STICKER_BOTTOM_SAFE + 46)
+  ctx.textAlign = 'left'
+}
+
+export async function generarBlobStickerResumen(data) {
+  const canvas = document.createElement('canvas')
+  await esperarFuentes()
+  dibujarStickerResumen(canvas, data)
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/png', 1)
+  })
+}
+
+
 /**
  * Dibuja la tarjeta de resumen sobre el canvas dado.
  * @param {HTMLCanvasElement} canvas

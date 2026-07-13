@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { dibujarTarjetaResumen, esperarFuentes } from '../utils/shareCard'
+import { dibujarTarjetaResumen, dibujarStickerResumen, esperarFuentes } from '../utils/shareCard'
 
 // Tarjeta compartible del resumen de sesión (historias de Instagram y
 // similares). Renderiza a canvas offscreen, muestra una preview en un modal
 // y comparte vía Web Share API (con archivo) si el navegador lo soporta;
 // si no, cae a descarga directa del PNG.
+//
+// Tiene dos modos de generación:
+// - 'sticker': PNG transparente salvo un panel compacto abajo (estilo
+//   Strava). Pensado para compartir directo a Instagram: el share sheet
+//   nativo detecta la transparencia y IG lo coloca como sticker sobre la
+//   foto/cámara que el usuario elija en el editor de Historia.
+// - 'completa': la tarjeta de siempre, con fondo propio y todos los datos
+//   (gráfico semanal, logros, top ejercicios). Para quien prefiere una
+//   imagen ya terminada, sin depender de agregarle una foto después.
 export default function CompartirResumen({
   rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana,
   calorias, racha, topEjercicios, logrosNuevos,
@@ -13,6 +22,7 @@ export default function CompartirResumen({
   const [previewUrl, setPreviewUrl] = useState(null)
   const [generando, setGenerando] = useState(false)
   const [error, setError] = useState(null)
+  const [modo, setModo] = useState('sticker')
   const canvasRef = useRef(null)
   const blobRef = useRef(null)
 
@@ -25,17 +35,24 @@ export default function CompartirResumen({
     && typeof navigator.canShare === 'function'
     && typeof navigator.share === 'function'
 
-  const generar = async () => {
+  const generar = async (modoActual = modo) => {
     setGenerando(true)
     setError(null)
     try {
       await esperarFuentes()
       const canvas = canvasRef.current
-      dibujarTarjetaResumen(canvas, datosTarjeta)
+      if (modoActual === 'sticker') {
+        dibujarStickerResumen(canvas, datosTarjeta)
+      } else {
+        dibujarTarjetaResumen(canvas, datosTarjeta)
+      }
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
       if (!blob) throw new Error('No se pudo generar la imagen')
       blobRef.current = blob
-      setPreviewUrl(URL.createObjectURL(blob))
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return URL.createObjectURL(blob)
+      })
     } catch (e) {
       console.error(e)
       setError('No se pudo generar la tarjeta. Probá de nuevo.')
@@ -45,8 +62,19 @@ export default function CompartirResumen({
   }
 
   const abrir = async () => {
+    // Si no hay forma de compartir archivos, "con tu foto" no tiene sentido
+    // como punto de partida: nadie va a poder pegarle una foto atrás, así
+    // que arrancamos directo en la tarjeta completa.
+    const modoInicial = puedeCompartirArchivos ? 'sticker' : 'completa'
+    setModo(modoInicial)
     setAbierto(true)
-    await generar()
+    await generar(modoInicial)
+  }
+
+  const cambiarModo = async (nuevoModo) => {
+    if (nuevoModo === modo || generando) return
+    setModo(nuevoModo)
+    await generar(nuevoModo)
   }
 
   const cerrar = () => {
@@ -63,9 +91,11 @@ export default function CompartirResumen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const nombreArchivo = modo === 'sticker' ? 'fitsync-sticker.png' : 'fitsync-resumen.png'
+
   const compartir = async () => {
     if (!blobRef.current) return
-    const file = new File([blobRef.current], 'fitsync-resumen.png', { type: 'image/png' })
+    const file = new File([blobRef.current], nombreArchivo, { type: 'image/png' })
     const shareData = {
       files: [file],
       title: 'Mi sesión en FitSync',
@@ -88,7 +118,7 @@ export default function CompartirResumen({
     if (!previewUrl) return
     const a = document.createElement('a')
     a.href = previewUrl
-    a.download = 'fitsync-resumen.png'
+    a.download = nombreArchivo
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -117,7 +147,37 @@ export default function CompartirResumen({
               </button>
             </div>
 
-            <div className="rounded-lg overflow-hidden border border-outline-variant bg-surface-container-lowest aspect-[9/16] flex items-center justify-center">
+            {/* Toggle de modo: sticker transparente vs tarjeta completa */}
+            <div className="flex gap-1 p-1 rounded-md bg-surface-container-lowest border border-outline-variant mb-3">
+              <button
+                onClick={() => cambiarModo('sticker')}
+                disabled={generando}
+                className={`flex-1 py-2 rounded text-body-sm font-semibold transition-colors disabled:opacity-50 ${
+                  modo === 'sticker' ? 'bg-accent text-on-accent' : 'text-on-surface-variant'
+                }`}
+              >
+                Con tu foto
+              </button>
+              <button
+                onClick={() => cambiarModo('completa')}
+                disabled={generando}
+                className={`flex-1 py-2 rounded text-body-sm font-semibold transition-colors disabled:opacity-50 ${
+                  modo === 'completa' ? 'bg-accent text-on-accent' : 'text-on-surface-variant'
+                }`}
+              >
+                Tarjeta completa
+              </button>
+            </div>
+
+            <div
+              className="rounded-lg overflow-hidden border border-outline-variant aspect-[9/16] flex items-center justify-center"
+              style={modo === 'sticker' ? {
+                backgroundImage: 'linear-gradient(45deg, #2a2a2e 25%, transparent 25%), linear-gradient(-45deg, #2a2a2e 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2a2a2e 75%), linear-gradient(-45deg, transparent 75%, #2a2a2e 75%)',
+                backgroundSize: '24px 24px',
+                backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
+                backgroundColor: '#1b1b1d',
+              } : undefined}
+            >
               {generando && (
                 <p className="text-label-md text-on-surface-variant">Generando tarjeta…</p>
               )}
@@ -128,6 +188,12 @@ export default function CompartirResumen({
                 <img src={previewUrl} alt="Vista previa de la tarjeta de resumen" className="w-full h-full object-contain" />
               )}
             </div>
+
+            {modo === 'sticker' && !generando && (
+              <p className="text-label-md text-on-surface-variant text-center mt-2 px-2">
+                El cuadriculado es transparencia, no se ve así en Instagram. Elegí Instagram al compartir y vas a poder ponerle una foto o video de fondo antes de acomodar la tarjeta.
+              </p>
+            )}
 
             <div className="flex gap-2 mt-4">
               <button
