@@ -13,6 +13,7 @@ import CoachChat from './components/CoachChat'
 import InstallGate from './components/InstallGate'
 import PendingSyncBanner from './components/PendingSyncBanner'
 import TourOverlay from './components/TourOverlay'
+import QueHayDeNuevo from './components/QueHayDeNuevo'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -57,6 +58,7 @@ export default function App() {
         <BottomNav />
         <CoachChat />
         <TourOverlay />
+        <QueHayDeNuevo />
       </div>
     </TourProvider>
   )

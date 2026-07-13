@@ -13,11 +13,23 @@ export default defineConfig({
       // (Chrome exige un SW registrado, no solo el manifest) y funcione offline.
       manifest: false,
       includeManifestIcons: false,
-      injectRegister: 'auto',
+      // Registramos el SW a mano en main.jsx (en vez de injectRegister:'auto')
+      // para poder forzar un chequeo de actualización cada vez que la PWA
+      // instalada vuelve a primer plano. Sin esto, un usuario que abre la app
+      // desde el ícono del celu puede quedarse días con una versión vieja: el
+      // navegador solo revisa si hay SW nuevo de tanto en tanto, no en cada
+      // apertura.
+      injectRegister: null,
       devOptions: {
         enabled: true, // permite probar instalación/offline con `npm run dev`, sin esperar al build
       },
       workbox: {
+        // Redundante con lo que ya implica registerType:'autoUpdate', pero
+        // explícito a propósito: el SW nuevo toma control apenas se instala,
+        // sin esperar a que se cierren todas las pestañas/instancias abiertas.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
         // Suma el manejo de push/notificationclick al SW autogenerado, sin
         // tener que migrar a la estrategia injectManifest.
