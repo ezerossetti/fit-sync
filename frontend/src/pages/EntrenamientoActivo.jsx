@@ -16,6 +16,8 @@ import {
 } from '../utils/helpers'
 import { logrosNuevos as calcularLogrosNuevos, NIVEL_COLOR } from '../data/achievements'
 import { guardarBorrador, leerBorrador, borrarBorrador, guardarSesionPendiente } from '../utils/sesionDraft'
+import { useTour } from '../context/TourContext'
+import { TOURS } from '../data/tours'
 
 const RPE_OPCIONES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -55,7 +57,7 @@ const SALTOS_REPS = [1, 2, 5]
 const DESCANSO_OBJETIVO_DEFAULT = 90
 
 // ---------- Stepper de carga rápida (peso / reps) ----------
-function CargaStepper({ label, value, onChange, saltos, unidad, min = 0 }) {
+function CargaStepper({ label, value, onChange, saltos, unidad, min = 0, tourAdd, tourSubtract }) {
   const [saltoIdx, setSaltoIdx] = useState(0)
   const salto = saltos[saltoIdx]
 
@@ -65,6 +67,7 @@ function CargaStepper({ label, value, onChange, saltos, unidad, min = 0 }) {
       <div className="flex items-center justify-between px-2">
         <button
           type="button"
+          data-tour={tourSubtract}
           onClick={() => onChange(Math.max(min, +(value - salto).toFixed(2)))}
           className="plate-btn w-14 h-14 shrink-0"
           aria-label={`Restar ${salto}${unidad}`}
@@ -77,6 +80,7 @@ function CargaStepper({ label, value, onChange, saltos, unidad, min = 0 }) {
         </div>
         <button
           type="button"
+          data-tour={tourAdd}
           onClick={() => onChange(+(value + salto).toFixed(2))}
           className="plate-btn w-14 h-14 shrink-0 bg-primary-container border-accent/30"
           aria-label={`Sumar ${salto}${unidad}`}
@@ -101,7 +105,7 @@ function CargaStepper({ label, value, onChange, saltos, unidad, min = 0 }) {
 }
 
 // ---------- Anillo circular de descanso ----------
-function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJETIVO_DEFAULT }) {
+function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJETIVO_DEFAULT, tourTarget }) {
   const restante = Math.max(0, objetivo - segundos)
   const progreso = objetivo > 0 ? Math.min(1, segundos / objetivo) : 1
   const size = 128
@@ -113,6 +117,7 @@ function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJ
   return (
     <button
       type="button"
+      data-tour={tourTarget}
       onClick={onToggle}
       className="relative flex items-center justify-center mx-auto"
       style={{ width: size, height: size }}
@@ -173,6 +178,17 @@ export default function EntrenamientoActivo() {
   const [borradorPendiente, setBorradorPendiente] = useState(null) // borrador detectado al entrar, esperando "Retomar" o "Descartar"
   const [guardadaOffline, setGuardadaOffline] = useState(false) // la última sesión finalizada se guardó localmente porque falló el POST
   const [mostrandoBuscadorExtra, setMostrandoBuscadorExtra] = useState(false) // toggle "+ agregar otro ejercicio" dentro del flujo con rutina
+  const { startTour } = useTour()
+
+  // Tours de esta pantalla: se disparan la primera vez que el usuario llega
+  // a "pre-serie" (antes de la primera serie de un ejercicio) y a "activo"
+  // (registrando series). Como startTour ya chequea localStorage, entrar y
+  // salir de estos steps varias veces no vuelve a mostrar nada una vez visto.
+  useEffect(() => {
+    if (step === 'pre-serie') startTour('preserie', TOURS.preserie.steps)
+    if (step === 'activo') startTour('activo', TOURS.activo.steps)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
   useEffect(() => {
     (async () => {
@@ -693,7 +709,7 @@ export default function EntrenamientoActivo() {
           <p className="text-body-sm text-on-surface-variant mb-4">{info.descripcion}</p>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div data-tour="preserie-historial" className="grid grid-cols-2 gap-3 mb-4">
           <div className="card p-3 text-center">
             <p className="text-label-md text-on-surface-variant uppercase mb-1">PR Personal</p>
             <p className="font-mono text-headline-sm text-accent">{pr ? `${formatKg(pr.peso)} kg` : '—'}</p>
@@ -737,7 +753,7 @@ export default function EntrenamientoActivo() {
           </div>
         )}
 
-        <button onClick={iniciarSerie} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
+        <button data-tour="preserie-comenzar" onClick={iniciarSerie} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
           Comenzar serie <span className="material-symbols-outlined">bolt</span>
         </button>
       </div>
@@ -776,20 +792,34 @@ export default function EntrenamientoActivo() {
               Serie 1: {previo.mejorSet.peso}kg × {previo.mejorSet.reps} ✓
             </p>
             {hechas > 0 && (
-              <button onClick={repetirCarga} className="text-label-md text-accent flex items-center gap-1 shrink-0 ml-2">
+              <button data-tour="activo-repetir" onClick={repetirCarga} className="text-label-md text-accent flex items-center gap-1 shrink-0 ml-2">
                 <span className="material-symbols-outlined text-[16px]">repeat</span> Repetir
               </button>
             )}
           </div>
         )}
 
-        <CargaStepper label="Carga (kg)" value={peso} onChange={setPeso} saltos={SALTOS_PESO} unidad="kg" />
+        <CargaStepper
+          label="Carga (kg)"
+          value={peso}
+          onChange={setPeso}
+          saltos={SALTOS_PESO}
+          unidad="kg"
+          tourAdd="activo-stepper-sumar"
+          tourSubtract="activo-stepper-restar"
+        />
         <CargaStepper label="Repeticiones" value={reps} onChange={setReps} saltos={SALTOS_REPS} unidad="reps" min={0} />
 
         <SelectorRPE value={rpe} onChange={setRpe} />
 
         <div className="card py-6">
-          <DescansoRing segundos={segundosDescanso} descansando={descansando} onToggle={() => setDescansando(d => !d)} objetivo={descansoObjetivo} />
+          <DescansoRing
+            segundos={segundosDescanso}
+            descansando={descansando}
+            onToggle={() => setDescansando(d => !d)}
+            objetivo={descansoObjetivo}
+            tourTarget="activo-descanso"
+          />
         </div>
 
         <p className="text-label-md text-on-surface-variant/70 text-center -mt-2">
@@ -805,7 +835,7 @@ export default function EntrenamientoActivo() {
         )}
 
         <div className="space-y-2">
-          <button onClick={() => guardarSerie()} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
+          <button data-tour="activo-guardar" onClick={() => guardarSerie()} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-[20px]">check_circle</span>
             {objetivo && hechas + 1 >= objetivo ? 'Serie completada ✓ → Siguiente' : 'Serie completada ✓'}
           </button>

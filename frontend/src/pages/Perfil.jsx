@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import usuarioService from '../services/usuario.service'
@@ -12,11 +13,15 @@ import {
 } from '../utils/helpers'
 import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
 import CompartirLogro from '../components/CompartirLogro'
+import { useTour } from '../context/TourContext'
+import { TOURS_REPLAYABLES } from '../data/tours'
 
 const PRESETS_DESCANSO = [30, 60, 90, 120, 180]
 
 export default function Perfil() {
   const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+  const { resetTour, resetAllTours } = useTour()
   const [perfil, setPerfil] = useState(null)
   const [historial, setHistorial] = useState([])
   const [loading, setLoading] = useState(true)
@@ -545,6 +550,44 @@ export default function Perfil() {
           </div>
         )}
       </div>
+
+      {/* Tutoriales */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="material-symbols-outlined text-accent text-[20px]">school</span>
+        <h2 className="text-body-md font-semibold text-on-surface">Tutoriales</h2>
+      </div>
+      <div className="card divide-y divide-outline-variant mb-3">
+        {TOURS_REPLAYABLES.map((tour) => (
+          <button
+            key={tour.id}
+            onClick={() => {
+              resetTour(tour.id)
+              navigate(tour.route)
+            }}
+            className="w-full flex items-center justify-between p-4 text-left"
+          >
+            <span className="text-body-sm text-on-surface">{tour.label}</span>
+            <span className="flex items-center gap-1 text-label-md text-accent">
+              Ver de nuevo
+              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="text-label-md text-on-surface-variant mb-2 px-1">
+        Los tutoriales de "antes de la primera serie" y "entrenamiento activo" aparecen solos la primera vez que llegás a esas pantallas dentro de un entrenamiento.
+      </p>
+      <button
+        onClick={() => {
+          if (confirm('¿Reiniciar todos los tutoriales? Van a volver a aparecer la próxima vez que entres a cada pantalla.')) {
+            resetAllTours()
+          }
+        }}
+        className="w-full flex items-center justify-center gap-2 py-3 mb-6 text-label-md text-on-surface-variant border border-outline-variant rounded-lg"
+      >
+        <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+        Reiniciar todos los tutoriales
+      </button>
 
       {/* Ajustes de cuenta */}
       <div className="flex items-center gap-2 mb-3">

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { TourProvider } from './context/TourContext'
 import TopBar from './components/TopBar'
 import BottomNav from './components/BottomNav'
 import Login from './pages/Login'
@@ -11,6 +12,7 @@ import Perfil from './pages/Perfil'
 import CoachChat from './components/CoachChat'
 import InstallGate from './components/InstallGate'
 import PendingSyncBanner from './components/PendingSyncBanner'
+import TourOverlay from './components/TourOverlay'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -33,26 +35,29 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <InstallGate />
-      <PendingSyncBanner />
-      <TopBar />
-      <main
-        className="max-w-container-max mx-auto px-margin-mobile pb-28"
-        style={{ paddingTop: 'calc(72px + env(safe-area-inset-top))' }}
-      >
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/rutinas" element={<Rutinas />} />
-          <Route path="/entrenar" element={<EntrenamientoActivo />} />
-          <Route path="/entrenar/:rutinaId" element={<EntrenamientoActivo />} />
-          <Route path="/historial" element={<Historial />} />
-          <Route path="/perfil" element={<Perfil />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      <BottomNav />
-      <CoachChat />
-    </div>
+    <TourProvider>
+      <div className="min-h-screen bg-background">
+        <InstallGate />
+        <PendingSyncBanner />
+        <TopBar />
+        <main
+          className="max-w-container-max mx-auto px-margin-mobile pb-28"
+          style={{ paddingTop: 'calc(72px + env(safe-area-inset-top))' }}
+        >
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/rutinas" element={<Rutinas />} />
+            <Route path="/entrenar" element={<EntrenamientoActivo />} />
+            <Route path="/entrenar/:rutinaId" element={<EntrenamientoActivo />} />
+            <Route path="/historial" element={<Historial />} />
+            <Route path="/perfil" element={<Perfil />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <BottomNav />
+        <CoachChat />
+        <TourOverlay />
+      </div>
+    </TourProvider>
   )
 }

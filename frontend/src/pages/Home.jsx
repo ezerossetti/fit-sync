@@ -4,6 +4,8 @@ import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
+import { useTour } from '../context/TourContext'
+import { TOURS } from '../data/tours'
 import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaDetalle, sugerirDeload, ejerciciosAbandonados } from '../utils/helpers'
 
 function inicioDeSemana() {
@@ -66,11 +68,25 @@ function calcularLogros({ sesiones, rutinas, racha }) {
 
 export default function Home() {
   const { user } = useAuth()
+  const { startTour, yaVisto } = useTour()
   const [rutinas, setRutinas] = useState([])
   const [sesiones, setSesiones] = useState([])
   const [perfil, setPerfil] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Primera vez en la app: tour de bienvenida (recorre la barra inferior).
+  // Ya la vio, pero nunca vio el detalle de Home: tour de Home.
+  // Ambos quedan guardados en localStorage, así que esto corre una sola vez
+  // por usuario, no en cada sesión.
+  useEffect(() => {
+    if (!yaVisto('bienvenida')) {
+      startTour('bienvenida', TOURS.bienvenida.steps)
+    } else {
+      startTour('home', TOURS.home.steps)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     (async () => {
@@ -120,6 +136,7 @@ export default function Home() {
       {/* CTA principal */}
       <Link
         to="/entrenar"
+        data-tour="home-cta-entrenar"
         className="block card p-5 bg-gradient-to-br from-primary to-primary-container border-none relative overflow-hidden"
       >
         <div className="relative z-10">
@@ -155,7 +172,7 @@ export default function Home() {
       )}
 
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div data-tour="home-stats" className="grid grid-cols-3 gap-3">
         <div className="card p-3 text-center">
           <p className="font-mono text-headline-md text-accent">{loading ? '–' : rutinas.length}</p>
           <p className="text-label-md text-on-surface-variant mt-1">Rutinas</p>
@@ -195,7 +212,7 @@ export default function Home() {
       )}
 
       {/* Rutinas */}
-      <div>
+      <div data-tour="home-rutinas">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-headline-sm font-display text-on-surface">Mis rutinas</h3>
           <Link to="/rutinas" className="text-body-sm text-accent">Ver todas</Link>
@@ -224,7 +241,7 @@ export default function Home() {
       </div>
 
       {/* Logros */}
-      <div>
+      <div data-tour="home-logros">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-headline-sm font-display text-on-surface">Logros</h3>
           <span className="text-label-md text-on-surface-variant">{logrosDesbloqueados}/{logros.length}</span>

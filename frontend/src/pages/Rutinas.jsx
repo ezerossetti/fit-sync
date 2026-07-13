@@ -4,6 +4,8 @@ import rutinasService from '../services/rutinas.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import { searchExercises, getExerciseInfo } from '../data/exerciseCatalog'
 import { sugerirAlternativas, tiposDeSplit, generarRutinaSugerida } from '../data/coach'
+import { useTour } from '../context/TourContext'
+import { TOURS } from '../data/tours'
 
 // ---------- Control numérico compacto (- valor +) ----------
 function NumberControl({ value, onChange, min = 1 }) {
@@ -235,6 +237,12 @@ export default function Rutinas() {
   const [showSplits, setShowSplits] = useState(false)
   const navigate = useNavigate()
   const splits = tiposDeSplit()
+  const { startTour } = useTour()
+
+  useEffect(() => {
+    startTour('rutinas', TOURS.rutinas.steps)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const aplicarSplit = (splitId) => {
     const sugerida = generarRutinaSugerida(splitId)
@@ -403,7 +411,7 @@ export default function Rutinas() {
       </div>
       <p className="text-body-sm text-on-surface-variant mb-5">Organizá tus días de entrenamiento.</p>
 
-      <button onClick={abrirNueva} className="btn-primary w-full py-3 text-body-md mb-5 flex items-center justify-center gap-2">
+      <button data-tour="rutinas-nueva" onClick={abrirNueva} className="btn-primary w-full py-3 text-body-md mb-5 flex items-center justify-center gap-2">
         <span className="material-symbols-outlined text-[18px]">add</span> Nueva rutina
       </button>
 
@@ -430,7 +438,11 @@ export default function Rutinas() {
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-3 pt-3 border-t border-outline-variant">
-                <button onClick={() => navigate(`/entrenar/${r.id}`)} className="btn-secondary flex-1 py-2 text-body-sm flex items-center justify-center gap-1">
+                <button
+                  onClick={() => navigate(`/entrenar/${r.id}`)}
+                  data-tour={r.id === rutinas[0]?.id ? 'rutinas-entrenar-btn' : undefined}
+                  className="btn-secondary flex-1 py-2 text-body-sm flex items-center justify-center gap-1"
+                >
                   <span className="material-symbols-outlined text-[16px]">bolt</span> Entrenar
                 </button>
                 <button onClick={() => abrirEditar(r)} className="px-3 py-2 text-on-surface-variant">

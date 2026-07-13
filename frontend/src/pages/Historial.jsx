@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import sesionesService from '../services/sesiones.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
+import { useTour } from '../context/TourContext'
+import { TOURS } from '../data/tours'
 import {
   formatFecha, formatFechaRelativa, volumenSesion, formatKg, formatDuracion,
   ejerciciosEnHistorial, progresoPorEjercicio, datosHeatmap, volumenPorGrupoSemana,
@@ -24,7 +26,7 @@ function ActivityHeatmap({ sesiones }) {
   ]
 
   return (
-    <div className="card p-4 mb-6">
+    <div data-tour="historial-heatmap" className="card p-4 mb-6">
       <p className="text-label-md text-accent uppercase tracking-wide mb-3">Actividad · últimas 12 semanas</p>
       <div className="flex gap-1 overflow-x-auto pb-1">
         {semanas.map((semana, i) => (
@@ -202,6 +204,16 @@ export default function Historial() {
   const [personalizados, setPersonalizados] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { startTour } = useTour()
+
+  // Se dispara recién cuando terminó de cargar y hay sesiones: los targets
+  // (heatmap, lista) solo existen en el DOM en ese caso.
+  useEffect(() => {
+    if (!loading && sesiones.length > 0) {
+      startTour('historial', TOURS.historial.steps)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, sesiones.length])
 
   const cargar = async () => {
     setLoading(true)
@@ -295,7 +307,7 @@ export default function Historial() {
           <p className="text-body-sm text-on-surface-variant mt-1">Es una invitación: tocá "Entrenar" y arrancá.</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div data-tour="historial-lista" className="space-y-6">
           {grupos.map(grupo => (
             <div key={grupo.label}>
               <p className="text-label-md text-accent uppercase tracking-wide mb-2">{grupo.label}</p>
