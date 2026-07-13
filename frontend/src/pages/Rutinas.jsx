@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
+import sesionesService from '../services/sesiones.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import { searchExercises, getExerciseInfo } from '../data/exerciseCatalog'
 import { sugerirAlternativas, tiposDeSplit, generarRutinaSugerida } from '../data/coach'
@@ -231,10 +232,12 @@ export default function Rutinas() {
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [personalizados, setPersonalizados] = useState([])
+  const [sesiones, setSesiones] = useState([])
   const [ejercicios, setEjercicios] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [showSplits, setShowSplits] = useState(false)
+  const [ultimoSplit, setUltimoSplit] = useState(null)
   const navigate = useNavigate()
   const splits = tiposDeSplit()
   const { startTour } = useTour()
@@ -245,8 +248,9 @@ export default function Rutinas() {
   }, [])
 
   const aplicarSplit = (splitId) => {
-    const sugerida = generarRutinaSugerida(splitId)
+    const sugerida = generarRutinaSugerida(splitId, { personalizados, rutinas, sesiones })
     setEjercicios(sugerida)
+    setUltimoSplit(splitId)
     if (!nombre.trim()) {
       const label = splits.find(s => s.id === splitId)?.label
       if (label) setNombre(`Día de ${label}`)
@@ -270,6 +274,7 @@ export default function Rutinas() {
   useEffect(() => {
     cargar()
     ejerciciosPersonalizadosService.getAll().then(setPersonalizados).catch(() => {})
+    sesionesService.getAll().then(setSesiones).catch(() => {})
   }, [])
 
   const abrirNueva = () => {
@@ -277,6 +282,7 @@ export default function Rutinas() {
     setNombre('')
     setDescripcion('')
     setEjercicios([])
+    setUltimoSplit(null)
     setShowForm(true)
   }
 
@@ -285,6 +291,7 @@ export default function Rutinas() {
     setNombre(r.nombre)
     setDescripcion(r.descripcion || '')
     setEjercicios(r.ejercicios || [])
+    setUltimoSplit(null)
     setShowForm(true)
   }
 
@@ -384,6 +391,16 @@ export default function Rutinas() {
                   </p>
                 )}
               </div>
+            )}
+            {ultimoSplit && !showSplits && (
+              <button
+                type="button"
+                onClick={() => aplicarSplit(ultimoSplit)}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 text-label-md text-accent uppercase py-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                Generar otra combinación
+              </button>
             )}
           </div>
 

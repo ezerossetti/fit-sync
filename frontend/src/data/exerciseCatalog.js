@@ -703,7 +703,7 @@ export const EXERCISE_CATALOG = [
 
 // Adapta un registro de la tabla ejercicios_personalizados (snake_case, viene del backend)
 // al mismo shape que usa el catálogo estático (camelCase) para que se puedan mezclar sin fricción.
-function normalizarPersonalizado(p) {
+export function normalizarPersonalizado(p) {
   return {
     nombre: p.nombre,
     sinonimos: [],
