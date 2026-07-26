@@ -334,11 +334,16 @@ export default function EntrenamientoActivo() {
 
     setRpe(null)
 
-    // En sesión libre (sin rutina, ej. cuando el entrenador da los ejercicios
-    // sobre la marcha) no hay objetivo de series predefinido: no cortamos
-    // automáticamente, ella vuelve a "Ejercicios" cuando quiera con el botón
-    // de atrás. Con rutina, mantenemos el default de 3.
-    const objetivo = ejercicioActual.series_objetivo || (rutina ? 3 : null)
+    // BUGFIX: antes, en sesión libre (o en ejercicios agregados sobre la
+    // marcha dentro de una rutina) el objetivo quedaba en `null` acá pero la
+    // pantalla "activo" SÍ mostraba un objetivo de 3 (con el label "→
+    // Siguiente"). Esa pantalla nunca cortaba de verdad, y como el contador
+    // de "Serie X de Y" quedaba pisado en "3 de 3", el usuario no se daba
+    // cuenta de que seguía sumando series 4, 5, 6... Ahora el criterio es
+    // el mismo acá y en la pantalla "activo": si el ejercicio no trae
+    // series_objetivo propio, el default de 3 se usa siempre (con o sin
+    // rutina) y siempre corta al llegar al objetivo.
+    const objetivo = ejercicioActual.series_objetivo || 3
     if (objetivo && nuevoConteo >= objetivo) {
       setDescansando(false)
       setSegundosDescanso(0)
@@ -784,7 +789,7 @@ export default function EntrenamientoActivo() {
             <span className="material-symbols-outlined text-[18px]">arrow_back</span> Ejercicios
           </button>
           <span className="text-label-md text-on-surface-variant bg-surface-container-high px-2.5 py-1 rounded-full">
-            Serie {Math.min(hechas + 1, objetivo || hechas + 1)}{objetivo ? ` de ${objetivo}` : ''}
+            Serie {hechas + 1}{objetivo ? ` de ${objetivo}` : ''}
           </span>
         </div>
 
