@@ -23560,5 +23560,42 @@
     "musculo": "antebrazos",
     "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0859-bd5b860.gif",
     "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0859-bd5b860.jpg"
+  },
+  {
+    "nombre": "Dumbbell Close-Grip Press",
+    "sinonimos": [
+      "dumbbell close-grip press"
+    ],
+    "grupo": "Brazos · mancuerna",
+    "descripcion": "Siéntate en un banco plano con una mancuerna en cada mano, apoyadas en los muslos. Usando los muslos para ayudar a levantar las mancuernas, levanta las mancuernas una a la vez para poder sostenerlas frente a ti a la altura de los hombros. Una vez a la altura de los hombros, rota las muñecas hacia adelante de modo que las palmas de las manos miren hacia afuera de ti. Esta será tu posición inicial. Mientras inhalas, baja lentamente las mancuernas hacia tu lado hasta que queden aproximadamente a la altura del pecho. Mientras exhalas, usa los tríceps para levantar las mancuernas de vuelta a la posición inicial. Repite el número de repeticiones deseado.",
+    "puntosClave": [
+      "Siéntate en un banco plano con una mancuerna en cada mano, apoyadas en los muslos.",
+      "Usando los muslos para ayudar a levantar las mancuernas, levanta las mancuernas una a la vez para poder sostenerlas frente a ti a la altura de los hombros.",
+      "Una vez a la altura de los hombros, rota las muñecas hacia adelante de modo que las palmas de las manos miren hacia afuera de ti. Esta será tu posición inicial.",
+      "Mientras inhalas, baja lentamente las mancuernas hacia tu lado hasta que queden aproximadamente a la altura del pecho.",
+      "Mientras exhalas, usa los tríceps para levantar las mancuernas de vuelta a la posición inicial."
+    ],
+    "equipo": "mancuerna",
+    "musculo": "tríceps",
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0296-RxayqAZ.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0296-RxayqAZ.jpg"
+  },
+  {
+    "nombre": "Dumbbell Standing One Arm Curl Over Incline Bench",
+    "sinonimos": [
+      "dumbbell standing one arm curl over incline bench"
+    ],
+    "grupo": "Brazos · mancuerna",
+    "descripcion": "Ponte de pie con los pies separados a la altura de los hombros, sujetando una mancuerna con una mano. Coloca la otra mano sobre un banco inclinado para apoyarte. Manteniendo el brazo superior quieto, flexiona la mancuerna hacia el hombro contrayendo el bíceps. Haz una pausa breve en la parte más alta, luego baja lentamente la mancuerna de vuelta a la posición inicial. Repite el número de repeticiones deseado, luego cambia de brazo.",
+    "puntosClave": [
+      "Ponte de pie con los pies separados a la altura de los hombros, sujetando una mancuerna con una mano.",
+      "Coloca la otra mano sobre un banco inclinado para apoyarte.",
+      "Manteniendo el brazo superior quieto, flexiona la mancuerna hacia el hombro contrayendo el bíceps.",
+      "Haz una pausa breve en la parte más alta, luego baja lentamente la mancuerna de vuelta a la posición inicial."
+    ],
+    "equipo": "mancuerna",
+    "musculo": "bíceps",
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1680-EmlJR2y.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1680-EmlJR2y.jpg"
   }
 ]

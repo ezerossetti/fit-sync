@@ -1,30 +1,238 @@
 {
-  "Burpees": {
-    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1160-dK9394r.gif",
-    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1160-dK9394r.jpg"
+  "Peso muerto": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0157-eGDudUV.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0157-eGDudUV.jpg"
   },
-  "Press con mancuernas": {
-    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0289-SpYC0Kp.gif",
-    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0289-SpYC0Kp.jpg"
+  "Peso muerto rumano": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0085-wQ2c4XD.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0085-wQ2c4XD.jpg"
   },
-  "Elevación de piernas colgado": {
-    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0472-I3tsCnC.gif",
-    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0472-I3tsCnC.jpg"
+  "Press de banca plano": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1254-khlHMqs.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1254-khlHMqs.jpg"
   },
-  "Kettlebell swing": {
-    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0549-UHJlbu3.gif",
-    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0549-UHJlbu3.jpg"
+  "Press de banca inclinado": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0169-Vh0GsK4.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0169-Vh0GsK4.jpg"
+  },
+  "Sentadilla": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1004-TUZLh71.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1004-TUZLh71.jpg"
+  },
+  "Sentadilla frontal": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0042-zG0zs85.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0042-zG0zs85.jpg"
+  },
+  "Press militar": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1012-u4bAmKp.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1012-u4bAmKp.jpg"
+  },
+  "Remo con barra": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0049-dmgMp3n.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0049-dmgMp3n.jpg"
   },
   "Dominadas": {
     "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0652-lBDjFxJ.gif",
     "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0652-lBDjFxJ.jpg"
   },
+  "Curl de bíceps": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0575-q6y3OhV.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0575-q6y3OhV.jpg"
+  },
+  "Extensión de tríceps": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0607-Ser9eQp.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0607-Ser9eQp.jpg"
+  },
+  "Zancadas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0054-t8iSghb.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0054-t8iSghb.jpg"
+  },
+  "Fondos": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0677-ezTvXcr.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0677-ezTvXcr.jpg"
+  },
+  "Elevaciones laterales": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0178-goJ6ezq.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0178-goJ6ezq.jpg"
+  },
+  "Prensa de piernas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0760-7zdxRTl.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0760-7zdxRTl.jpg"
+  },
+  "Sentadilla búlgara": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0410-qx4fgX7.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0410-qx4fgX7.jpg"
+  },
+  "Extensión de cuádriceps": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0585-my33uHU.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0585-my33uHU.jpg"
+  },
+  "Curl femoral": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0586-17lJ1kr.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0586-17lJ1kr.jpg"
+  },
+  "Elevación de talones de pie": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1375-yl2IYyy.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1375-yl2IYyy.jpg"
+  },
+  "Elevación de talones sentado": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0594-bOOdeyc.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0594-bOOdeyc.jpg"
+  },
+  "Sentadilla goblet": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1760-yn8yg1r.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1760-yn8yg1r.jpg"
+  },
+  "Zancadas caminando": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1460-IZVHb27.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1460-IZVHb27.jpg"
+  },
+  "Peso muerto sumo": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0117-KgI0tqW.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0117-KgI0tqW.jpg"
+  },
+  "Puente de glúteos": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/3561-GibBPPg.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/3561-GibBPPg.jpg"
+  },
+  "Abducción de cadera": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0710-7WaDzyL.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0710-7WaDzyL.jpg"
+  },
+  "Jalón al pecho": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0197-qdRxqCj.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0197-qdRxqCj.jpg"
+  },
+  "Remo con mancuerna a una mano": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0363-6cKQC5E.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0363-6cKQC5E.jpg"
+  },
+  "Remo en polea baja": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0861-fUBheHs.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0861-fUBheHs.jpg"
+  },
+  "Pull over": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/2285-4U7iLb5.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/2285-4U7iLb5.jpg"
+  },
+  "Remo en T": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0606-aaXr7ld.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0606-aaXr7ld.jpg"
+  },
+  "Hiperextensiones": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0573-rUXfn3R.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0573-rUXfn3R.jpg"
+  },
+  "Press de banca declinado": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0753-ETZfAbZ.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0753-ETZfAbZ.jpg"
+  },
+  "Press con mancuernas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0289-SpYC0Kp.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0289-SpYC0Kp.jpg"
+  },
+  "Aperturas con mancuernas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0331-1PLE8e9.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0331-1PLE8e9.jpg"
+  },
+  "Cruce de poleas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1270-j7XMAyn.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1270-j7XMAyn.jpg"
+  },
+  "Press en máquina": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1301-wDN97Ca.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1301-wDN97Ca.jpg"
+  },
   "Flexiones de brazos": {
     "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0662-I4hDWkc.gif",
     "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0662-I4hDWkc.jpg"
   },
+  "Press militar con mancuernas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0405-znQUdHY.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0405-znQUdHY.jpg"
+  },
+  "Elevaciones frontales": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0978-TFA88iB.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0978-TFA88iB.jpg"
+  },
+  "Press Arnold": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/2137-Xy4jlWA.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/2137-Xy4jlWA.jpg"
+  },
+  "Encogimientos de hombros": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1018-trmte8s.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1018-trmte8s.jpg"
+  },
+  "Curl con mancuernas alterno": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1650-J74XlNf.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1650-J74XlNf.jpg"
+  },
+  "Curl martillo": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0313-slDvUAU.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0313-slDvUAU.jpg"
+  },
+  "Curl en banco Scott": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0195-P2lNrGL.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0195-P2lNrGL.jpg"
+  },
+  "Press francés": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0060-h8LFzo9.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0060-h8LFzo9.jpg"
+  },
+  "Extensión de tríceps en polea": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0241-gAwDzB3.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0241-gAwDzB3.jpg"
+  },
+  "Fondos en banco": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1753-DQ0cqkT.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1753-DQ0cqkT.jpg"
+  },
+  "Curl de muñeca": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1016-vUTfFHw.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1016-vUTfFHw.jpg"
+  },
+  "Plancha abdominal": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/3665-hCjGsRQ.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/3665-hCjGsRQ.jpg"
+  },
+  "Crunch abdominal": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/2429-FFRP97T.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/2429-FFRP97T.jpg"
+  },
+  "Elevación de piernas colgado": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0472-I3tsCnC.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0472-I3tsCnC.jpg"
+  },
+  "Rueda abdominal": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0857-NAgVB3t.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0857-NAgVB3t.jpg"
+  },
   "Giro ruso": {
     "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0687-XVDdcoj.gif",
     "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0687-XVDdcoj.jpg"
+  },
+  "Pallof press": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1015-G7PXMlT.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1015-G7PXMlT.jpg"
+  },
+  "Burpees": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1160-dK9394r.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1160-dK9394r.jpg"
+  },
+  "Kettlebell swing": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0549-UHJlbu3.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0549-UHJlbu3.jpg"
+  },
+  "Saltos al cajón": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1374-iPm26QU.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1374-iPm26QU.jpg"
+  },
+  "Escalador (mountain climbers)": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0630-RJgzwny.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0630-RJgzwny.jpg"
+  },
+  "Elevaciones posteriores": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0378-8DiFDVA.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0378-8DiFDVA.jpg"
   }
 }
