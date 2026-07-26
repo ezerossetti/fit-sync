@@ -3,9 +3,12 @@ import { getExerciseMedia } from '../utils/exerciseMedia'
 import { getExerciseGif } from '../utils/exerciseGif'
 
 // Pantalla de pre-serie: prioridad de media por ejercicio:
-// 1) GIF animado (ExerciseDB) si hay match confiable — muestra el movimiento completo.
-// 2) Fotos estáticas (free-exercise-db) si no hay GIF (o el GIF puntual falló al cargar).
-// 3) Ícono placeholder si no hay match de ninguno de los dos.
+// 1) GIF propio del catálogo (dataset exercises-dataset, ya resuelto sin red
+//    extra ni matching en runtime — es el caso más común ahora).
+// 2) GIF animado (ExerciseDB, live) si hay match confiable y el catálogo no
+//    trajo uno propio.
+// 3) Fotos estáticas (free-exercise-db o la del propio dataset) si no hay GIF.
+// 4) Ícono placeholder si no hay match de nada.
 export default function ExerciseMedia({ exerciseInfo }) {
   const [gif, setGif] = useState(undefined) // undefined = cargando, null = sin match, false = matcheó pero la URL falló
   const [media, setMedia] = useState(undefined) // undefined = sin pedir/cargando, null = sin match
@@ -14,10 +17,20 @@ export default function ExerciseMedia({ exerciseInfo }) {
 
   useEffect(() => {
     let cancelado = false
-    setGif(undefined)
-    setMedia(undefined)
     setIdx(0)
     setPhotoFailed(false)
+
+    // Caso más común: el ejercicio ya trae su GIF propio (curado a mano con
+    // override, o del catálogo grande del dataset externo). Cero llamadas de
+    // red de matching — se muestra directo.
+    if (exerciseInfo?.gifUrl) {
+      setGif({ gifUrl: exerciseInfo.gifUrl, name: exerciseInfo.nombre })
+      setMedia(undefined)
+      return
+    }
+
+    setGif(undefined)
+    setMedia(undefined)
 
     getExerciseGif(exerciseInfo).then(g => {
       if (cancelado) return
@@ -29,7 +42,7 @@ export default function ExerciseMedia({ exerciseInfo }) {
     })
 
     return () => { cancelado = true }
-  }, [exerciseInfo?.nombre])
+  }, [exerciseInfo?.nombre, exerciseInfo?.gifUrl])
 
   const pidiendoFotos = gif === null || gif === false
   const cargando = gif === undefined || (pidiendoFotos && media === undefined)
@@ -53,13 +66,19 @@ export default function ExerciseMedia({ exerciseInfo }) {
           className="w-full h-full object-cover"
           onError={() => {
             // El GIF matcheó pero la URL puntual falló (ej: 404) — probamos
-            // con la foto estática antes de rendirnos al ícono.
+            // con la foto estática antes de rendirnos al ícono. Si el GIF
+            // venía del propio catálogo, su foto hermana es exerciseInfo.imageUrl
+            // (mismo dataset, no hace falta pedir nada más).
             setGif(false)
-            getExerciseMedia(exerciseInfo).then(m => setMedia(m))
+            if (exerciseInfo?.gifUrl && exerciseInfo?.imageUrl) {
+              setMedia({ name: exerciseInfo.nombre, images: [exerciseInfo.imageUrl] })
+            } else {
+              getExerciseMedia(exerciseInfo).then(m => setMedia(m))
+            }
           }}
         />
         <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wide bg-black/40 backdrop-blur text-white/80 px-2 py-0.5 rounded-full">
-          ExerciseDB
+          {exerciseInfo?.gifUrl ? 'exercises-dataset' : 'ExerciseDB'}
         </span>
       </div>
     )
@@ -111,7 +130,7 @@ export default function ExerciseMedia({ exerciseInfo }) {
         </div>
       )}
       <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wide bg-black/40 backdrop-blur text-white/80 px-2 py-0.5 rounded-full">
-        free-exercise-db
+        {media.name === exerciseInfo?.nombre && exerciseInfo?.imageUrl === imgs[0] ? 'exercises-dataset' : 'free-exercise-db'}
       </span>
     </div>
   )

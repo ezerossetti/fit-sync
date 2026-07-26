@@ -1,6 +1,9 @@
 // Catálogo bilingüe de ejercicios — Insight #1 de C4:
 // UI siempre en español formal, pero la búsqueda acepta sinónimos en inglés y acrónimos (PB, 1RM, RDL).
 // Cada ejercicio incluye metadata para la pantalla de pre-serie (descripción, puntos clave).
+import EXTRA_EJERCICIOS from './exercisesExtendido.json'
+import GIF_OVERRIDES from './gifOverrides.json'
+
 export const EXERCISE_CATALOG = [
   {
     nombre: 'Peso muerto',
@@ -700,6 +703,24 @@ export const EXERCISE_CATALOG = [
   },
 ]
 
+// Enriquecemos el catálogo curado (coaching en español, el que usa el Coach IA)
+// con el GIF/foto real cuando el dataset externo (exercises-dataset de
+// hasaneyldrm, ver README del repo) matcheó ese ejercicio puntual por nombre.
+for (const ex of EXERCISE_CATALOG) {
+  const media = GIF_OVERRIDES[ex.nombre]
+  if (media) {
+    ex.gifUrl = media.gifUrl
+    ex.imageUrl = media.imageUrl
+  }
+}
+
+// Catálogo GRANDE: el curado a mano (coaching en español, EXERCISE_CATALOG —
+// el que le mandamos al Coach IA, así que se mantiene chico y no se toca) +
+// los ~1300 ejercicios del dataset externo que no teníamos cubiertos, cada uno
+// ya con su GIF animado. Solo se usa para buscar/elegir ejercicio y para la
+// media de pre-serie — nunca para el contexto del Coach IA.
+const CATALOGO_GRANDE = [...EXERCISE_CATALOG, ...EXTRA_EJERCICIOS]
+
 
 // Adapta un registro de la tabla ejercicios_personalizados (snake_case, viene del backend)
 // al mismo shape que usa el catálogo estático (camelCase) para que se puedan mezclar sin fricción.
@@ -718,7 +739,7 @@ export function normalizarPersonalizado(p) {
 // `personalizados` es opcional: la lista de ejercicios propios del usuario (crudos del backend).
 // Si no se pasa, estas funciones se comportan exactamente igual que antes (solo catálogo estático).
 export function searchExercises(query, personalizados = []) {
-  const catalogoCompleto = [...EXERCISE_CATALOG, ...personalizados.map(normalizarPersonalizado)]
+  const catalogoCompleto = [...CATALOGO_GRANDE, ...personalizados.map(normalizarPersonalizado)]
   const q = query.trim().toLowerCase()
   if (!q) return catalogoCompleto
   return catalogoCompleto.filter(e =>
@@ -731,7 +752,7 @@ export function searchExercises(query, personalizados = []) {
 export function getExerciseInfo(nombre, personalizados = []) {
   if (!nombre) return null
   const n = nombre.trim().toLowerCase()
-  const enCatalogo = EXERCISE_CATALOG.find(e => e.nombre.toLowerCase() === n)
+  const enCatalogo = CATALOGO_GRANDE.find(e => e.nombre.toLowerCase() === n)
   if (enCatalogo) return enCatalogo
   const propio = personalizados.find(p => p.nombre.toLowerCase() === n)
   return propio ? normalizarPersonalizado(propio) : null

@@ -1,0 +1,30 @@
+{
+  "Burpees": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1160-dK9394r.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/1160-dK9394r.jpg"
+  },
+  "Press con mancuernas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0289-SpYC0Kp.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0289-SpYC0Kp.jpg"
+  },
+  "Elevación de piernas colgado": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0472-I3tsCnC.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0472-I3tsCnC.jpg"
+  },
+  "Kettlebell swing": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0549-UHJlbu3.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0549-UHJlbu3.jpg"
+  },
+  "Dominadas": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0652-lBDjFxJ.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0652-lBDjFxJ.jpg"
+  },
+  "Flexiones de brazos": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0662-I4hDWkc.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0662-I4hDWkc.jpg"
+  },
+  "Giro ruso": {
+    "gifUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/0687-XVDdcoj.gif",
+    "imageUrl": "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images/0687-XVDdcoj.jpg"
+  }
+}

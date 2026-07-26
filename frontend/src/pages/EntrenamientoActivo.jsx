@@ -769,6 +769,21 @@ export default function EntrenamientoActivo() {
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">{ejercicioActual.nombre}</h1>
         <p className="text-body-sm text-on-surface-variant mb-4">{info?.grupo || 'Ejercicio personalizado'}</p>
 
+        {(info?.equipo || info?.musculo) && (
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {info.equipo && (
+              <span className="text-label-md text-on-surface-variant bg-surface-container-high px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">fitness_center</span> {info.equipo}
+              </span>
+            )}
+            {info.musculo && (
+              <span className="text-label-md text-on-surface-variant bg-surface-container-high px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">target</span> {info.musculo}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Fotos reales del ejercicio (free-exercise-db) con fallback a ícono */}
         <ExerciseMedia exerciseInfo={info} />
 
