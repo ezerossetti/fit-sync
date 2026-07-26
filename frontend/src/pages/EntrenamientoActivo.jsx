@@ -349,17 +349,25 @@ export default function EntrenamientoActivo() {
     const pesoFinal = pesoOverride ?? peso
     const repsFinal = repsOverride ?? reps
     const rpeFinal = rpeOverride !== undefined ? rpeOverride : rpe
-    let nuevoConteo = 0
+
+    // BUGFIX: el conteo de series NO se calcula más leyendo una variable
+    // mutada "de reojo" dentro del callback de setSesionEjercicios (React no
+    // garantiza que ese callback corra de forma síncrona antes de que sigamos
+    // ejecutando el código de abajo). Ahora se calcula acá, de forma
+    // determinística, a partir del estado actual (sesionEjercicios) antes de
+    // disparar el setState. Esto es lo que causaba que a veces, al completar
+    // la última serie, la pantalla se quedara clavada en "activo" en vez de
+    // pasar automáticamente al siguiente ejercicio.
+    const idxActual = sesionEjercicios.findIndex(e => e.nombre === ejercicioActual.nombre)
+    const nuevoConteo = idxActual === -1 ? 1 : sesionEjercicios[idxActual].series.length + 1
 
     setSesionEjercicios(prev => {
       const idx = prev.findIndex(e => e.nombre === ejercicioActual.nombre)
       if (idx === -1) {
-        nuevoConteo = 1
         return [...prev, { nombre: ejercicioActual.nombre, series: [{ peso: pesoFinal, reps: repsFinal, rpe: rpeFinal || null }] }]
       }
       const copia = [...prev]
       const series = [...copia[idx].series, { peso: pesoFinal, reps: repsFinal, rpe: rpeFinal || null }]
-      nuevoConteo = series.length
       copia[idx] = { ...copia[idx], series }
       return copia
     })
