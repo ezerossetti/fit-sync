@@ -17,6 +17,60 @@ function inicioDeSemana() {
   return d
 }
 
+const LETRA_DIA = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+
+// Arma los 7 días de la semana actual (lunes a domingo) marcando cuáles
+// tienen al menos una sesión registrada, para el calendario de racha estilo
+// Duolingo. Los días futuros (después de hoy) se muestran aparte, apagados,
+// para no confundirlos con días "salteados".
+function diasSemanaEntrenados(sesionesSemana, inicio) {
+  const dias = new Set(sesionesSemana.map(s => new Date(s.fecha).toDateString()))
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  return Array.from({ length: 7 }, (_, i) => {
+    const fecha = new Date(inicio)
+    fecha.setDate(inicio.getDate() + i)
+    return {
+      letra: LETRA_DIA[i],
+      entrenado: dias.has(fecha.toDateString()),
+      esHoy: fecha.toDateString() === hoy.toDateString(),
+      esFuturo: fecha > hoy,
+    }
+  })
+}
+
+// Calendario semanal de racha, tipo Duolingo: un círculo por día con ícono
+// de fuego lleno si hubo sesión ese día, contorno si no. El día de hoy se
+// marca con un anillo para ubicarse rápido dentro de la semana.
+function RachaSemanal({ sesionesSemana, inicio }) {
+  const dias = diasSemanaEntrenados(sesionesSemana, inicio)
+  return (
+    <div className="card p-4">
+      <p className="text-label-md text-on-surface-variant uppercase mb-3">Esta semana</p>
+      <div className="flex justify-between">
+        {dias.map((d, i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <span className="text-label-md text-on-surface-variant">{d.letra}</span>
+            <div
+              className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                d.entrenado
+                  ? 'bg-accent text-on-primary'
+                  : d.esFuturo
+                    ? 'border border-outline-variant/40 text-on-surface-variant/30'
+                    : 'border border-outline-variant text-on-surface-variant/60'
+              } ${d.esHoy ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : ''}`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {d.entrenado ? 'local_fire_department' : 'radio_button_unchecked'}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Vista previa de 6 logros para Home, usando el mismo catálogo central que
 // Perfil (data/achievements.js) — así nunca se desincronizan entre pantallas.
 // Prioriza mostrar primero los ya desbloqueados y, si sobra lugar, completa
@@ -157,6 +211,9 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      {/* Calendario de racha semanal */}
+      {!loading && <RachaSemanal sesionesSemana={sesionesSemana} inicio={inicio} />}
 
       {/* Última sesión */}
       {ultimaSesion && (

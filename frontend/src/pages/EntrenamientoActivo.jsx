@@ -107,6 +107,50 @@ function CargaStepper({ label, value, onChange, saltos, unidad, min = 0, tourAdd
 }
 
 // ---------- Calculadora de discos ----------
+// Colores estándar de discos olímpicos (IWF), para que el dibujo se lea de
+// un vistazo igual que en el gym real. Altura proporcional al peso (los
+// discos chicos son visiblemente más finos), ancho fijo por simplicidad.
+const DISCO_ESTILO = {
+  25: { color: '#dc2626', alto: 76 },
+  20: { color: '#2563eb', alto: 68 },
+  15: { color: '#eab308', alto: 60 },
+  10: { color: '#16a34a', alto: 52 },
+  5: { color: '#e5e7eb', alto: 44 },
+  2.5: { color: '#111827', alto: 38 },
+  1.25: { color: '#9ca3af', alto: 32 },
+  0.5: { color: '#9ca3af', alto: 24 },
+}
+
+// Dibujo simple de la barra vista de frente: un disco por barrita de color,
+// del más grande (pegado al collar) al más chico (en la punta), espejado en
+// los dos lados. `discosPorLado` ya viene ordenado de mayor a menor.
+function BarraVisual({ discosPorLado }) {
+  const bloques = discosPorLado.flatMap(({ disco, cantidad }) =>
+    Array.from({ length: cantidad }, (_, i) => ({ disco, key: `${disco}-${i}` }))
+  )
+  const Disco = ({ disco }) => {
+    const estilo = DISCO_ESTILO[disco] || { color: '#9ca3af', alto: 30 }
+    return (
+      <div
+        className="w-2.5 rounded-[2px] border border-black/20 shrink-0"
+        style={{ height: estilo.alto, backgroundColor: estilo.color }}
+        title={`${disco}kg`}
+      />
+    )
+  }
+  return (
+    <div className="flex items-center justify-center gap-[3px] py-3">
+      <div className="flex items-center flex-row-reverse gap-[3px]">
+        {bloques.map(b => <Disco key={`i-${b.key}`} disco={b.disco} />)}
+      </div>
+      <div className="w-8 h-2.5 bg-on-surface-variant/50 rounded-sm shrink-0" />
+      <div className="flex items-center gap-[3px]">
+        {bloques.map(b => <Disco key={`d-${b.key}`} disco={b.disco} />)}
+      </div>
+    </div>
+  )
+}
+
 // Muestra qué discos poner de cada lado de la barra para llegar al peso
 // cargado en el stepper. Colapsada por defecto para no ocupar lugar cuando
 // no hace falta (ejercicios con mancuernas, poleas, etc. donde no aplica).
@@ -139,6 +183,7 @@ function CalculadoraDiscos({ peso, barraKg }) {
             <p className="text-body-sm text-on-surface-variant">No se pudo calcular un juego de discos exacto para este peso.</p>
           ) : (
             <>
+              <BarraVisual discosPorLado={discosPorLado} />
               <p className="text-label-md text-on-surface-variant uppercase mb-2">Por lado (barra {formatKg(barraKg)}kg)</p>
               <div className="flex flex-wrap gap-2">
                 {discosPorLado.map(({ disco, cantidad }) => (
