@@ -211,6 +211,61 @@ export function prPersonalEjercicio(sesiones = [], nombreEjercicio) {
   return mejor
 }
 
+// ---------- Calculadora de discos ----------
+// Discos estándar disponibles en la mayoría de gimnasios (kg). Greedy desde
+// el más grande: no es óptimo en el sentido matemático estricto, pero para
+// juegos de discos reales (stock limitado por par) es exactamente lo que
+// alguien haría a ojo en el gym, así que es el resultado esperado.
+const DISCOS_ESTANDAR_KG = [25, 20, 15, 10, 5, 2.5, 1.25, 0.5]
+
+// Devuelve { discosPorLado: [{disco, cantidad}], sobra, alcanzable } para un
+// peso objetivo total y un peso de barra dado. `sobra` es el kg que no se
+// pudo formar con los discos disponibles (por redondeo raro), para avisar
+// en vez de mentir con un resultado que no suma exacto.
+export function calcularDiscos(pesoObjetivo, barraKg = 20) {
+  const objetivo = Number(pesoObjetivo) || 0
+  const barra = Number(barraKg) || 20
+  const porLado = (objetivo - barra) / 2
+
+  if (porLado <= 0) {
+    return { discosPorLado: [], sobra: 0, soloBarra: true, barraKg: barra }
+  }
+
+  let restante = Math.round(porLado * 100) / 100
+  const discosPorLado = []
+  for (const disco of DISCOS_ESTANDAR_KG) {
+    const cantidad = Math.floor((restante + 1e-6) / disco)
+    if (cantidad > 0) {
+      discosPorLado.push({ disco, cantidad })
+      restante = Math.round((restante - cantidad * disco) * 100) / 100
+    }
+  }
+
+  return { discosPorLado, sobra: Math.max(0, restante), soloBarra: false, barraKg: barra }
+}
+
+// ---------- Sets de calentamiento sugeridos ----------
+// Progresión clásica de aproximación (40% / 60% / 80% del peso de trabajo)
+// con reps decrecientes. Para pesos livianos no tiene sentido estructurar
+// calentamiento (no hay carga real que "preparar"), así que no se sugiere
+// nada por debajo de un umbral mínimo.
+const UMBRAL_MIN_CALENTAMIENTO_KG = 20
+
+export function seriesCalentamiento(pesoTrabajo) {
+  const peso = Number(pesoTrabajo) || 0
+  if (peso < UMBRAL_MIN_CALENTAMIENTO_KG) return []
+
+  const redondear = (p) => Math.max(0, Math.round(p / 1.25) * 1.25)
+  const sets = [
+    { peso: redondear(peso * 0.4), reps: 10 },
+    { peso: redondear(peso * 0.6), reps: 6 },
+    { peso: redondear(peso * 0.8), reps: 3 },
+  ]
+  // Filtramos sets que quedaron pegados al peso de trabajo real (o en 0)
+  // por redondeo con pesos de trabajo bajos/medios — no aportan nada.
+  return sets.filter((s, i) => s.peso > 0 && s.peso < peso && (i === 0 || s.peso > sets[i - 1].peso))
+}
+
 // ---------- Coach por ejercicio (pantalla de pre-serie) ----------
 
 // Historial de un ejercicio puntual, un registro por sesión donde apareció,

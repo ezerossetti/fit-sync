@@ -35,6 +35,8 @@ export default function Perfil() {
   const [unidad, setUnidad] = useState('Kilogramos')
   const [pesoCorporalKg, setPesoCorporalKg] = useState(75)
   const [pesoCorporalInput, setPesoCorporalInput] = useState('75')
+  const [barraKg, setBarraKg] = useState(20)
+  const [barraInput, setBarraInput] = useState('20')
   const [prefsListas, setPrefsListas] = useState(false)
 
   // Notificaciones push (chequeo de inactividad)
@@ -67,6 +69,9 @@ export default function Perfil() {
           const peso = Number(p.preferencias.pesoCorporalKg) || 75
           setPesoCorporalKg(peso)
           setPesoCorporalInput(String(peso))
+          const barra = Number(p.preferencias.barraKg) || 20
+          setBarraKg(barra)
+          setBarraInput(String(barra))
         }
       } finally {
         setLoading(false)
@@ -92,9 +97,9 @@ export default function Perfil() {
   useEffect(() => {
     if (!prefsListas) return
     usuarioService.updateMe({
-      preferencias: { descansoDefault, unidad, pesoCorporalKg }
+      preferencias: { descansoDefault, unidad, pesoCorporalKg, barraKg }
     }).catch(err => console.error('No se pudieron guardar las preferencias:', err))
-  }, [descansoDefault, unidad, pesoCorporalKg, prefsListas])
+  }, [descansoDefault, unidad, pesoCorporalKg, barraKg, prefsListas])
 
   const guardarNombre = async (e) => {
     e.preventDefault()
@@ -148,6 +153,17 @@ export default function Perfil() {
     const val = Math.max(30, Math.round(Number(pesoCorporalInput) || 75))
     setPesoCorporalKg(val)
     setPesoCorporalInput(String(val))
+  }
+
+  const onBarraInputChange = (e) => {
+    const val = e.target.value
+    if (val === '' || /^[0-9]*\.?[0-9]*$/.test(val)) setBarraInput(val)
+  }
+
+  const confirmarBarraInput = () => {
+    const val = Math.max(0, Math.round((Number(barraInput) || 20) * 4) / 4) // redondea a cuartos de kg
+    setBarraKg(val)
+    setBarraInput(String(val))
   }
 
   const toggleNotificaciones = async () => {
@@ -487,6 +503,30 @@ export default function Perfil() {
           </div>
           <p className="text-label-md text-on-surface-variant mt-2">
             Se usa para estimar calorías quemadas en tus sesiones (aproximado, no es un dato médico).
+          </p>
+        </div>
+        <div className="p-4">
+          <span className="flex items-center gap-2 text-body-sm text-on-surface mb-3">
+            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">balance</span>
+            Peso de la barra
+          </span>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={0.25}
+              className="input-field w-24 text-center font-mono"
+              value={barraInput}
+              onChange={onBarraInputChange}
+              onBlur={confirmarBarraInput}
+              onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget.blur())}
+              aria-label="Peso de la barra en kg"
+            />
+            <span className="text-body-sm text-on-surface-variant">kg</span>
+          </div>
+          <p className="text-label-md text-on-surface-variant mt-2">
+            Se usa en la calculadora de discos durante el entrenamiento (barra olímpica estándar: 20kg).
           </p>
         </div>
       </div>

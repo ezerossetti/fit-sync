@@ -14,7 +14,7 @@ import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
   dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaDetalle, topEjerciciosPorVolumen,
-  notificarLogroDesbloqueado
+  notificarLogroDesbloqueado, calcularDiscos, seriesCalentamiento
 } from '../utils/helpers'
 import { logrosNuevos as calcularLogrosNuevos, NIVEL_COLOR } from '../data/achievements'
 import { guardarBorrador, leerBorrador, borrarBorrador, guardarSesionPendiente } from '../utils/sesionDraft'
@@ -106,6 +106,99 @@ function CargaStepper({ label, value, onChange, saltos, unidad, min = 0, tourAdd
   )
 }
 
+// ---------- Calculadora de discos ----------
+// Muestra qué discos poner de cada lado de la barra para llegar al peso
+// cargado en el stepper. Colapsada por defecto para no ocupar lugar cuando
+// no hace falta (ejercicios con mancuernas, poleas, etc. donde no aplica).
+function CalculadoraDiscos({ peso, barraKg }) {
+  const [abierta, setAbierta] = useState(false)
+  const { discosPorLado, sobra, soloBarra } = calcularDiscos(peso, barraKg)
+
+  return (
+    <div className="card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setAbierta(a => !a)}
+        className="w-full p-3 flex items-center justify-between text-left"
+      >
+        <span className="flex items-center gap-2 text-body-sm text-on-surface">
+          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">calculate</span>
+          Calculadora de discos
+        </span>
+        <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+          {abierta ? 'expand_less' : 'expand_more'}
+        </span>
+      </button>
+      {abierta && (
+        <div className="px-4 pb-4">
+          {soloBarra ? (
+            <p className="text-body-sm text-on-surface-variant">
+              Con solo la barra ({formatKg(barraKg)}kg) ya llegás o te pasás de {formatKg(peso)}kg. No hace falta agregar discos.
+            </p>
+          ) : discosPorLado.length === 0 ? (
+            <p className="text-body-sm text-on-surface-variant">No se pudo calcular un juego de discos exacto para este peso.</p>
+          ) : (
+            <>
+              <p className="text-label-md text-on-surface-variant uppercase mb-2">Por lado (barra {formatKg(barraKg)}kg)</p>
+              <div className="flex flex-wrap gap-2">
+                {discosPorLado.map(({ disco, cantidad }) => (
+                  <span key={disco} className="font-mono text-body-sm text-on-surface bg-surface-container-high px-2.5 py-1 rounded-full">
+                    {cantidad}×{formatKg(disco)}kg
+                  </span>
+                ))}
+              </div>
+              {sobra > 0 && (
+                <p className="text-label-md text-on-surface-variant/70 mt-2">
+                  Sobran {formatKg(sobra)}kg por lado que no entran justo con los discos estándar.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------- Sets de calentamiento sugeridos ----------
+// key={ejercicioActual.nombre} desde donde se instancia: al cambiar de
+// ejercicio, React remonta el componente entero y el checklist arranca
+// de cero solo, sin necesidad de un useEffect de reset manual.
+function CalentamientoSugerido({ pesoObjetivo }) {
+  const sets = seriesCalentamiento(pesoObjetivo)
+  const [hechos, setHechos] = useState(() => sets.map(() => false))
+
+  if (sets.length === 0) return null
+
+  return (
+    <div className="card p-4">
+      <p className="text-label-md text-accent uppercase mb-2 flex items-center gap-1">
+        <span className="material-symbols-outlined text-[16px]">local_fire_department</span> Calentamiento sugerido
+      </p>
+      <div className="space-y-2">
+        {sets.map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setHechos(h => h.map((v, idx) => (idx === i ? !v : v)))}
+            className="w-full flex items-center gap-3 text-left"
+          >
+            <span className={`material-symbols-outlined text-[20px] shrink-0 ${hechos[i] ? 'text-success' : 'text-on-surface-variant/40'}`}>
+              {hechos[i] ? 'check_circle' : 'radio_button_unchecked'}
+            </span>
+            <span className={`text-body-sm ${hechos[i] ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
+              {formatKg(s.peso)}kg × {s.reps} reps
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="text-label-md text-on-surface-variant/70 mt-2">
+        No se guardan como series de trabajo, son solo para ir subiendo la carga antes de la serie real.
+      </p>
+    </div>
+  )
+}
+
 // ---------- Anillo circular de descanso ----------
 function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJETIVO_DEFAULT, tourTarget }) {
   const restante = Math.max(0, objetivo - segundos)
@@ -168,6 +261,7 @@ export default function EntrenamientoActivo() {
   const [reps, setReps] = useState(8)
   const [rpe, setRpe] = useState(null)
   const [pesoCorporalKg, setPesoCorporalKg] = useState(75)
+  const [barraKg, setBarraKg] = useState(20)
   const [segundosDescanso, setSegundosDescanso] = useState(0)
   const [descansando, setDescansando] = useState(false)
   const intervalRef = useRef(null)
@@ -183,6 +277,14 @@ export default function EntrenamientoActivo() {
   const [borradorPendiente, setBorradorPendiente] = useState(null) // borrador detectado al entrar, esperando "Retomar" o "Descartar"
   const [guardadaOffline, setGuardadaOffline] = useState(false) // la última sesión finalizada se guardó localmente porque falló el POST
   const [mostrandoBuscadorExtra, setMostrandoBuscadorExtra] = useState(false) // toggle "+ agregar otro ejercicio" dentro del flujo con rutina
+
+  // Modo bloque (superserie/circuito): varios ejercicios que se alternan
+  // serie por serie, sin volver a la lista ni pasar por pre-serie cada vez.
+  // `bloqueActivo` = array de objetos ejercicio (de la rutina) mientras el
+  // bloque está corriendo; `null` = entrenamiento normal (un ejercicio a la vez).
+  const [bloqueActivo, setBloqueActivo] = useState(null)
+  const [modoSeleccionBloque, setModoSeleccionBloque] = useState(false) // eligiendo miembros del próximo bloque
+  const [bloqueSeleccionTemp, setBloqueSeleccionTemp] = useState([])
   const { startTour } = useTour()
 
   // Tours de esta pantalla: se disparan la primera vez que el usuario llega
@@ -212,6 +314,7 @@ export default function EntrenamientoActivo() {
         setPersonalizados(ep || [])
         setDescansoObjetivo(p?.preferencias?.descansoDefault ?? DESCANSO_OBJETIVO_DEFAULT)
         setPesoCorporalKg(Number(p?.preferencias?.pesoCorporalKg) || 75)
+        setBarraKg(Number(p?.preferencias?.barraKg) || 20)
         if (rutinaId) {
           // Si viene por link directo a una rutina, eso manda: no interrumpimos
           // con la pantalla de "retomar borrador".
@@ -314,7 +417,11 @@ export default function EntrenamientoActivo() {
     setStep('select-ejercicio')
   }
 
-  const elegirEjercicio = (ej) => {
+  // `destino` = 'pre-serie' (default, muestra gif/historial/coach antes de
+  // arrancar) o 'activo' (directo a cargar la serie). Se usa 'activo' al
+  // rotar entre ejercicios de un mismo bloque/superserie, para no tener que
+  // salir y volver a entrar a cada uno en cada vuelta del circuito.
+  const elegirEjercicio = (ej, destino = 'pre-serie') => {
     setEjercicioActual(ej)
     const yaEnSesion = sesionEjercicios.find(e => e.nombre === ej.nombre)
     const ultimaDeHoy = yaEnSesion?.series?.[yaEnSesion.series.length - 1]
@@ -328,7 +435,34 @@ export default function EntrenamientoActivo() {
       setReps(previo?.mejorSet?.reps ?? (ej.reps_objetivo || 8))
     }
     setRpe(null)
-    setStep('pre-serie')
+    setDescansando(false)
+    setSegundosDescanso(0)
+    setStep(destino)
+  }
+
+  const toggleSeleccionBloque = (ej) => {
+    setBloqueSeleccionTemp(prev =>
+      prev.some(e => e.nombre === ej.nombre)
+        ? prev.filter(e => e.nombre !== ej.nombre)
+        : [...prev, ej]
+    )
+  }
+
+  const cancelarSeleccionBloque = () => {
+    setModoSeleccionBloque(false)
+    setBloqueSeleccionTemp([])
+  }
+
+  // Arranca el bloque: el primer ejercicio sí pasa por pre-serie (gif,
+  // historial, coach) como cualquier ejercicio nuevo — la fricción que
+  // se quería sacar es la de cada CAMBIO de ejercicio dentro del circuito,
+  // no la primera entrada.
+  const iniciarBloque = () => {
+    if (bloqueSeleccionTemp.length < 2) return
+    setBloqueActivo(bloqueSeleccionTemp)
+    setModoSeleccionBloque(false)
+    elegirEjercicio(bloqueSeleccionTemp[0])
+    setBloqueSeleccionTemp([])
   }
 
   const iniciarSerie = () => {
@@ -356,6 +490,30 @@ export default function EntrenamientoActivo() {
     return ordenados.find(ej => {
       if (ej.nombre === nombreActual) return false
       const hechos = sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0
+      const objetivo = ej.series_objetivo || 3
+      return hechos < objetivo
+    }) || null
+  }
+
+  // Rotación dentro de un bloque/superserie: arranca justo después del
+  // ejercicio actual y da la vuelta completa por bloqueActivo, devolviendo
+  // el primer miembro (incluido el actual, si da la vuelta entera) que
+  // todavía no llegó a su objetivo de series. null = el bloque ya completó
+  // el objetivo de todos sus miembros.
+  // `conteoActualizado` cubre el mismo caso que nuevoConteo en guardarSerie:
+  // en el momento en que esto se llama, sesionEjercicios (closure) todavía
+  // no refleja la serie recién guardada porque setState es asincrónico. Para
+  // nombreActual usamos el conteo ya calculado en vez de leerlo del estado viejo.
+  const siguienteMiembroBloque = (nombreActual, conteoActualizado) => {
+    if (!bloqueActivo || bloqueActivo.length === 0) return null
+    const idxActual = bloqueActivo.findIndex(e => e.nombre === nombreActual)
+    const ordenados = idxActual === -1
+      ? bloqueActivo
+      : [...bloqueActivo.slice(idxActual + 1), ...bloqueActivo.slice(0, idxActual + 1)]
+    return ordenados.find(ej => {
+      const hechos = ej.nombre === nombreActual
+        ? conteoActualizado
+        : (sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0)
       const objetivo = ej.series_objetivo || 3
       return hechos < objetivo
     }) || null
@@ -406,6 +564,24 @@ export default function EntrenamientoActivo() {
     // series_objetivo propio, el default de 3 se usa siempre (con o sin
     // rutina) y siempre corta al llegar al objetivo.
     const objetivo = ejercicioActual.series_objetivo || 3
+
+    // Modo bloque/superserie: acá el corte NO espera a que este ejercicio
+    // llegue a su objetivo — rota al siguiente miembro del bloque después
+    // de CADA serie (esa es la gracia del circuito). Solo cuando ningún
+    // miembro tiene series pendientes se cierra el bloque y se vuelve a la lista.
+    if (bloqueActivo) {
+      const siguienteDelBloque = siguienteMiembroBloque(ejercicioActual.nombre, nuevoConteo)
+      if (siguienteDelBloque) {
+        elegirEjercicio(siguienteDelBloque, 'activo')
+      } else {
+        setBloqueActivo(null)
+        setDescansando(false)
+        setSegundosDescanso(0)
+        setStep('select-ejercicio')
+      }
+      return
+    }
+
     if (objetivo && nuevoConteo >= objetivo) {
       setDescansando(false)
       setSegundosDescanso(0)
@@ -433,7 +609,10 @@ export default function EntrenamientoActivo() {
     guardarSerie(ultima.peso, ultima.reps, ultima.rpe ?? null)
   }
 
-  const volverASeleccionEjercicio = () => setStep('select-ejercicio')
+  const volverASeleccionEjercicio = () => {
+    setBloqueActivo(null)
+    setStep('select-ejercicio')
+  }
 
   // El borrador guarda solo el rutinaId (no la rutina completa) porque la
   // lista de rutinas ya está cargada acá mismo al montar el componente.
@@ -683,11 +862,36 @@ export default function EntrenamientoActivo() {
     const ejerciciosAgregados = sesionEjercicios.filter(e => !nombresRutina.has(e.nombre))
     return (
       <div>
-        <button onClick={() => setStep('select-rutina')} className="flex items-center gap-1 text-accent text-body-sm mb-4">
+        <button onClick={() => { setBloqueActivo(null); cancelarSeleccionBloque(); setStep('select-rutina') }} className="flex items-center gap-1 text-accent text-body-sm mb-4">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span> Cambiar rutina
         </button>
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">{rutina?.nombre}</h1>
-        <p className="text-body-sm text-on-surface-variant mb-5">Elegí el ejercicio a registrar.</p>
+        <p className="text-body-sm text-on-surface-variant mb-3">
+          {modoSeleccionBloque ? 'Elegí 2 o más ejercicios para alternar entre ellos.' : 'Elegí el ejercicio a registrar.'}
+        </p>
+
+        {!bloqueActivo && ejerciciosDisponibles.length >= 2 && (
+          <button
+            onClick={() => (modoSeleccionBloque ? cancelarSeleccionBloque() : setModoSeleccionBloque(true))}
+            className={`w-full card p-3 flex items-center gap-2 text-left mb-4 ${modoSeleccionBloque ? 'border-accent/40 bg-accent/5' : 'border-dashed'}`}
+          >
+            <span className="material-symbols-outlined text-accent text-[20px]">
+              {modoSeleccionBloque ? 'close' : 'sync_alt'}
+            </span>
+            <p className="text-body-sm text-on-surface">
+              {modoSeleccionBloque ? 'Cancelar selección de bloque' : 'Entrenar por bloque (superserie/circuito)'}
+            </p>
+          </button>
+        )}
+
+        {bloqueActivo && (
+          <div className="card p-3 flex items-center gap-2 mb-4 border-accent/40 bg-accent/5">
+            <span className="material-symbols-outlined text-accent text-[20px]">sync_alt</span>
+            <p className="text-body-sm text-on-surface">
+              Bloque activo: {bloqueActivo.map(e => e.nombre).join(' → ')}
+            </p>
+          </div>
+        )}
 
         {ejerciciosDisponibles.length === 0 ? (
           <div className="card p-6 text-center">
@@ -704,10 +908,17 @@ export default function EntrenamientoActivo() {
               // arrancar), no solo en la pantalla de pre-serie — así el
               // usuario ya sabe qué esperar antes de tocar el ejercicio.
               const coachHint = analizarCoachEjercicio(historial, ej)
+              const seleccionadoEnBloque = bloqueSeleccionTemp.some(e => e.nombre === ej.nombre)
               return (
-                <button key={i} onClick={() => elegirEjercicio(ej)} className="w-full card p-4 flex items-center justify-between text-left">
+                <button
+                  key={i}
+                  onClick={() => (modoSeleccionBloque ? toggleSeleccionBloque(ej) : elegirEjercicio(ej))}
+                  className={`w-full card p-4 flex items-center justify-between text-left ${seleccionadoEnBloque ? 'border-accent bg-accent/10' : ''}`}
+                >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="material-symbols-outlined text-accent shrink-0">fitness_center</span>
+                    <span className="material-symbols-outlined text-accent shrink-0">
+                      {modoSeleccionBloque ? (seleccionadoEnBloque ? 'check_box' : 'check_box_outline_blank') : 'fitness_center'}
+                    </span>
                     <div className="min-w-0">
                       <p className="text-body-md font-semibold text-on-surface truncate">{ej.nombre}</p>
                       <p className="text-label-md text-on-surface-variant">Objetivo: {ej.series_objetivo}×{ej.reps_objetivo}</p>
@@ -719,7 +930,7 @@ export default function EntrenamientoActivo() {
                       )}
                     </div>
                   </div>
-                  {hechos > 0 && (
+                  {!modoSeleccionBloque && hechos > 0 && (
                     <span className={`text-label-md px-2 py-1 rounded-full shrink-0 ${completo ? 'text-success bg-success-container' : 'text-accent bg-accent/15'}`}>
                       {completo ? 'Completo ✓' : `${hechos}/${objetivo || '—'}`}
                     </span>
@@ -728,6 +939,18 @@ export default function EntrenamientoActivo() {
               )
             })}
           </div>
+        )}
+
+        {modoSeleccionBloque && (
+          <button
+            onClick={iniciarBloque}
+            disabled={bloqueSeleccionTemp.length < 2}
+            className="btn-primary w-full py-3 text-body-md mb-6 disabled:opacity-40"
+          >
+            {bloqueSeleccionTemp.length < 2
+              ? 'Elegí al menos 2 ejercicios'
+              : `Iniciar bloque (${bloqueSeleccionTemp.length})`}
+          </button>
         )}
 
         {ejerciciosAgregados.length > 0 && (
@@ -872,6 +1095,10 @@ export default function EntrenamientoActivo() {
           </div>
         )}
 
+        <div className="mb-4">
+          <CalentamientoSugerido key={ejercicioActual.nombre} pesoObjetivo={peso} />
+        </div>
+
         <button data-tour="preserie-comenzar" onClick={iniciarSerie} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
           Comenzar serie <span className="material-symbols-outlined">bolt</span>
         </button>
@@ -902,6 +1129,28 @@ export default function EntrenamientoActivo() {
           </span>
         </div>
 
+        {bloqueActivo && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {bloqueActivo.map(ej => {
+              const hechosEj = sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0
+              const objetivoEj = ej.series_objetivo || 3
+              const esActual = ej.nombre === ejercicioActual.nombre
+              const completoEj = hechosEj >= objetivoEj
+              return (
+                <span
+                  key={ej.nombre}
+                  className={`text-label-md px-2 py-1 rounded-full flex items-center gap-1 ${
+                    esActual ? 'bg-accent text-on-primary' : completoEj ? 'text-success bg-success-container' : 'text-on-surface-variant bg-surface-container-high'
+                  }`}
+                >
+                  {completoEj && <span className="material-symbols-outlined text-[12px]">check</span>}
+                  {ej.nombre}
+                </span>
+              )
+            })}
+          </div>
+        )}
+
         <h1 className="font-display text-headline-md text-on-surface">{ejercicioActual.nombre}</h1>
 
         {previo && (
@@ -928,6 +1177,8 @@ export default function EntrenamientoActivo() {
           tourSubtract="activo-stepper-restar"
         />
         <CargaStepper label="Repeticiones" value={reps} onChange={setReps} saltos={SALTOS_REPS} unidad="reps" min={0} />
+
+        <CalculadoraDiscos peso={peso} barraKg={barraKg} />
 
         {modoCarga !== 'retroactivo' && (
           <>
@@ -960,7 +1211,9 @@ export default function EntrenamientoActivo() {
         <div className="space-y-2">
           <button data-tour="activo-guardar" onClick={() => guardarSerie()} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-[20px]">check_circle</span>
-            {objetivo && hechas + 1 >= objetivo ? 'Serie completada ✓ → Siguiente' : 'Serie completada ✓'}
+            {bloqueActivo
+              ? 'Serie completada ✓ → Sigue el bloque'
+              : (objetivo && hechas + 1 >= objetivo ? 'Serie completada ✓ → Siguiente' : 'Serie completada ✓')}
           </button>
         </div>
       </div>
