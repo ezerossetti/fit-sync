@@ -632,12 +632,17 @@ export function volumenPorSemana(sesiones = [], semanas = 6) {
 export function sugerirDeload(sesiones = []) {
   if (sesiones.length < 6) return null
 
+  // Miramos directamente las últimas 3 semanas calendario (no filtradas): así
+  // "sonConsecutivas" chequea algo real. Antes se filtraban primero las
+  // semanas con entreno y recién ahí se pedían las últimas 3 — con lo cual la
+  // condición de "seguidas" quedaba siempre en true (eran las mismas 3 que ya
+  // se habían filtrado por tener entreno), y una racha con semanas salteadas
+  // en el medio pasaba como si fueran consecutivas.
   const semanas = volumenPorSemana(sesiones, 5)
-  const semanasConEntreno = semanas.filter(s => s.cantidadSesiones > 0)
+  const ultimas3 = semanas.slice(-3)
 
-  // Necesitamos al menos 3 semanas completas seguidas con entrenamiento
-  if (semanasConEntreno.length < 3) return null
-  const ultimas3 = semanasConEntreno.slice(-3)
+  // Necesitamos que las 3 últimas semanas calendario, en orden, tengan
+  // entrenamiento — recién ahí son "3 semanas seguidas" de verdad.
   const sonConsecutivas = ultimas3.every(s => s.cantidadSesiones > 0)
   if (!sonConsecutivas) return null
 
