@@ -266,6 +266,7 @@ export default function CoachChat() {
     <>
       {/* Botón flotante */}
       <button
+        data-tour="home-coach"
         onClick={() => setAbierto(true)}
         className="fixed z-50 bottom-24 right-4 w-14 h-14 rounded-full bg-primary shadow-plate flex items-center justify-center"
         style={{ display: abierto ? 'none' : 'flex' }}

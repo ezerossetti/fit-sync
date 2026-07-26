@@ -334,14 +334,12 @@ export default function EntrenamientoActivo() {
   const { startTour } = useTour()
 
   // Tours de esta pantalla: se disparan la primera vez que el usuario llega
-  // a "pre-serie" (antes de la primera serie de un ejercicio) y a "activo"
-  // (registrando series). Como startTour ya chequea localStorage, entrar y
+  // a cada paso del flujo. Como startTour ya chequea localStorage, entrar y
   // salir de estos steps varias veces no vuelve a mostrar nada una vez visto.
   useEffect(() => {
     if (step === 'select-rutina') startTour('seleccionRutina', TOURS.seleccionRutina.steps)
+    if (step === 'calentamiento-general') startTour('calentamiento', TOURS.calentamiento.steps)
     if (step === 'select-ejercicio') startTour('seleccionEjercicio', TOURS.seleccionEjercicio.steps)
-    // Sin tour propio: es una pantalla intermedia y breve (una sola vez por
-    // rutina), no amerita agregarla al recorrido guiado.
     if (step === 'pre-serie') startTour('preserie', TOURS.preserie.steps)
     if (step === 'activo') startTour('activo', TOURS.activo.steps)
     if (step === 'resumen') startTour('resumen', TOURS.resumen.steps)

@@ -70,6 +70,11 @@ export const TOURS = {
         title: 'Logros',
         body: 'Se desbloquean solos a medida que entrenás. Es otra forma de ver tu constancia.',
       },
+      {
+        target: 'home-coach',
+        title: 'Tu coach IA',
+        body: 'Preguntale lo que quieras sobre tu entrenamiento, pedile un resumen, que te sugiera ejercicios o que te arme una rutina nueva.',
+      },
     ],
   },
 
@@ -174,6 +179,25 @@ export const TOURS = {
         target: 'select-rutina-lista',
         title: 'Con rutina cargada',
         body: 'O elegí una de tus rutinas guardadas para entrenar con los ejercicios y objetivos ya definidos.',
+      },
+      {
+        target: 'select-rutina-retroactivo',
+        title: '¿Ya entrenaste y te olvidaste de cargarlo?',
+        body: 'Usá esta opción para cargar un entrenamiento que ya hiciste, sin que cuente tiempo real ni arranque cronómetros.',
+      },
+    ],
+  },
+
+  calentamiento: {
+    id: 'calentamiento',
+    label: 'Calentamiento sugerido',
+    route: null,
+    replayable: false,
+    steps: [
+      {
+        target: 'calentamiento-continuar',
+        title: 'Antes de arrancar',
+        body: 'Te dejamos un calentamiento sugerido según los ejercicios de tu rutina. Cuando estés listo, tocá acá para seguir a la lista de ejercicios.',
       },
     ],
   },

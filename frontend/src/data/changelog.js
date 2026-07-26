@@ -10,9 +10,17 @@
 //      (esto lo lee el usuario final, no es un changelog de git).
 // ---------------------------------------------------------------------------
 
-export const APP_VERSION = '2026.07.19'
+export const APP_VERSION = '2026.07.26'
 
 export const CHANGELOG = [
+  {
+    version: '2026.07.26',
+    fecha: '26 jul 2026',
+    items: [
+      'Tutoriales nuevos para el calentamiento sugerido, la carga retroactiva y el coach IA.',
+      'Arreglamos que compartir sin fondo a Instagram Stories saliera todo negro.',
+    ],
+  },
   {
     version: '2026.07.19',
     fecha: '19 jul 2026',
