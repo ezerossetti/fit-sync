@@ -871,7 +871,7 @@ export default function EntrenamientoActivo() {
           <div className="card p-3 flex items-center justify-between">
             <p className="text-body-sm text-on-surface-variant">
               <span className="text-on-surface-variant/70">Historial anterior · </span>
-              Serie 1: {previo.mejorSet.peso}kg × {previo.mejorSet.reps} ✓
+              Mejor serie: {previo.mejorSet.peso}kg × {previo.mejorSet.reps} ✓
             </p>
             {hechas > 0 && (
               <button data-tour="activo-repetir" onClick={repetirCarga} className="text-label-md text-accent flex items-center gap-1 shrink-0 ml-2">
@@ -934,11 +934,15 @@ export default function EntrenamientoActivo() {
     const vol = volumenSesion(sesionEjercicios)
     const totalSeries = sesionEjercicios.reduce((a, e) => a + e.series.length, 0)
 
-    // Detectar PBs: peso más alto registrado hoy vs. historial previo
+    // Detectar PBs: peso más alto registrado hoy vs. el verdadero récord
+    // histórico (prPersonalEjercicio, todas las sesiones). Antes comparaba
+    // contra ultimoRegistroEjercicio (solo la sesión anterior), así que
+    // avisaba "nuevo récord" con solo superar la última sesión, aunque
+    // siguiera por debajo del máximo histórico real.
     const pbs = sesionEjercicios.filter(ej => {
-      const previo = ultimoRegistroEjercicio(historial, ej.nombre)
+      const pr = prPersonalEjercicio(historial, ej.nombre)
       const maxHoy = Math.max(...ej.series.map(s => Number(s.peso)))
-      return !previo || maxHoy > Number(previo.mejorSet.peso)
+      return !pr || maxHoy > Number(pr.peso)
     })
 
     const semana = volumenPorDiaSemana(historial, ultimaSesionGuardada)
