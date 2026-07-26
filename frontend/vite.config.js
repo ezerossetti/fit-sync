@@ -30,6 +30,7 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // el bundle principal pasó los 2 MiB por defecto
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
         // Suma el manejo de push/notificationclick al SW autogenerado, sin
         // tener que migrar a la estrategia injectManifest.
