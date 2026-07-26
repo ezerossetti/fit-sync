@@ -757,3 +757,82 @@ export function getExerciseInfo(nombre, personalizados = []) {
   const propio = personalizados.find(p => p.nombre.toLowerCase() === n)
   return propio ? normalizarPersonalizado(propio) : null
 }
+
+// ---------- Calentamiento general sugerido (por rutina, no por ejercicio) ----------
+// Reemplaza al viejo esquema de "sets de aproximación" por ejercicio (que
+// dependía del peso de trabajo). Este es general: se muestra UNA sola vez,
+// antes de arrancar con el primer ejercicio de la rutina, y propone 2-3
+// movimientos de activación/movilidad según las zonas que la rutina va a
+// trabajar. No son series de trabajo — no llevan peso ni cuentan para la carga.
+//
+// Las claves son la "zona" (lo que está antes de la barra "/" en `grupo`,
+// ver EXERCISE_CATALOG más arriba). PRIORIDAD_ZONAS define qué zonas se
+// priorizan cuando la rutina toca varias (para no mostrar más de 3).
+const WARMUP_CATALOG = {
+  'Piernas': {
+    nombre: 'Sentadilla al aire',
+    descripcion: '2-3 series de 10-12 reps sin peso, para activar cuádriceps, glúteos e isquios.',
+  },
+  'Funcional': {
+    nombre: 'Sentadilla al aire',
+    descripcion: '2-3 series de 10-12 reps sin peso, para activar cuádriceps, glúteos e isquios.',
+  },
+  'Empuje': {
+    nombre: 'Flexiones de brazos livianas',
+    descripcion: '10-15 flexiones (de rodillas si hace falta) + círculos de brazos, para activar pecho, hombros y tríceps.',
+  },
+  'Tracción': {
+    nombre: 'Remo con banda elástica o dead hang',
+    descripcion: '2 series de 10-12 reps de remo liviano, o colgarte de la barra 20-30 segundos, para activar espalda y dorsales.',
+  },
+  'Espalda': {
+    nombre: 'Remo con banda elástica o dead hang',
+    descripcion: '2 series de 10-12 reps de remo liviano, o colgarte de la barra 20-30 segundos, para activar espalda y dorsales.',
+  },
+  'Hombros': {
+    nombre: 'Rotaciones de hombro',
+    descripcion: 'Círculos de brazos y rotaciones con banda elástica o mancuernas muy livianas, 1-2 minutos.',
+  },
+  'Core': {
+    nombre: 'Plancha + rotación de torso',
+    descripcion: '20-30 segundos de plancha y rotaciones de torso controladas, para activar el core.',
+  },
+  'Brazos': {
+    nombre: 'Movilidad de muñeca y codo',
+    descripcion: 'Rotaciones de muñeca y extensiones livianas de codo, 1 minuto, antes de aislar bíceps/tríceps.',
+  },
+  'Espalda baja': {
+    nombre: 'Gato-camello (cat-cow)',
+    descripcion: '10-12 reps lentas de gato-camello y rotación de cadera, para movilizar la zona lumbar.',
+  },
+  'Cardio': {
+    nombre: 'Cardio liviano',
+    descripcion: '3-5 minutos de bici, cuerda o trote suave para subir la frecuencia cardíaca antes de arrancar.',
+  },
+}
+
+const PRIORIDAD_ZONAS = ['Piernas', 'Empuje', 'Tracción', 'Espalda', 'Hombros', 'Core', 'Espalda baja', 'Cardio', 'Funcional', 'Brazos']
+
+const CALENTAMIENTO_DEFAULT = [
+  { nombre: 'Movilidad articular general', descripcion: 'Rotación de tobillos, cadera, hombros y muñecas, 2-3 minutos, para entrar en calor de forma general.' },
+  { nombre: 'Cardio liviano', descripcion: '3-5 minutos de bici, cuerda o trote suave para subir la frecuencia cardíaca antes de arrancar.' },
+]
+
+// Recibe los ejercicios de la rutina (`rutina.ejercicios`, cada uno con
+// `.nombre`) y devuelve 2-3 sugerencias de calentamiento/movilidad general,
+// según las zonas del cuerpo que esa rutina va a trabajar. No dependen del
+// peso ni se guardan como series — son solo una checklist previa, una vez
+// por rutina (no una por ejercicio).
+export function calentamientoSugeridoRutina(ejercicios = [], personalizados = []) {
+  const zonas = new Set()
+  for (const ej of ejercicios) {
+    const info = getExerciseInfo(ej.nombre, personalizados)
+    const zona = info?.grupo?.split('/')[0]?.trim()
+    if (zona && WARMUP_CATALOG[zona]) zonas.add(zona)
+  }
+
+  if (zonas.size === 0) return CALENTAMIENTO_DEFAULT
+
+  const ordenadas = PRIORIDAD_ZONAS.filter(z => zonas.has(z)).slice(0, 3)
+  return ordenadas.map(z => WARMUP_CATALOG[z])
+}

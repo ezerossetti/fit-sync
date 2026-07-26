@@ -6,7 +6,7 @@ import usuarioService from '../services/usuario.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import coachService from '../services/coach.service'
 import { construirContextoComentarioSesion } from '../utils/contextoCoach'
-import { getExerciseInfo } from '../data/exerciseCatalog'
+import { getExerciseInfo, calentamientoSugeridoRutina } from '../data/exerciseCatalog'
 import ExerciseMedia from '../components/ExerciseMedia'
 import BuscadorEjercicio from '../components/BuscadorEjercicio'
 import CompartirResumen from '../components/CompartirResumen'
@@ -14,7 +14,7 @@ import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
   dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaDetalle, topEjerciciosPorVolumen,
-  notificarLogroDesbloqueado, calcularDiscos, seriesCalentamiento
+  notificarLogroDesbloqueado, calcularDiscos
 } from '../utils/helpers'
 import { logrosNuevos as calcularLogrosNuevos, NIVEL_COLOR } from '../data/achievements'
 import { guardarBorrador, leerBorrador, borrarBorrador, guardarSesionPendiente } from '../utils/sesionDraft'
@@ -160,41 +160,42 @@ function CalculadoraDiscos({ peso, barraKg }) {
   )
 }
 
-// ---------- Sets de calentamiento sugeridos ----------
-// key={ejercicioActual.nombre} desde donde se instancia: al cambiar de
-// ejercicio, React remonta el componente entero y el checklist arranca
-// de cero solo, sin necesidad de un useEffect de reset manual.
-function CalentamientoSugerido({ pesoObjetivo }) {
-  const sets = seriesCalentamiento(pesoObjetivo)
-  const [hechos, setHechos] = useState(() => sets.map(() => false))
-
-  if (sets.length === 0) return null
+// ---------- Calentamiento general sugerido (pantalla propia, una vez por rutina) ----------
+// Reemplaza al viejo CalentamientoSugerido por ejercicio (basado en % del
+// peso objetivo). Ahora es una checklist simple de 2-3 items generales
+// (activación/movilidad, sin peso) que se muestra una sola vez al elegir
+// la rutina, antes de la lista de ejercicios — ver step 'calentamiento-general'.
+function CalentamientoGeneral({ items, onContinuar }) {
+  const [hechos, setHechos] = useState(() => items.map(() => false))
 
   return (
-    <div className="card p-4">
-      <p className="text-label-md text-accent uppercase mb-2 flex items-center gap-1">
-        <span className="material-symbols-outlined text-[16px]">local_fire_department</span> Calentamiento sugerido
+    <div>
+      <p className="text-body-sm text-on-surface-variant mb-4">
+        Antes de arrancar, 2-3 movimientos para entrar en calor según lo que vas a trabajar hoy. No cuentan como series de trabajo.
       </p>
-      <div className="space-y-2">
-        {sets.map((s, i) => (
+      <div className="space-y-2 mb-6">
+        {items.map((item, i) => (
           <button
             key={i}
             type="button"
             onClick={() => setHechos(h => h.map((v, idx) => (idx === i ? !v : v)))}
-            className="w-full flex items-center gap-3 text-left"
+            className="w-full card p-4 flex items-start gap-3 text-left"
           >
-            <span className={`material-symbols-outlined text-[20px] shrink-0 ${hechos[i] ? 'text-success' : 'text-on-surface-variant/40'}`}>
+            <span className={`material-symbols-outlined text-[22px] shrink-0 mt-0.5 ${hechos[i] ? 'text-success' : 'text-on-surface-variant/40'}`}>
               {hechos[i] ? 'check_circle' : 'radio_button_unchecked'}
             </span>
-            <span className={`text-body-sm ${hechos[i] ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
-              {formatKg(s.peso)}kg × {s.reps} reps
-            </span>
+            <div>
+              <p className={`text-body-md font-semibold ${hechos[i] ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
+                {item.nombre}
+              </p>
+              <p className="text-label-md text-on-surface-variant mt-0.5">{item.descripcion}</p>
+            </div>
           </button>
         ))}
       </div>
-      <p className="text-label-md text-on-surface-variant/70 mt-2">
-        No se guardan como series de trabajo, son solo para ir subiendo la carga antes de la serie real.
-      </p>
+      <button data-tour="calentamiento-continuar" onClick={onContinuar} className="btn-primary w-full py-3 text-body-md">
+        Continuar a ejercicios
+      </button>
     </div>
   )
 }
@@ -253,7 +254,7 @@ export default function EntrenamientoActivo() {
 
   const [rutina, setRutina] = useState(null)
   const [ejercicioActual, setEjercicioActual] = useState(null)
-  const [step, setStep] = useState('select-rutina') // select-rutina | select-ejercicio | pre-serie | activo | resumen
+  const [step, setStep] = useState('select-rutina') // select-rutina | calentamiento-general | select-ejercicio | pre-serie | activo | resumen
   const [modoCarga, setModoCarga] = useState('live') // 'live' (entrenando ahora) | 'retroactivo' (cargando un entreno que ya hiciste)
 
   const [sesionEjercicios, setSesionEjercicios] = useState([]) // acumulado de toda la sesión
@@ -294,6 +295,8 @@ export default function EntrenamientoActivo() {
   useEffect(() => {
     if (step === 'select-rutina') startTour('seleccionRutina', TOURS.seleccionRutina.steps)
     if (step === 'select-ejercicio') startTour('seleccionEjercicio', TOURS.seleccionEjercicio.steps)
+    // Sin tour propio: es una pantalla intermedia y breve (una sola vez por
+    // rutina), no amerita agregarla al recorrido guiado.
     if (step === 'pre-serie') startTour('preserie', TOURS.preserie.steps)
     if (step === 'activo') startTour('activo', TOURS.activo.steps)
     if (step === 'resumen') startTour('resumen', TOURS.resumen.steps)
@@ -321,7 +324,7 @@ export default function EntrenamientoActivo() {
           const encontrada = (r || []).find(x => String(x.id) === String(rutinaId))
           if (encontrada) {
             setRutina(encontrada)
-            setStep('select-ejercicio')
+            setStep((encontrada.ejercicios || []).length > 0 ? 'calentamiento-general' : 'select-ejercicio')
           }
         } else {
           const borrador = leerBorrador()
@@ -414,7 +417,7 @@ export default function EntrenamientoActivo() {
 
   const elegirRutina = (r) => {
     setRutina(r)
-    setStep('select-ejercicio')
+    setStep((r?.ejercicios || []).length > 0 ? 'calentamiento-general' : 'select-ejercicio')
   }
 
   // `destino` = 'pre-serie' (default, muestra gif/historial/coach antes de
@@ -804,6 +807,22 @@ export default function EntrenamientoActivo() {
     )
   }
 
+  if (step === 'calentamiento-general') {
+    const items = calentamientoSugeridoRutina(rutina?.ejercicios || [], personalizados)
+    return (
+      <div>
+        <button onClick={() => { setRutina(null); setStep('select-rutina') }} className="flex items-center gap-1 text-accent text-body-sm mb-4">
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span> Cambiar rutina
+        </button>
+        <p className="text-label-md text-accent uppercase tracking-wide mb-1 flex items-center gap-1">
+          <span className="material-symbols-outlined text-[16px]">local_fire_department</span> Calentamiento sugerido
+        </p>
+        <h1 className="font-display text-headline-lg-mobile text-on-surface mb-3">{rutina?.nombre}</h1>
+        <CalentamientoGeneral items={items} onContinuar={() => setStep('select-ejercicio')} />
+      </div>
+    )
+  }
+
   if (step === 'select-ejercicio' && !rutina) {
     // Sesión libre: no hay lista fija de ejercicios. Se buscan en el catálogo
     // (o se cargan como texto libre si el entrenador usa un nombre que no está
@@ -1094,10 +1113,6 @@ export default function EntrenamientoActivo() {
             </ul>
           </div>
         )}
-
-        <div className="mb-4">
-          <CalentamientoSugerido key={ejercicioActual.nombre} pesoObjetivo={peso} />
-        </div>
 
         <button data-tour="preserie-comenzar" onClick={iniciarSerie} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
           Comenzar serie <span className="material-symbols-outlined">bolt</span>

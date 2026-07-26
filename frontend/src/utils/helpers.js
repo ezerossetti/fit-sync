@@ -244,28 +244,6 @@ export function calcularDiscos(pesoObjetivo, barraKg = 20) {
   return { discosPorLado, sobra: Math.max(0, restante), soloBarra: false, barraKg: barra }
 }
 
-// ---------- Sets de calentamiento sugeridos ----------
-// Progresión clásica de aproximación (40% / 60% / 80% del peso de trabajo)
-// con reps decrecientes. Para pesos livianos no tiene sentido estructurar
-// calentamiento (no hay carga real que "preparar"), así que no se sugiere
-// nada por debajo de un umbral mínimo.
-const UMBRAL_MIN_CALENTAMIENTO_KG = 20
-
-export function seriesCalentamiento(pesoTrabajo) {
-  const peso = Number(pesoTrabajo) || 0
-  if (peso < UMBRAL_MIN_CALENTAMIENTO_KG) return []
-
-  const redondear = (p) => Math.max(0, Math.round(p / 1.25) * 1.25)
-  const sets = [
-    { peso: redondear(peso * 0.4), reps: 10 },
-    { peso: redondear(peso * 0.6), reps: 6 },
-    { peso: redondear(peso * 0.8), reps: 3 },
-  ]
-  // Filtramos sets que quedaron pegados al peso de trabajo real (o en 0)
-  // por redondeo con pesos de trabajo bajos/medios — no aportan nada.
-  return sets.filter((s, i) => s.peso > 0 && s.peso < peso && (i === 0 || s.peso > sets[i - 1].peso))
-}
-
 // ---------- Coach por ejercicio (pantalla de pre-serie) ----------
 
 // Historial de un ejercicio puntual, un registro por sesión donde apareció,
