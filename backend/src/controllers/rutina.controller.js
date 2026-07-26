@@ -14,7 +14,7 @@ export const rutinaController = {
   getById: async (req, res) => {
     try {
       const { rutinaId } = req.params;
-      const rutina = await rutinaModel.getById(rutinaId);
+      const rutina = await rutinaModel.getById(rutinaId, req.usuarioId);
       if (!rutina) {
         return res.status(404).json({ success: false, message: 'Rutina no encontrada' });
       }
@@ -52,7 +52,7 @@ export const rutinaController = {
     try {
       const { rutinaId } = req.params;
       const datosActualizacion = req.body;
-      const rutinaActualizada = await rutinaModel.update(rutinaId, datosActualizacion);
+      const rutinaActualizada = await rutinaModel.update(rutinaId, req.usuarioId, datosActualizacion);
       if (!rutinaActualizada) {
         return res.status(404).json({ success: false, message: 'Rutina no encontrada' });
       }
@@ -65,7 +65,7 @@ export const rutinaController = {
   remove: async (req, res) => {
     try {
       const { rutinaId } = req.params;
-      const rutinaEliminada = await rutinaModel.remove(rutinaId);
+      const rutinaEliminada = await rutinaModel.remove(rutinaId, req.usuarioId);
       if (!rutinaEliminada) {
         return res.status(404).json({ success: false, message: 'Rutina no encontrada' });
       }

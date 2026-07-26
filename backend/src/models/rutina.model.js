@@ -19,13 +19,14 @@ export const rutinaModel = {
     }
   },
 
-  // Obtener una rutina por ID
-  getById: async (rutinaId) => {
+  // Obtener una rutina por ID, siempre scopeada al usuario dueño
+  getById: async (rutinaId, usuarioId) => {
     try {
       const { data, error } = await supabase
         .from('rutinas')
         .select('*')
         .eq('id', rutinaId)
+        .eq('usuario_id', usuarioId)
         .maybeSingle();
 
       if (error) {
@@ -75,13 +76,14 @@ export const rutinaModel = {
     }
   },
 
-  // Actualizar una rutina
-  update: async (rutinaId, datosActualizacion) => {
+  // Actualizar una rutina, siempre scopeada al usuario dueño
+  update: async (rutinaId, usuarioId, datosActualizacion) => {
     try {
       const { data, error } = await supabase
         .from('rutinas')
         .update(datosActualizacion)
         .eq('id', rutinaId)
+        .eq('usuario_id', usuarioId)
         .select()
         .maybeSingle();
 
@@ -95,13 +97,14 @@ export const rutinaModel = {
     }
   },
 
-  // Eliminar una rutina
-  remove: async (rutinaId) => {
+  // Eliminar una rutina, siempre scopeada al usuario dueño
+  remove: async (rutinaId, usuarioId) => {
     try {
       const { data, error } = await supabase
         .from('rutinas')
         .delete()
         .eq('id', rutinaId)
+        .eq('usuario_id', usuarioId)
         .select()
         .maybeSingle();
 

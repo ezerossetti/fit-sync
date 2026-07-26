@@ -19,13 +19,14 @@ export const sesionModel = {
     }
   },
 
-  // Obtener una sesión por ID
-  getById: async (sesionId) => {
+  // Obtener una sesión por ID, siempre scopeada al usuario dueño
+  getById: async (sesionId, usuarioId) => {
     try {
       const { data, error } = await supabase
         .from('sesiones')
         .select('*')
         .eq('id', sesionId)
+        .eq('usuario_id', usuarioId)
         .maybeSingle();
 
       if (error) {
@@ -75,13 +76,14 @@ export const sesionModel = {
     }
   },
 
-  // Actualizar una sesión
-  update: async (sesionId, datosActualizacion) => {
+  // Actualizar una sesión, siempre scopeada al usuario dueño
+  update: async (sesionId, usuarioId, datosActualizacion) => {
     try {
       const { data, error } = await supabase
         .from('sesiones')
         .update(datosActualizacion)
         .eq('id', sesionId)
+        .eq('usuario_id', usuarioId)
         .select()
         .maybeSingle();
 
@@ -95,13 +97,14 @@ export const sesionModel = {
     }
   },
 
-  // Eliminar una sesión
-  remove: async (sesionId) => {
+  // Eliminar una sesión, siempre scopeada al usuario dueño
+  remove: async (sesionId, usuarioId) => {
     try {
       const { data, error } = await supabase
         .from('sesiones')
         .delete()
         .eq('id', sesionId)
+        .eq('usuario_id', usuarioId)
         .select()
         .maybeSingle();
 

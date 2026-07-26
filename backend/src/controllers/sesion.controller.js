@@ -24,7 +24,7 @@ export const sesionController = {
   getById: async (req, res) => {
     try {
       const { sesionId } = req.params;
-      const sesion = await sesionModel.getById(sesionId);
+      const sesion = await sesionModel.getById(sesionId, req.usuarioId);
 
       if (!sesion) {
         return res.status(404).json({
@@ -96,7 +96,7 @@ export const sesionController = {
       const { sesionId } = req.params;
       const datosActualizacion = req.body;
 
-      const sesionActualizada = await sesionModel.update(sesionId, datosActualizacion);
+      const sesionActualizada = await sesionModel.update(sesionId, req.usuarioId, datosActualizacion);
 
       if (!sesionActualizada) {
         return res.status(404).json({
@@ -124,7 +124,7 @@ export const sesionController = {
     try {
       const { sesionId } = req.params;
 
-      const sesionEliminada = await sesionModel.remove(sesionId);
+      const sesionEliminada = await sesionModel.remove(sesionId, req.usuarioId);
 
       if (!sesionEliminada) {
         return res.status(404).json({
