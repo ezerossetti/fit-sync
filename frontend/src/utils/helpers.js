@@ -493,6 +493,124 @@ export function calcularRachaMaxima(sesiones = []) {
   return mejor
 }
 
+// ---------- Racha SEMANAL por meta personal ----------
+// La racha por días consecutivos (arriba) castiga a cualquiera que entrene
+// menos de 7 días por semana: alguien que entrena 3 veces con descansos
+// normales (ej. lunes/miércoles/viernes) pierde la racha todos los fines de
+// semana, aunque esté siendo perfectamente constante. Esta es la métrica que
+// reemplaza a esa en la UI principal: cuenta SEMANAS consecutivas donde se
+// cumplió una meta personal de sesiones (no días seguidos).
+
+function inicioSemanaDe(fecha) {
+  const d = new Date(fecha)
+  const dia = d.getDay() === 0 ? 7 : d.getDay() // 1 = lunes ... 7 = domingo
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - dia + 1)
+  return d
+}
+
+// Agrupa las sesiones por semana (lunes a domingo) y devuelve un Map
+// timestamp-de-inicio-de-semana -> cantidad de DÍAS distintos entrenados esa
+// semana (no de sesiones: dos sesiones el mismo día cuentan una vez, así el
+// conteo semanal siempre se compara contra la meta en las mismas unidades).
+function diasPorSemana(sesiones = []) {
+  const mapa = new Map()
+  sesiones.forEach(s => {
+    const f = new Date(s.fecha)
+    const inicio = inicioSemanaDe(f).getTime()
+    if (!mapa.has(inicio)) mapa.set(inicio, new Set())
+    mapa.get(inicio).add(f.toDateString())
+  })
+  return mapa
+}
+
+const MS_SEMANA = 7 * 24 * 60 * 60 * 1000
+
+// Sugiere una meta semanal razonable a partir del propio historial: la
+// mediana de días entrenados por semana en las últimas 8 semanas YA
+// completadas (la semana en curso no cuenta, todavía no terminó). Sin
+// historial suficiente, arranca en 2 — mejor una meta chica que se cumple,
+// que una ambiciosa que rompe la racha en la primera semana floja.
+export function metaSemanalSugerida(sesiones = []) {
+  const mapa = diasPorSemana(sesiones)
+  const inicioEstaSemana = inicioSemanaDe(new Date()).getTime()
+
+  const conteos = Array.from(mapa.entries())
+    .filter(([inicio]) => inicio < inicioEstaSemana)
+    .sort((a, b) => b[0] - a[0])
+    .slice(0, 8)
+    .map(([, dias]) => dias.size)
+    .sort((a, b) => a - b)
+
+  if (conteos.length === 0) return 2
+  const mediana = conteos[Math.floor(conteos.length / 2)]
+  return Math.min(6, Math.max(2, mediana))
+}
+
+// Cuenta semanas consecutivas (hacia atrás desde hoy) donde se cumplió
+// `metaSemanal` días entrenados. La semana actual, si todavía no llegó a la
+// meta, no corta la racha (capaz falta que llegue el finde) — el mismo
+// criterio que ya usa calcularRachaDetalle con el día de hoy.
+export function calcularRachaSemanal(sesiones = [], metaSemanal = null) {
+  const meta = metaSemanal || metaSemanalSugerida(sesiones)
+  const mapa = diasPorSemana(sesiones)
+
+  const inicioEstaSemana = inicioSemanaDe(new Date()).getTime()
+  const sesionesEstaSemana = mapa.get(inicioEstaSemana)?.size || 0
+  const metaCumplidaEstaSemana = sesionesEstaSemana >= meta
+
+  let racha = 0
+  let esSemanaActual = true
+  let cursor = inicioEstaSemana
+
+  for (let i = 0; i < 520; i++) { // ~10 años de tope de seguridad
+    const dias = mapa.get(cursor)?.size || 0
+
+    if (dias >= meta) {
+      racha += 1
+      esSemanaActual = false
+      cursor -= MS_SEMANA
+      continue
+    }
+
+    // Semana en curso sin llegar todavía a la meta: no es una falta.
+    if (esSemanaActual) {
+      esSemanaActual = false
+      cursor -= MS_SEMANA
+      continue
+    }
+
+    break
+  }
+
+  return { racha, meta, sesionesEstaSemana, metaCumplidaEstaSemana }
+}
+
+// Equivalente semanal de calcularRachaMaxima: la corrida más larga de
+// semanas-con-meta-cumplida en TODO el historial, para el logro de racha
+// (que no debería "perderse" solo porque la racha actual está cortada).
+export function calcularRachaSemanalMaxima(sesiones = [], metaSemanal = null) {
+  const meta = metaSemanal || metaSemanalSugerida(sesiones)
+  const mapa = diasPorSemana(sesiones)
+  if (mapa.size === 0) return 0
+
+  const semanas = Array.from(mapa.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([inicio, dias]) => ({ inicio, cumplida: dias.size >= meta }))
+
+  let mejor = 0
+  let actual = 0
+  let semanaPrevia = null
+  for (const s of semanas) {
+    if (!s.cumplida) { actual = 0; semanaPrevia = s.inicio; continue }
+    const consecutiva = semanaPrevia !== null && (s.inicio - semanaPrevia) === MS_SEMANA
+    actual = consecutiva ? actual + 1 : 1
+    mejor = Math.max(mejor, actual)
+    semanaPrevia = s.inicio
+  }
+  return mejor
+}
+
 // Top N ejercicios de una sesión puntual, ordenados por volumen descendente
 // (peso x reps sumado de todas sus series). Se usa en la tarjeta compartible
 // para mostrar el desglose de "qué se entrenó" sin listar todo.

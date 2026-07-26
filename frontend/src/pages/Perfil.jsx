@@ -7,7 +7,7 @@ import sesionesService from '../services/sesiones.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
 import { pushNotifications } from '../utils/pushNotifications'
 import {
-  calcularRachaDetalle, volumenTotalHistorico, sesionesCompletadas,
+  calcularRachaSemanal, volumenTotalHistorico, sesionesCompletadas,
   horasActivasTotales, recordsPersonalesTotal, nivelPorSesiones, formatKg, formatTimer,
   volumenPorSemana
 } from '../utils/helpers'
@@ -200,7 +200,7 @@ export default function Perfil() {
   const nombre = perfil?.nombre || user?.user_metadata?.nombre || 'Deportista'
   const inicial = nombre?.[0]?.toUpperCase() || '?'
 
-  const { racha, huboGracia } = calcularRachaDetalle(historial)
+  const rachaSemanal = calcularRachaSemanal(historial)
   const volumen = volumenTotalHistorico(historial)
   const completados = sesionesCompletadas(historial)
   const horas = horasActivasTotales(historial)
@@ -272,13 +272,11 @@ export default function Perfil() {
           <span className="px-3 py-1 rounded-full text-label-md bg-primary-container text-on-primary-container uppercase">
             Nivel {nivel}
           </span>
-          {racha > 0 && (
+          {rachaSemanal.racha > 0 && (
             <span className="px-3 py-1 rounded-full text-label-md bg-success-container text-on-success-container flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
-              {racha} {racha === 1 ? 'Día' : 'Días'}
-              {huboGracia && (
-                <span title="Tenés un día de gracia usado en esta racha" className="material-symbols-outlined text-[13px] ml-0.5">shield</span>
-              )}
+              {rachaSemanal.racha} {rachaSemanal.racha === 1 ? 'Semana' : 'Semanas'}
+              <span title={`Cumplís tu meta cuando entrenás ${rachaSemanal.meta} días en la semana`} className="material-symbols-outlined text-[13px] ml-0.5">info</span>
             </span>
           )}
         </div>

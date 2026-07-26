@@ -500,7 +500,7 @@ function drawWordmarkCentered(ctx, cxCenter, y, { fontSize = 52, iconSize = 42, 
 // chip (no baseline), para poder anclarlo como badge de esquina.
 function drawStreakChip(ctx, xRight, yTop, racha) {
   if (!racha || racha < 1) return
-  const label = `${racha} ${racha === 1 ? 'día' : 'días'}`
+  const label = `${racha} ${racha === 1 ? 'semana' : 'semanas'}`
   ctx.font = '700 28px "Plus Jakarta Sans"'
   const textW = ctx.measureText(label).width
   const iconSize = 26
@@ -904,7 +904,7 @@ export function dibujarStickerResumen(canvas, data) {
     { icon: 'list', text: `${totalSeries} Series` },
     { icon: 'timer', text: formatDuracion(duracionMin) },
   ]
-  if (racha > 0) items.push({ icon: 'flame', text: `Racha ${racha} ${racha === 1 ? 'día' : 'días'}` })
+  if (racha > 0) items.push({ icon: 'flame', text: `Racha ${racha} ${racha === 1 ? 'semana' : 'semanas'}` })
 
   conSombra(() => {
     ctx.textAlign = 'left'
@@ -1098,7 +1098,7 @@ export function dibujarTarjetaResumen(canvas, data) {
     { icon: 'timer', value: formatDuracion(duracionMin), unit: '', label: 'Duración' },
   ]
   if (racha > 0) {
-    bentoItems.push({ icon: 'flame', value: racha, unit: racha === 1 ? 'día' : 'días', label: 'Racha', accentColor: COLORS.gold })
+    bentoItems.push({ icon: 'flame', value: racha, unit: racha === 1 ? 'semana' : 'semanas', label: 'Racha', accentColor: COLORS.gold })
   }
   const bentoGap = 20
   const bentoW = (innerW - bentoGap * (bentoItems.length - 1)) / bentoItems.length

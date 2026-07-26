@@ -6,7 +6,7 @@
 // al terminar una sesión (para mostrarlos en la tarjeta compartible).
 import {
   volumenTotalHistorico, sesionesCompletadas, horasActivasTotales,
-  recordsPersonalesTotal, ejerciciosEnHistorial, calcularRachaMaxima, volumenSesion,
+  recordsPersonalesTotal, ejerciciosEnHistorial, calcularRachaSemanalMaxima, volumenSesion,
 } from '../utils/helpers'
 
 // nivel: solo afecta el color/insignia visual (bronce/plata/oro/platino)
@@ -18,11 +18,11 @@ export const LOGROS = [
   { id: 'sesiones_50', titulo: 'Veterano', descripcion: 'Completá 50 sesiones', icono: 'shield', statKey: 'sesiones', objetivo: 50, nivel: 'plata' },
   { id: 'sesiones_100', titulo: 'Centurión', descripcion: 'Completá 100 sesiones', icono: 'workspace_premium', statKey: 'sesiones', objetivo: 100, nivel: 'oro' },
 
-  // ---- Racha (días consecutivos, la mejor racha histórica) ----
-  { id: 'racha_3', titulo: 'Buen arranque', descripcion: 'Encadená 3 días seguidos entrenando', icono: 'local_fire_department', statKey: 'rachaMaxima', objetivo: 3, nivel: 'bronce' },
-  { id: 'racha_7', titulo: 'Semana perfecta', descripcion: 'Encadená 7 días seguidos', icono: 'local_fire_department', statKey: 'rachaMaxima', objetivo: 7, nivel: 'plata' },
-  { id: 'racha_14', titulo: 'Dos semanas de fuego', descripcion: 'Encadená 14 días seguidos', icono: 'local_fire_department', statKey: 'rachaMaxima', objetivo: 14, nivel: 'oro' },
-  { id: 'racha_30', titulo: 'Hábito de hierro', descripcion: 'Encadená 30 días seguidos', icono: 'whatshot', statKey: 'rachaMaxima', objetivo: 30, nivel: 'platino' },
+  // ---- Racha (semanas consecutivas cumpliendo tu meta personal, la mejor racha histórica) ----
+  { id: 'racha_3', titulo: 'Buen arranque', descripcion: 'Cumplí tu meta semanal 3 semanas seguidas', icono: 'local_fire_department', statKey: 'rachaSemanalMaxima', objetivo: 3, nivel: 'bronce' },
+  { id: 'racha_8', titulo: 'Dos meses de fuego', descripcion: 'Cumplí tu meta semanal 8 semanas seguidas', icono: 'local_fire_department', statKey: 'rachaSemanalMaxima', objetivo: 8, nivel: 'plata' },
+  { id: 'racha_16', titulo: 'Cuatrimestre de hierro', descripcion: 'Cumplí tu meta semanal 16 semanas seguidas', icono: 'local_fire_department', statKey: 'rachaSemanalMaxima', objetivo: 16, nivel: 'oro' },
+  { id: 'racha_26', titulo: 'Medio año sin fallar', descripcion: 'Cumplí tu meta semanal 26 semanas seguidas', icono: 'whatshot', statKey: 'rachaSemanalMaxima', objetivo: 26, nivel: 'platino' },
 
   // ---- Volumen acumulado ----
   { id: 'volumen_10t', titulo: '10 toneladas', descripcion: 'Acumulá 10.000 kg de volumen total', icono: 'fitness_center', statKey: 'volumenTotal', objetivo: 10000, nivel: 'bronce' },
@@ -81,7 +81,7 @@ export function calcularStatsLogros(sesiones = []) {
     prs: recordsPersonalesTotal(sesiones),
     horas: horasActivasTotales(sesiones),
     ejerciciosDistintos: ejerciciosEnHistorial(sesiones).length,
-    rachaMaxima: calcularRachaMaxima(sesiones),
+    rachaSemanalMaxima: calcularRachaSemanalMaxima(sesiones),
     sesionesFinDeSemana,
     sesionesMadrugada,
     sesionesNoche,

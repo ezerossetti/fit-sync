@@ -6,7 +6,7 @@ import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
 import { useTour } from '../context/TourContext'
 import { TOURS } from '../data/tours'
-import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaDetalle, sugerirDeload, ejerciciosAbandonados } from '../utils/helpers'
+import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaSemanal, sugerirDeload, ejerciciosAbandonados } from '../utils/helpers'
 import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
 
 function inicioDeSemana() {
@@ -20,7 +20,7 @@ function inicioDeSemana() {
 const LETRA_DIA = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 // Arma los 7 días de la semana actual (lunes a domingo) marcando cuáles
-// tienen al menos una sesión registrada, para el calendario de racha estilo
+// tienen al menos una sesión registrada, para el calendario estilo
 // Duolingo. Los días futuros (después de hoy) se muestran aparte, apagados,
 // para no confundirlos con días "salteados".
 function diasSemanaEntrenados(sesionesSemana, inicio) {
@@ -39,14 +39,21 @@ function diasSemanaEntrenados(sesionesSemana, inicio) {
   })
 }
 
-// Calendario semanal de racha, tipo Duolingo: un círculo por día con ícono
-// de fuego lleno si hubo sesión ese día, contorno si no. El día de hoy se
-// marca con un anillo para ubicarse rápido dentro de la semana.
-function RachaSemanal({ sesionesSemana, inicio }) {
+// Calendario semanal, tipo Duolingo: un círculo por día con ícono de fuego
+// lleno si hubo sesión ese día, contorno si no. El día de hoy se marca con
+// un anillo para ubicarse rápido dentro de la semana. Debajo, el progreso
+// contra la meta personal (ver calcularRachaSemanal) — esta es la métrica
+// que de verdad importa para la racha, no los días sueltos.
+function CalendarioSemana({ sesionesSemana, inicio, sesionesEstaSemana, meta, metaCumplida }) {
   const dias = diasSemanaEntrenados(sesionesSemana, inicio)
   return (
     <div className="card p-4">
-      <p className="text-label-md text-on-surface-variant uppercase mb-3">Esta semana</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-label-md text-on-surface-variant uppercase">Esta semana</p>
+        <p className={`text-label-md font-semibold ${metaCumplida ? 'text-success' : 'text-on-surface-variant'}`}>
+          {sesionesEstaSemana}/{meta} {metaCumplida && '✓'}
+        </p>
+      </div>
       <div className="flex justify-between">
         {dias.map((d, i) => (
           <div key={i} className="flex flex-col items-center gap-1">
@@ -129,7 +136,7 @@ export default function Home() {
 
   const inicio = inicioDeSemana()
   const sesionesSemana = sesiones.filter(s => new Date(s.fecha) >= inicio)
-  const { racha, huboGracia } = calcularRachaDetalle(sesiones)
+  const rachaSemanal = calcularRachaSemanal(sesiones)
   const deload = sugerirDeload(sesiones)
   const abandonados = ejerciciosAbandonados(sesiones, rutinas)
   const ultimaSesion = sesiones[0]
@@ -202,18 +209,24 @@ export default function Home() {
           <p className="text-label-md text-on-surface-variant mt-1">Sesiones · semana</p>
         </div>
         <div className="card p-3 text-center">
-          <p className="font-mono text-headline-md text-accent">{loading ? '–' : racha}</p>
+          <p className="font-mono text-headline-md text-accent">{loading ? '–' : rachaSemanal.racha}</p>
           <p className="text-label-md text-on-surface-variant mt-1 flex items-center justify-center gap-1">
-            Racha (días)
-            {!loading && huboGracia && (
-              <span title="Tenés un día de gracia usado en esta racha" className="material-symbols-outlined text-[14px] text-accent">shield</span>
-            )}
+            Racha (semanas)
+            <span title={`Cumplís tu meta cuando entrenás ${rachaSemanal.meta} días en la semana`} className="material-symbols-outlined text-[14px] text-on-surface-variant/60">info</span>
           </p>
         </div>
       </div>
 
-      {/* Calendario de racha semanal */}
-      {!loading && <RachaSemanal sesionesSemana={sesionesSemana} inicio={inicio} />}
+      {/* Calendario de la semana + progreso contra la meta */}
+      {!loading && (
+        <CalendarioSemana
+          sesionesSemana={sesionesSemana}
+          inicio={inicio}
+          sesionesEstaSemana={rachaSemanal.sesionesEstaSemana}
+          meta={rachaSemanal.meta}
+          metaCumplida={rachaSemanal.metaCumplidaEstaSemana}
+        />
+      )}
 
       {/* Última sesión */}
       {ultimaSesion && (

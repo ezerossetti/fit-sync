@@ -13,7 +13,7 @@ import CompartirResumen from '../components/CompartirResumen'
 import {
   ultimoRegistroEjercicio, prPersonalEjercicio, formatFechaRelativa, formatTimer,
   volumenSesion, formatKg, formatDuracion, volumenPorDiaSemana, analizarCoachEjercicio,
-  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaDetalle, topEjerciciosPorVolumen,
+  dispararAlarmaDescanso, caloriasPorSerie, caloriasSesion, calcularRachaSemanal, topEjerciciosPorVolumen,
   notificarLogroDesbloqueado, calcularDiscos
 } from '../utils/helpers'
 import { logrosNuevos as calcularLogrosNuevos, NIVEL_COLOR } from '../data/achievements'
@@ -1297,7 +1297,7 @@ export default function EntrenamientoActivo() {
 
     const semana = volumenPorDiaSemana(historial, ultimaSesionGuardada)
     const maxSemana = Math.max(1, ...semana.map(d => d.volumen))
-    const { racha: rachaActual } = calcularRachaDetalle([...historial, ultimaSesionGuardada].filter(Boolean))
+    const { racha: rachaActual } = calcularRachaSemanal([...historial, ultimaSesionGuardada].filter(Boolean))
     // Sesión cargada en modo retroactivo: no hay duración real, así que no
     // tiene sentido ni mostrar ni recalcular calorías a partir de ella.
     const esRetroactiva = ultimaSesionGuardada?.duracion_min == null
