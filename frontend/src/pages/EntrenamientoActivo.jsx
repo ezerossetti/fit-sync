@@ -4,6 +4,8 @@ import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import ejerciciosPersonalizadosService from '../services/ejerciciosPersonalizados.service'
+import coachService from '../services/coach.service'
+import { construirContextoComentarioSesion } from '../utils/contextoCoach'
 import { getExerciseInfo } from '../data/exerciseCatalog'
 import ExerciseMedia from '../components/ExerciseMedia'
 import BuscadorEjercicio from '../components/BuscadorEjercicio'
@@ -172,6 +174,8 @@ export default function EntrenamientoActivo() {
   const inicioSesionRef = useRef(null)
   const [guardando, setGuardando] = useState(false)
   const [ultimaSesionGuardada, setUltimaSesionGuardada] = useState(null)
+  const [comentarioCoach, setComentarioCoach] = useState(null)
+  const [cargandoComentarioCoach, setCargandoComentarioCoach] = useState(false)
   const [notas, setNotas] = useState('')
   const [nombreRutinaNueva, setNombreRutinaNueva] = useState('')
   const [guardandoRutina, setGuardandoRutina] = useState(false)
@@ -285,6 +289,24 @@ export default function EntrenamientoActivo() {
     notificacionLogrosEnviada.current = true
     const nuevos = calcularLogrosNuevos(historial, ultimaSesionGuardada)
     nuevos.filter(l => l.nivel === 'oro' || l.nivel === 'platino').forEach(notificarLogroDesbloqueado)
+  }, [step, ultimaSesionGuardada, historial])
+
+  // Comentario automático del coach IA sobre la sesión recién terminada:
+  // compara cada ejercicio contra el historial inmediato (¿subiste peso?,
+  // ¿estás estancado?, etc). Se pide una sola vez al llegar a "resumen" — si
+  // falla (sin conexión, rate limit de Groq) simplemente no se muestra la
+  // tarjeta, no bloquea el resto de la pantalla.
+  const comentarioCoachPedido = useRef(false)
+  useEffect(() => {
+    if (step !== 'resumen' || !ultimaSesionGuardada) return
+    if (comentarioCoachPedido.current) return
+    comentarioCoachPedido.current = true
+    setCargandoComentarioCoach(true)
+    const contexto = construirContextoComentarioSesion(ultimaSesionGuardada, historial)
+    coachService.comentarioSesion(contexto)
+      .then(({ comentario }) => setComentarioCoach(comentario))
+      .catch(() => setComentarioCoach(null))
+      .finally(() => setCargandoComentarioCoach(false))
   }, [step, ultimaSesionGuardada, historial])
 
   const elegirRutina = (r) => {
@@ -997,6 +1019,20 @@ export default function EntrenamientoActivo() {
             </p>
             {pbs.length > 1 && (
               <p className="text-body-sm text-on-surface-variant">También en: {pbs.slice(1).map(p => p.nombre).join(', ')}</p>
+            )}
+          </div>
+        )}
+
+        {(cargandoComentarioCoach || comentarioCoach) && (
+          <div className="card p-4 mb-5 border-accent/30 bg-accent/5">
+            <p className="text-body-sm font-semibold text-accent mb-1.5 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">sports</span>
+              Coach Chiche
+            </p>
+            {cargandoComentarioCoach ? (
+              <p className="text-body-sm text-on-surface-variant">Analizando tu sesión...</p>
+            ) : (
+              <p className="text-body-sm text-on-surface whitespace-pre-wrap">{comentarioCoach}</p>
             )}
           </div>
         )}

@@ -42,7 +42,12 @@ export function construirContextoComentarioSesion(sesionActual, sesionesPrevias 
     series: ej.series,
     ultimo_registro_previo: ultimoRegistroEjercicio(sesionesPrevias, ej.nombre),
     pr_previo: prPersonalEjercicio(sesionesPrevias, ej.nombre),
-    analisis_coach: analizarCoachEjercicio(sesionesPrevias, ej.nombre),
+    // BUGFIX: analizarCoachEjercicio espera el OBJETO ejercicio (usa
+    // ejercicio?.nombre adentro), no el string del nombre directamente. Antes
+    // se le pasaba `ej.nombre` (string), así que `ejercicio?.nombre` daba
+    // undefined y la función cortaba en el primer if devolviendo null
+    // siempre — el análisis de coach quedaba vacío en todos los casos.
+    analisis_coach: analizarCoachEjercicio(sesionesPrevias, ej),
   }))
 
   return {
