@@ -5,7 +5,7 @@ import { useTour } from '../context/TourContext'
 import { TOURS } from '../data/tours'
 import {
   formatFecha, formatFechaRelativa, volumenSesion, formatKg, formatDuracion,
-  ejerciciosEnHistorial, progresoPorEjercicio, datosHeatmap, volumenPorGrupoSemana,
+  ejerciciosEnHistorial, progresoPorEjercicio, datosHeatmap, volumenPorGrupoSemana, fechaSesion,
 } from '../utils/helpers'
 
 function mesAnioLabel(fechaISO) {
@@ -222,7 +222,7 @@ export default function Historial() {
         sesionesService.getAll(),
         ejerciciosPersonalizadosService.getAll().catch(() => []),
       ])
-      setSesiones((data || []).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
+      setSesiones((data || []).sort((a, b) => fechaSesion(b.fecha) - fechaSesion(a.fecha)))
       setPersonalizados(ep || [])
     } catch (e) {
       console.error(e)
@@ -318,10 +318,10 @@ export default function Historial() {
                       <div className="flex items-start gap-3 min-w-0">
                         <div className="w-11 h-11 rounded-lg bg-primary-container flex flex-col items-center justify-center shrink-0 leading-none">
                           <span className="text-label-md text-accent font-bold">
-                            {new Date(s.fecha).toLocaleDateString('es-AR', { day: '2-digit' })}
+                            {fechaSesion(s.fecha).toLocaleDateString('es-AR', { day: '2-digit' })}
                           </span>
                           <span className="text-on-surface-variant" style={{ fontSize: '9px' }}>
-                            {new Date(s.fecha).toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
+                            {fechaSesion(s.fecha).toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
                           </span>
                         </div>
                         <div className="min-w-0">

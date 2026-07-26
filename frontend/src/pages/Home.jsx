@@ -6,7 +6,7 @@ import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
 import { useTour } from '../context/TourContext'
 import { TOURS } from '../data/tours'
-import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaSemanal, sugerirDeload, ejerciciosAbandonados } from '../utils/helpers'
+import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaSemanal, sugerirDeload, ejerciciosAbandonados, fechaSesion } from '../utils/helpers'
 import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
 
 function inicioDeSemana() {
@@ -24,7 +24,7 @@ const LETRA_DIA = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 // Duolingo. Los días futuros (después de hoy) se muestran aparte, apagados,
 // para no confundirlos con días "salteados".
 function diasSemanaEntrenados(sesionesSemana, inicio) {
-  const dias = new Set(sesionesSemana.map(s => new Date(s.fecha).toDateString()))
+  const dias = new Set(sesionesSemana.map(s => fechaSesion(s.fecha).toDateString()))
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   return Array.from({ length: 7 }, (_, i) => {
@@ -123,7 +123,7 @@ export default function Home() {
           usuarioService.getMe().catch(() => null),
         ])
         setRutinas(r || [])
-        setSesiones((s || []).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
+        setSesiones((s || []).sort((a, b) => fechaSesion(b.fecha) - fechaSesion(a.fecha)))
         setPerfil(p)
       } catch (e) {
         console.error(e)
@@ -135,7 +135,7 @@ export default function Home() {
   }, [])
 
   const inicio = inicioDeSemana()
-  const sesionesSemana = sesiones.filter(s => new Date(s.fecha) >= inicio)
+  const sesionesSemana = sesiones.filter(s => fechaSesion(s.fecha) >= inicio)
   const rachaSemanal = calcularRachaSemanal(sesiones)
   const deload = sugerirDeload(sesiones)
   const abandonados = ejerciciosAbandonados(sesiones, rutinas)

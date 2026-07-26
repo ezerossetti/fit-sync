@@ -7,6 +7,7 @@
 import {
   volumenTotalHistorico, sesionesCompletadas, horasActivasTotales,
   recordsPersonalesTotal, ejerciciosEnHistorial, calcularRachaSemanalMaxima, volumenSesion,
+  fechaSesion, fechaTieneHora,
 } from '../utils/helpers'
 
 // nivel: solo afecta el color/insignia visual (bronce/plata/oro/platino)
@@ -65,11 +66,18 @@ export const NIVEL_COLOR = {
 // historial una vez por logro.
 export function calcularStatsLogros(sesiones = []) {
   const sesionesFinDeSemana = sesiones.filter(s => {
-    const dia = new Date(s.fecha).getDay()
+    const dia = fechaSesion(s.fecha).getDay()
     return dia === 0 || dia === 6
   }).length
-  const sesionesMadrugada = sesiones.filter(s => new Date(s.fecha).getHours() < 7).length
-  const sesionesNoche = sesiones.filter(s => new Date(s.fecha).getHours() >= 21).length
+  // BUGFIX: antes usaban new Date(s.fecha).getHours() sin filtrar fechas
+  // "peladas" (solo "YYYY-MM-DD", sin hora). Esas se interpretan como
+  // medianoche UTC, y al convertir a un huso horario negativo como el de
+  // Argentina caían siempre en horario "de noche" (21hs+) sin que el
+  // usuario haya entrenado realmente a esa hora. Ahora se excluyen del
+  // conteo: sin hora real en la fecha, no hay forma honesta de saber si fue
+  // de madrugada o de noche.
+  const sesionesMadrugada = sesiones.filter(s => fechaTieneHora(s.fecha) && new Date(s.fecha).getHours() < 7).length
+  const sesionesNoche = sesiones.filter(s => fechaTieneHora(s.fecha) && new Date(s.fecha).getHours() >= 21).length
   const volumenMaxSesion = sesiones.reduce((max, s) => {
     const vol = Number(s.volumen_total ?? volumenSesion(s.ejercicios))
     return vol > max ? vol : max

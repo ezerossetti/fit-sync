@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Pencil, Trash2, CheckCircle, Clock, Weight, Timer } from 'lucide-react'
 import sesionesService from '../services/sesiones.service'
+import { fechaSesion } from '../utils/helpers'
 
 const F = "'Lexend', sans-serif"
 
@@ -92,7 +93,7 @@ export default function SesionesList({ onEditarSesion }) {
             </div>
             <div style={{ color: '#8e909b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Clock size={12} />
-              {new Date(sesion.fecha).toLocaleDateString('es-AR')}
+              {fechaSesion(sesion.fecha).toLocaleDateString('es-AR')}
             </div>
           </div>
 

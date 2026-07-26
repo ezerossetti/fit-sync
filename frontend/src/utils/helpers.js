@@ -1,5 +1,44 @@
 import { getExerciseInfo } from '../data/exerciseCatalog'
 
+// ---------- Parseo seguro de la fecha de una sesión ----------
+
+// BUGFIX: el círculo del día no se completaba en el calendario semanal de
+// Inicio (y arrastraba corrimientos parecidos en el heatmap del Historial,
+// los logros de "sesión de madrugada/noche", etc.) cuando el backend
+// devuelve `fecha` como una fecha calendario pelada ("2026-07-26", sin hora
+// ni huso horario) en vez de un timestamp completo.
+//
+// `new Date('2026-07-26')` la interpreta como medianoche UTC (así lo define
+// el estándar ECMAScript para strings "solo fecha"). En un huso horario
+// negativo como el de Argentina (UTC-3), pasar esa medianoche UTC a hora
+// local la corre al día anterior: entrenás el domingo, pero
+// `new Date('2026-07-26').toDateString()` da "sábado". Los timestamps
+// completos (con hora y offset, ej. lo que genera `new Date().toISOString()`
+// al guardar) no tienen este problema — el corrimiento solo aparece con
+// fechas "peladas".
+//
+// Esta función fuerza que una fecha pelada se interprete como medianoche
+// LOCAL (el día calendario que en verdad se quiso guardar), y deja los
+// timestamps completos sin tocar.
+export function fechaSesion(fecha) {
+  if (typeof fecha === 'string') {
+    const soloFecha = fecha.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (soloFecha) {
+      const [, anio, mes, dia] = soloFecha
+      return new Date(Number(anio), Number(mes) - 1, Number(dia))
+    }
+  }
+  return new Date(fecha)
+}
+
+// Una fecha "pelada" (solo "YYYY-MM-DD", sin hora) no tiene manera de saber
+// a qué hora del día se entrenó — no hay hora que inventar. Se usa para no
+// contarlas de casualidad como "sesión de madrugada" o "de noche" en los
+// logros que dependen de la hora (ver calcularStatsLogros en achievements.js).
+export function fechaTieneHora(fecha) {
+  return !(typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha))
+}
+
 // ---------- Alarma de fin de descanso ----------
 
 // Dispara una vibración corta (si el dispositivo lo soporta) y un beep audible
@@ -99,13 +138,13 @@ export function saludoPorHora() {
 
 export function formatFecha(fechaISO) {
   if (!fechaISO) return ''
-  const d = new Date(fechaISO)
+  const d = fechaSesion(fechaISO)
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 export function formatFechaRelativa(fechaISO) {
   if (!fechaISO) return ''
-  const d = new Date(fechaISO)
+  const d = fechaSesion(fechaISO)
   const diffMs = Date.now() - d.getTime()
   const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
   if (dias <= 0) return 'Hoy'
@@ -182,7 +221,7 @@ export function formatTimer(totalSeconds) {
 export function ultimoRegistroEjercicio(sesiones = [], nombreEjercicio) {
   const candidatas = sesiones
     .filter(s => (s.ejercicios || []).some(e => e.nombre === nombreEjercicio))
-    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .sort((a, b) => fechaSesion(b.fecha) - fechaSesion(a.fecha))
 
   if (candidatas.length === 0) return null
 
@@ -257,7 +296,7 @@ function registrosEjercicio(sesiones = [], nombreEjercicio) {
       const maxPeso = Math.max(0, ...series.map(set => Number(set.peso) || 0))
       return { fecha: s.fecha, series, maxPeso }
     })
-    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+    .sort((a, b) => fechaSesion(a.fecha) - fechaSesion(b.fecha))
 }
 
 // Analiza el historial reciente de un ejercicio y devuelve UNA sola señal de
@@ -364,7 +403,7 @@ export function ejerciciosAbandonados(sesiones = [], rutinas = [], diasUmbral = 
 
   const ultimaFechaPorEjercicio = {}
   sesiones.forEach(s => (s.ejercicios || []).forEach(ej => {
-    const f = new Date(s.fecha)
+    const f = fechaSesion(s.fecha)
     if (!ultimaFechaPorEjercicio[ej.nombre] || f > ultimaFechaPorEjercicio[ej.nombre]) {
       ultimaFechaPorEjercicio[ej.nombre] = f
     }
@@ -396,7 +435,7 @@ export function volumenPorDiaSemana(sesiones = [], sesionExtra = null) {
   const todas = sesionExtra ? [...sesiones, sesionExtra] : sesiones
 
   todas.forEach(s => {
-    const f = new Date(s.fecha)
+    const f = fechaSesion(s.fecha)
     if (f < inicio) return
     const diffDias = Math.floor((f - inicio) / (1000 * 60 * 60 * 24))
     if (diffDias < 0 || diffDias > 6) return
@@ -411,7 +450,7 @@ export function volumenPorDiaSemana(sesiones = [], sesionExtra = null) {
 // Racha de días consecutivos entrenando, contando hacia atrás desde hoy
 export function calcularRacha(sesiones = []) {
   if (!sesiones.length) return 0
-  const dias = new Set(sesiones.map(s => new Date(s.fecha).toDateString()))
+  const dias = new Set(sesiones.map(s => fechaSesion(s.fecha).toDateString()))
   let racha = 0
   let cursor = new Date()
   while (dias.has(cursor.toDateString())) {
@@ -428,7 +467,7 @@ export function calcularRacha(sesiones = []) {
 export function calcularRachaDetalle(sesiones = []) {
   if (!sesiones.length) return { racha: 0, huboGracia: false }
 
-  const dias = new Set(sesiones.map(s => new Date(s.fecha).toDateString()))
+  const dias = new Set(sesiones.map(s => fechaSesion(s.fecha).toDateString()))
   let racha = 0
   let graciaDisponible = 1
   let huboGracia = false
@@ -476,7 +515,7 @@ export function calcularRachaDetalle(sesiones = []) {
 // solo porque la racha actual se cortó.
 export function calcularRachaMaxima(sesiones = []) {
   if (!sesiones.length) return 0
-  const dias = Array.from(new Set(sesiones.map(s => new Date(s.fecha).setHours(0, 0, 0, 0))))
+  const dias = Array.from(new Set(sesiones.map(s => fechaSesion(s.fecha).setHours(0, 0, 0, 0))))
     .sort((a, b) => a - b)
 
   let mejor = 1
@@ -516,7 +555,7 @@ function inicioSemanaDe(fecha) {
 function diasPorSemana(sesiones = []) {
   const mapa = new Map()
   sesiones.forEach(s => {
-    const f = new Date(s.fecha)
+    const f = fechaSesion(s.fecha)
     const inicio = inicioSemanaDe(f).getTime()
     if (!mapa.has(inicio)) mapa.set(inicio, new Set())
     mapa.get(inicio).add(f.toDateString())
@@ -647,7 +686,7 @@ export function recordsPersonalesTotal(sesiones = []) {
   const mejoresPorEjercicio = {}
   let total = 0
 
-  const ordenadas = [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+  const ordenadas = [...sesiones].sort((a, b) => fechaSesion(a.fecha) - fechaSesion(b.fecha))
 
   for (const s of ordenadas) {
     for (const ej of s.ejercicios || []) {
@@ -684,7 +723,7 @@ export function ejerciciosEnHistorial(sesiones = []) {
 export function progresoPorEjercicio(sesiones = [], nombreEjercicio) {
   if (!nombreEjercicio) return []
   const puntos = []
-  const ordenadas = [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+  const ordenadas = [...sesiones].sort((a, b) => fechaSesion(a.fecha) - fechaSesion(b.fecha))
 
   for (const s of ordenadas) {
     const ej = (s.ejercicios || []).find(e => e.nombre === nombreEjercicio)
@@ -707,7 +746,7 @@ export function progresoPorEjercicio(sesiones = [], nombreEjercicio) {
 export function datosHeatmap(sesiones = [], semanas = 12) {
   const volumenPorDia = {}
   sesiones.forEach(s => {
-    const key = new Date(s.fecha).toDateString()
+    const key = fechaSesion(s.fecha).toDateString()
     const vol = Number(s.volumen_total ?? volumenSesion(s.ejercicios))
     volumenPorDia[key] = (volumenPorDia[key] || 0) + vol
   })
@@ -764,7 +803,7 @@ export function volumenPorSemana(sesiones = [], semanas = 6) {
   }
 
   sesiones.forEach(s => {
-    const f = new Date(s.fecha)
+    const f = fechaSesion(s.fecha)
     const bloque = bloques.find(b => f >= b.inicio && f <= new Date(b.fin.getFullYear(), b.fin.getMonth(), b.fin.getDate(), 23, 59, 59))
     if (!bloque) return
     bloque.volumen += Number(s.volumen_total ?? volumenSesion(s.ejercicios))
@@ -803,7 +842,7 @@ export function sugerirDeload(sesiones = []) {
   if (!vieneSostenido) return null
 
   // ¿Hubo algún récord personal en las últimas sesiones?
-  const ordenadasAsc = [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+  const ordenadasAsc = [...sesiones].sort((a, b) => fechaSesion(a.fecha) - fechaSesion(b.fecha))
   const N = Math.min(6, ordenadasAsc.length)
   const recientes = ordenadasAsc.slice(-N)
   const anteriores = ordenadasAsc.slice(0, ordenadasAsc.length - N)
@@ -861,7 +900,7 @@ export function volumenPorGrupoSemana(sesiones = [], personalizados = []) {
   CATEGORIAS_BALANCE.forEach(c => { totales[c] = 0 })
 
   sesiones.forEach(s => {
-    const f = new Date(s.fecha)
+    const f = fechaSesion(s.fecha)
     if (f < inicio) return
     ;(s.ejercicios || []).forEach(ej => {
       const info = getExerciseInfo(ej.nombre, personalizados)
