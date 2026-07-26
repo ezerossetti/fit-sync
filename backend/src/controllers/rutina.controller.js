@@ -51,7 +51,16 @@ export const rutinaController = {
   update: async (req, res) => {
     try {
       const { rutinaId } = req.params;
-      const datosActualizacion = req.body;
+
+      // Whitelist explícito: mismo fix que en sesion.controller — no dejar
+      // que el body reasigne usuario_id/id de la rutina.
+      const { nombre, descripcion, ejercicios, activa } = req.body;
+      const datosActualizacion = {};
+      if (nombre !== undefined) datosActualizacion.nombre = nombre;
+      if (descripcion !== undefined) datosActualizacion.descripcion = descripcion;
+      if (ejercicios !== undefined) datosActualizacion.ejercicios = ejercicios;
+      if (activa !== undefined) datosActualizacion.activa = activa;
+
       const rutinaActualizada = await rutinaModel.update(rutinaId, req.usuarioId, datosActualizacion);
       if (!rutinaActualizada) {
         return res.status(404).json({ success: false, message: 'Rutina no encontrada' });

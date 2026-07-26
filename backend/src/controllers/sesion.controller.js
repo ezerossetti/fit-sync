@@ -94,7 +94,24 @@ export const sesionController = {
   update: async (req, res) => {
     try {
       const { sesionId } = req.params;
-      const datosActualizacion = req.body;
+
+      // Whitelist explícito: nunca dejamos que el body pise usuario_id, id,
+      // creado_en, etc. Sin esto, cualquiera podía mandar { "usuario_id": "<otro-uuid>" }
+      // en el PUT y "robarse" (o tirar al limbo) la sesión de otro usuario.
+      const {
+        fecha, rutina_id, rutina_nombre, ejercicios,
+        volumen_total, duracion_min, completada, notas, calorias_estimadas
+      } = req.body;
+      const datosActualizacion = {};
+      if (fecha !== undefined) datosActualizacion.fecha = fecha;
+      if (rutina_id !== undefined) datosActualizacion.rutina_id = rutina_id;
+      if (rutina_nombre !== undefined) datosActualizacion.rutina_nombre = rutina_nombre;
+      if (ejercicios !== undefined) datosActualizacion.ejercicios = ejercicios;
+      if (volumen_total !== undefined) datosActualizacion.volumen_total = volumen_total;
+      if (duracion_min !== undefined) datosActualizacion.duracion_min = duracion_min;
+      if (completada !== undefined) datosActualizacion.completada = completada;
+      if (notas !== undefined) datosActualizacion.notas = notas;
+      if (calorias_estimadas !== undefined) datosActualizacion.calorias_estimadas = calorias_estimadas;
 
       const sesionActualizada = await sesionModel.update(sesionId, req.usuarioId, datosActualizacion);
 

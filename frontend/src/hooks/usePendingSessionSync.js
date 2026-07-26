@@ -8,6 +8,10 @@ export default function usePendingSessionSync() {
   const [pendiente, setPendiente] = useState(() => leerSesionPendiente())
   const [sincronizando, setSincronizando] = useState(false)
   const [sincronizadoOk, setSincronizadoOk] = useState(false)
+  // Rechazo permanente del backend (400/404/422): reintentar para siempre
+  // no tiene sentido acá, el payload no va a cambiar solo. Se corta el loop
+  // y se le avisa al usuario en vez de girar el spinner sin fin.
+  const [errorPermanente, setErrorPermanente] = useState(false)
 
   const intentarSync = useCallback(async () => {
     const actual = leerSesionPendiente()
@@ -17,18 +21,25 @@ export default function usePendingSessionSync() {
       await sesionesService.create(actual.payload)
       borrarSesionPendiente()
       setPendiente(null)
+      setErrorPermanente(false)
       setSincronizadoOk(true)
       setTimeout(() => setSincronizadoOk(false), 4000)
     } catch (e) {
-      // Sigue sin conexión (o el backend rechazó el payload): se reintenta
-      // en el próximo evento 'online' o en el próximo intervalo.
+      // e.response presente = el backend respondió (llegó la request), no es
+      // un problema de conectividad. 401/403 = sesión vencida, hay que
+      // reloguearse. 400/404/422 = el payload está mal y nunca va a pasar
+      // solo. En esos casos cortamos el reintento automático; el resto
+      // (sin e.response = error de red, o 5xx del server) sigue reintentando.
+      const status = e?.response?.status
+      const esErrorPermanente = status !== undefined && status !== 429 && status < 500
+      setErrorPermanente(esErrorPermanente)
     } finally {
       setSincronizando(false)
     }
   }, [])
 
   useEffect(() => {
-    if (!pendiente) return undefined
+    if (!pendiente || errorPermanente) return undefined
     intentarSync()
     window.addEventListener('online', intentarSync)
     const interval = setInterval(intentarSync, REINTENTO_MS)
@@ -36,7 +47,7 @@ export default function usePendingSessionSync() {
       window.removeEventListener('online', intentarSync)
       clearInterval(interval)
     }
-  }, [pendiente, intentarSync])
+  }, [pendiente, errorPermanente, intentarSync])
 
   // Si EntrenamientoActivo guarda una nueva sesión pendiente mientras el
   // banner ya está montado en App.jsx, hay que enterarse sin recargar.
@@ -56,5 +67,5 @@ export default function usePendingSessionSync() {
     }
   }, [])
 
-  return { pendiente, sincronizando, sincronizadoOk }
+  return { pendiente, sincronizando, sincronizadoOk, errorPermanente, reintentarManual: intentarSync }
 }
