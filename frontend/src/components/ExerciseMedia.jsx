@@ -21,12 +21,12 @@ export default function ExerciseMedia({ exerciseInfo }) {
   // ---- GIF animado (prioridad 1) ----
   if (gifUrl && !gifFailed) {
     return (
-      <div className="card relative h-64 mb-4 overflow-hidden bg-surface-container-high">
+      <div className="card relative aspect-square w-full mb-4 overflow-hidden bg-surface-container-high">
         <img
           src={gifUrl}
           alt={exerciseInfo.nombre}
           loading="lazy"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           onError={() => setGifFailed(true)}
         />
         <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wide bg-black/40 backdrop-blur text-white/80 px-2 py-0.5 rounded-full">
@@ -39,12 +39,12 @@ export default function ExerciseMedia({ exerciseInfo }) {
   // ---- Foto estática (prioridad 2, si el GIF no existe o falló al cargar) ----
   if (imageUrl && !photoFailed) {
     return (
-      <div className="card relative h-64 mb-4 overflow-hidden bg-surface-container-high">
+      <div className="card relative aspect-square w-full mb-4 overflow-hidden bg-surface-container-high">
         <img
           src={imageUrl}
           alt={exerciseInfo.nombre}
           loading="lazy"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           onError={() => setPhotoFailed(true)}
         />
         <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wide bg-black/40 backdrop-blur text-white/80 px-2 py-0.5 rounded-full">
@@ -56,7 +56,7 @@ export default function ExerciseMedia({ exerciseInfo }) {
 
   // ---- Sin match en el dataset: ícono placeholder ----
   return (
-    <div className="card relative h-64 mb-4 overflow-hidden flex items-center justify-center bg-gradient-to-br from-surface-container-high to-surface-container">
+    <div className="card relative aspect-square w-full mb-4 overflow-hidden flex items-center justify-center bg-gradient-to-br from-surface-container-high to-surface-container">
       <span className="material-symbols-outlined text-on-surface-variant/30 text-[96px]">fitness_center</span>
     </div>
   )
