@@ -469,11 +469,18 @@ export default function EntrenamientoActivo() {
 
   const finalizarSesion = async () => {
     setGuardando(true)
+    // BUGFIX: `payload` se declara ACÁ, antes del try, no adentro. Antes
+    // estaba declarado con `const` dentro del bloque try, así que el bloque
+    // catch (que lo necesita para guardarlo como pendiente cuando falla la
+    // conexión) no tenía acceso a esa variable: tiraba
+    // "ReferenceError: payload is not defined" apenas entraba al catch, y la
+    // sesión completa se perdía en vez de quedar guardada offline.
+    let payload = null
     try {
       const esRetroactivo = modoCarga === 'retroactivo'
       const duracionMin = (Date.now() - inicioSesionRef.current) / 1000 / 60
       const duracionRedondeada = Math.max(1, Math.round(duracionMin))
-      const payload = {
+      payload = {
         fecha: new Date().toISOString(),
         rutina_id: rutina?.id,
         rutina_nombre: rutina?.nombre || 'Sesión libre',
@@ -498,7 +505,7 @@ export default function EntrenamientoActivo() {
       // Se guarda localmente como "pendiente" y el banner en App.jsx la
       // reintenta subir sola cuando vuelve la señal. El borrador NO se
       // borra todavía: recién se limpia cuando el POST realmente entra.
-      guardarSesionPendiente(payload)
+      if (payload) guardarSesionPendiente(payload)
       setUltimaSesionGuardada(payload)
       setGuardadaOffline(true)
       setStep('resumen')
