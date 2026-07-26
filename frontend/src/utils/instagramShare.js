@@ -1,81 +1,49 @@
-// Utilidades para compartir directo a Instagram Stories.
+// Utilidades para compartir a Instagram Stories.
 //
-// En iOS, Meta documenta un deep link (instagram-stories://share) que abre
-// el editor de Historia con una imagen ya puesta como sticker de fondo,
-// pasada vía el pasteboard general de iOS. Requiere un Facebook App ID
-// configurado (VITE_FACEBOOK_APP_ID) y que Instagram esté instalado.
+// HISTORIAL: esta versión anterior intentaba un deep link
+// (instagram-stories://share?top_background_image[]=data:...base64) para
+// entrar directo al editor de Historia con la imagen ya puesta. Ese enfoque
+// NO es la API real de Meta y nunca funcionó de forma confiable:
 //
-// En Android no existe un equivalente confiable vía deep link con imagen
-// en el pasteboard, así que ahí seguimos usando el share sheet nativo
-// (Web Share API) desde CompartirResumen.jsx.
+// - La API real de iOS (documentada por Meta) requiere escribir la imagen
+//   en el UIPasteboard nativo bajo una clave especial
+//   ("com.instagram.sharedSticker.backgroundImage") y recién ahí abrir
+//   "instagram-stories://share". Eso solo se puede hacer con código nativo
+//   (Swift/Kotlin); el Clipboard API del navegador no permite escribir
+//   claves de pasteboard custom, así que una PWA no tiene forma de hacerlo.
+// - En Android el equivalente es un Intent nativo
+//   ("com.instagram.share.ADD_TO_STORY") con una content:// URI de un
+//   FileProvider, que tampoco existe fuera de una app nativa.
+//
+// Como pasar la imagen por query string (base64, potencialmente pesado) no
+// es un mecanismo soportado, el deep link fallaba en silencio y la app caía
+// al share genérico: Instagram recibía la imagen como post/feed normal y
+// aplanaba la transparencia a negro sólido — el "sale todo negro" que se
+// veía tanto en iOS como en Android.
+//
+// La única forma 100% confiable de conservar la transparencia (sin empaquetar
+// la app como nativa con Capacitor/similar) es que el usuario descargue el
+// PNG y lo agregue como sticker desde la galería dentro del editor de
+// Historia de Instagram — el picker de "foto de la galería como sticker" de
+// Instagram sí respeta el canal alfa. Por eso el flujo de share ahora se
+// apoya en eso en vez de prometer un salto directo que no se puede cumplir.
 
 export function esAndroid() {
   return /Android/i.test(navigator.userAgent)
 }
 
-function esIOS() {
+export function esIOS() {
   return /iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream
 }
 
-export function puedeCompartirStoryNativoIOS() {
-  return esIOS() && Boolean(import.meta.env.VITE_FACEBOOK_APP_ID)
-}
-
-// Convierte un Blob a base64 puro (sin el prefijo data:...;base64,).
-function blobABase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const resultado = reader.result || ''
-      const base64 = String(resultado).split(',')[1] || ''
-      resolve(base64)
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-}
-
-// Intenta abrir el editor de Historia de Instagram en iOS con la imagen
-// como sticker de fondo. Devuelve true si se disparó el deep link, false
-// si no había forma de intentarlo (para que el caller caiga al share sheet
-// genérico como alternativa).
-export async function compartirStoryNativoIOS(blob) {
-  const appId = import.meta.env.VITE_FACEBOOK_APP_ID
-  if (!appId || !blob) return false
-
-  try {
-    const base64 = await blobABase64(blob)
-
-    const params = new URLSearchParams({
-      source_application: appId,
-      'top_background_image[]': `data:image/png;base64,${base64}`,
-    })
-
-    const url = `instagram-stories://share?${params.toString()}`
-
-    const antesDeIrse = Date.now()
-    window.location.href = url
-
-    // Si Instagram no está instalado, iOS no navega y no dispara blur/hidden.
-    // Esperamos un toque para chequear si la app tomó foco; si no, asumimos
-    // que falló y dejamos que el caller use el fallback.
-    return await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        document.removeEventListener('visibilitychange', onVisibilityChange)
-        resolve(false)
-      }, 1500)
-
-      function onVisibilityChange() {
-        if (document.hidden && Date.now() - antesDeIrse < 1500) {
-          clearTimeout(timeout)
-          document.removeEventListener('visibilitychange', onVisibilityChange)
-          resolve(true)
-        }
-      }
-
-      document.addEventListener('visibilitychange', onVisibilityChange)
-    })
-  } catch (e) {
-    return false
+// Instrucciones cortas y correctas para el flujo confiable, según plataforma.
+// Se usan como copy de ayuda debajo de la preview cuando el modo es "sticker".
+export function instruccionesStickerTransparente() {
+  if (esAndroid()) {
+    return 'Descargá la imagen. Después, en Instagram, arrancá una Historia con tu cámara o una foto, abrí el selector de stickers y elegí "Foto" > la imagen que acabás de descargar: se pega manteniendo la transparencia.'
   }
+  if (esIOS()) {
+    return 'Descargá la imagen a tu galería. Después, en Instagram, arrancá una Historia, tocá el ícono de sticker (la carita) y elegí la foto que acabás de descargar: se pega manteniendo la transparencia.'
+  }
+  return 'Descargá la imagen y agregala como sticker desde la galería al crear una Historia en Instagram: así se conserva la transparencia.'
 }

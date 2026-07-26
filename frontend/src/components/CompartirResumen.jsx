@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { dibujarTarjetaResumen, dibujarStickerResumen, esperarFuentes } from '../utils/shareCard'
-import { esAndroid, puedeCompartirStoryNativoIOS, compartirStoryNativoIOS } from '../utils/instagramShare'
+import { instruccionesStickerTransparente } from '../utils/instagramShare'
 
 // Tarjeta compartible del resumen de sesión (historias de Instagram y
 // similares). Renderiza a canvas offscreen, muestra una preview en un modal
@@ -97,16 +97,25 @@ export default function CompartirResumen({
   const compartir = async () => {
     if (!blobRef.current) return
 
-    // BUGFIX: antes esta función solo usaba navigator.share genérico, que
-    // Instagram no distingue de "compartir una foto normal" — terminaba
-    // subida como post/DM y no había forma de sacarse una foto propia
-    // detrás. En iOS, si hay un Facebook App ID configurado, entramos
-    // directo al editor de Historia con el sticker ya puesto (dejando
-    // elegir cámara o galería de fondo) usando el pasteboard + deep link
-    // que documenta Meta. Esto solo aplica al modo "sticker".
-    if (modo === 'sticker' && puedeCompartirStoryNativoIOS()) {
-      const ok = await compartirStoryNativoIOS(blobRef.current)
-      if (ok) return
+    // BUGFIX: la versión anterior intentaba un deep link directo a
+    // Instagram (instagram-stories://share con la imagen en la URL) para
+    // entrar al editor de Historia con el sticker ya puesto. Esa no es la
+    // API real de Meta (que requiere escribir en el UIPasteboard nativo con
+    // una clave especial, algo que un navegador no puede hacer) y nunca
+    // funcionó: el link fallaba en silencio y todo terminaba en el share
+    // sheet genérico, donde Instagram recibe la imagen como post normal y
+    // aplana la transparencia a negro sólido.
+    //
+    // En modo "sticker" el share sheet genérico de Web Share API tiene el
+    // mismo problema (Instagram no sabe que es un sticker con fondo
+    // transparente, y en varios flujos lo trata como post/feed). La forma
+    // que sí funciona siempre es que el usuario descargue el PNG y lo
+    // agregue como sticker desde la galería dentro del editor de Historia
+    // — ver instruccionesStickerTransparente(). Por eso acá directamente
+    // descargamos en vez de arriesgarnos al share genérico.
+    if (modo === 'sticker') {
+      descargar()
+      return
     }
 
     const file = new File([blobRef.current], nombreArchivo, { type: 'image/png' })
@@ -205,30 +214,40 @@ export default function CompartirResumen({
 
             {modo === 'sticker' && !generando && (
               <p className="text-label-md text-on-surface-variant text-center mt-2 px-2">
-                El cuadriculado es transparencia, no se ve así en Instagram.{' '}
-                {esAndroid()
-                  ? 'Al compartir, elegí el ícono "Tu historia" (no el de "Instagram" a secas) — ese es el que te deja sacar una foto o elegir una de fondo antes de acomodar la tarjeta.'
-                  : 'Vas a entrar directo al editor de Historia con la tarjeta ya puesta: elegí cámara o galería para ponerle fondo.'}
+                El cuadriculado es transparencia, no se ve así en Instagram. {instruccionesStickerTransparente()}
               </p>
             )}
 
             <div className="flex gap-2 mt-4">
-              <button
-                onClick={descargar}
-                disabled={generando || !previewUrl}
-                className="btn-secondary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
-              >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                Descargar
-              </button>
-              <button
-                onClick={compartir}
-                disabled={generando || !previewUrl}
-                className="btn-primary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
-              >
-                <span className="material-symbols-outlined text-[18px]">ios_share</span>
-                {puedeCompartirArchivos ? 'Compartir' : 'Descargar'}
-              </button>
+              {modo === 'sticker' ? (
+                <button
+                  onClick={descargar}
+                  disabled={generando || !previewUrl}
+                  className="btn-primary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Descargar
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={descargar}
+                    disabled={generando || !previewUrl}
+                    className="btn-secondary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">download</span>
+                    Descargar
+                  </button>
+                  <button
+                    onClick={compartir}
+                    disabled={generando || !previewUrl}
+                    className="btn-primary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">ios_share</span>
+                    {puedeCompartirArchivos ? 'Compartir' : 'Descargar'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
