@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { dibujarTarjetaResumen, dibujarStickerResumen, esperarFuentes } from '../utils/shareCard'
 import { esAndroid, puedeCompartirStoryNativoIOS, compartirStoryNativoIOS } from '../utils/instagramShare'
-import { compartirStoryNativoIOS, puedeCompartirStoryNativoIOS, esAndroid } from '../utils/instagramShare'
 
 // Tarjeta compartible del resumen de sesión (historias de Instagram y
 // similares). Renderiza a canvas offscreen, muestra una preview en un modal
