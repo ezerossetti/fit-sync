@@ -31,6 +31,7 @@ export function TourProvider({ children }) {
     setActiveTour((actual) => {
       if (actual) return actual // ya hay uno corriendo, no interrumpir
       if (!force && yaVisto(tourId)) return null
+      marcarVisto(tourId) // se marca visto apenas se muestra el primer paso
       return { id: tourId, steps, stepIndex: 0 }
     })
   }, [])
@@ -40,7 +41,6 @@ export function TourProvider({ children }) {
       if (!t) return t
       const siguienteIndex = t.stepIndex + 1
       if (siguienteIndex >= t.steps.length) {
-        marcarVisto(t.id)
         return null
       }
       return { ...t, stepIndex: siguienteIndex }
@@ -54,7 +54,6 @@ export function TourProvider({ children }) {
       if (!t) return t
       const siguienteIndex = t.stepIndex + 1
       if (siguienteIndex >= t.steps.length) {
-        marcarVisto(t.id)
         return null
       }
       return { ...t, stepIndex: siguienteIndex }

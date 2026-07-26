@@ -159,6 +159,7 @@ export default function EntrenamientoActivo() {
   const [rutina, setRutina] = useState(null)
   const [ejercicioActual, setEjercicioActual] = useState(null)
   const [step, setStep] = useState('select-rutina') // select-rutina | select-ejercicio | pre-serie | activo | resumen
+  const [modoCarga, setModoCarga] = useState('live') // 'live' (entrenando ahora) | 'retroactivo' (cargando un entreno que ya hiciste)
 
   const [sesionEjercicios, setSesionEjercicios] = useState([]) // acumulado de toda la sesión
   const [peso, setPeso] = useState(20)
@@ -268,8 +269,9 @@ export default function EntrenamientoActivo() {
       sesionEjercicios,
       notas,
       inicioSesion: inicioSesionRef.current,
+      modoCarga,
     })
-  }, [sesionEjercicios, notas, step, rutina])
+  }, [sesionEjercicios, notas, step, rutina, modoCarga])
 
   // Notificación local de "logro importante desbloqueado" (oro/platino). Se
   // recalcula lo mismo que ya se muestra en la tarjeta de resumen
@@ -292,9 +294,17 @@ export default function EntrenamientoActivo() {
 
   const elegirEjercicio = (ej) => {
     setEjercicioActual(ej)
-    const previo = ultimoRegistroEjercicio(historial, ej.nombre)
-    setPeso(previo?.mejorSet?.peso ?? 20)
-    setReps(previo?.mejorSet?.reps ?? (ej.reps_objetivo || 8))
+    const yaEnSesion = sesionEjercicios.find(e => e.nombre === ej.nombre)
+    const ultimaDeHoy = yaEnSesion?.series?.[yaEnSesion.series.length - 1]
+    if (ultimaDeHoy) {
+      // Ya cargaste series de este ejercicio hoy: seguimos desde ahí, no del historial viejo
+      setPeso(ultimaDeHoy.peso)
+      setReps(ultimaDeHoy.reps)
+    } else {
+      const previo = ultimoRegistroEjercicio(historial, ej.nombre)
+      setPeso(previo?.mejorSet?.peso ?? 20)
+      setReps(previo?.mejorSet?.reps ?? (ej.reps_objetivo || 8))
+    }
     setRpe(null)
     setStep('pre-serie')
   }
@@ -310,9 +320,31 @@ export default function EntrenamientoActivo() {
     return ex?.series?.length || 0
   }
 
+  // Busca el próximo ejercicio de la rutina que todavía no llegó a su
+  // objetivo de series, arrancando justo después del ejercicio actual y
+  // dando la vuelta completa. Devuelve null en sesión libre (sin rutina)
+  // o si ya no queda ningún ejercicio pendiente.
+  const siguienteEjercicioPendiente = (nombreActual) => {
+    const ejerciciosRutina = rutina?.ejercicios || []
+    if (ejerciciosRutina.length === 0) return null
+    const idxActual = ejerciciosRutina.findIndex(e => e.nombre === nombreActual)
+    const ordenados = idxActual === -1
+      ? ejerciciosRutina
+      : [...ejerciciosRutina.slice(idxActual + 1), ...ejerciciosRutina.slice(0, idxActual + 1)]
+    return ordenados.find(ej => {
+      if (ej.nombre === nombreActual) return false
+      const hechos = sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0
+      const objetivo = ej.series_objetivo || 3
+      return hechos < objetivo
+    }) || null
+  }
+
   // BUGFIX: antes esta función no chequeaba el objetivo de series de la rutina,
   // así que se podían guardar series infinitas ("Serie 16 de 2"). Ahora corta
-  // automáticamente al llegar al objetivo y vuelve a la lista de ejercicios.
+  // automáticamente al llegar al objetivo. Si queda algún ejercicio pendiente
+  // en la rutina, salta directo a su pre-serie (así evitamos que, al volver a
+  // la lista, el usuario re-toque por error el ejercicio ya completo y siga
+  // cargando series de más). Solo si no queda ninguno pendiente vuelve a la lista.
   const guardarSerie = (pesoOverride, repsOverride, rpeOverride) => {
     const pesoFinal = pesoOverride ?? peso
     const repsFinal = repsOverride ?? reps
@@ -347,8 +379,13 @@ export default function EntrenamientoActivo() {
     if (objetivo && nuevoConteo >= objetivo) {
       setDescansando(false)
       setSegundosDescanso(0)
-      setStep('select-ejercicio')
-    } else {
+      const siguiente = siguienteEjercicioPendiente(ejercicioActual.nombre)
+      if (siguiente) {
+        elegirEjercicio(siguiente)
+      } else {
+        setStep('select-ejercicio')
+      }
+    } else if (modoCarga !== 'retroactivo') {
       setDescansando(true)
       setSegundosDescanso(0)
     }
@@ -378,6 +415,7 @@ export default function EntrenamientoActivo() {
     setRutina(rutinaGuardada || null)
     setSesionEjercicios(borradorPendiente.sesionEjercicios || [])
     setNotas(borradorPendiente.notas || '')
+    setModoCarga(borradorPendiente.modoCarga || 'live')
     inicioSesionRef.current = borradorPendiente.inicioSesion || Date.now()
     setBorradorPendiente(null)
     setStep(rutinaGuardada || !borradorPendiente.rutinaId ? 'select-ejercicio' : 'select-rutina')
@@ -424,6 +462,7 @@ export default function EntrenamientoActivo() {
   const finalizarSesion = async () => {
     setGuardando(true)
     try {
+      const esRetroactivo = modoCarga === 'retroactivo'
       const duracionMin = (Date.now() - inicioSesionRef.current) / 1000 / 60
       const duracionRedondeada = Math.max(1, Math.round(duracionMin))
       const payload = {
@@ -432,10 +471,13 @@ export default function EntrenamientoActivo() {
         rutina_nombre: rutina?.nombre || 'Sesión libre',
         ejercicios: sesionEjercicios,
         volumen_total: volumenSesion(sesionEjercicios),
-        duracion_min: duracionRedondeada,
+        // En modo retroactivo no pasó tiempo real entrenando, así que ni la
+        // duración ni las calorías (que se calculan a partir de ella) tienen
+        // sentido — se mandan null y el resumen las oculta.
+        duracion_min: esRetroactivo ? null : duracionRedondeada,
         completada: true,
         notas: notas.trim() || null,
-        calorias_estimadas: caloriasSesion(sesionEjercicios, duracionRedondeada, pesoCorporalKg),
+        calorias_estimadas: esRetroactivo ? null : caloriasSesion(sesionEjercicios, duracionRedondeada, pesoCorporalKg),
       }
       const creada = await sesionesService.create(payload)
       setUltimaSesionGuardada(creada || payload)
@@ -495,14 +537,29 @@ export default function EntrenamientoActivo() {
 
         <button
           data-tour="select-rutina-libre"
-          onClick={() => { setRutina(null); setStep('select-ejercicio') }}
-          className="w-full card p-4 flex items-center justify-between text-left mb-5 border-accent/40 bg-accent/5"
+          onClick={() => { setModoCarga('live'); setRutina(null); setStep('select-ejercicio') }}
+          className="w-full card p-4 flex items-center justify-between text-left mb-3 border-accent/40 bg-accent/5"
         >
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-accent">bolt</span>
             <div>
               <p className="text-body-md font-semibold text-on-surface">Sesión libre</p>
               <p className="text-label-md text-on-surface-variant">Sin rutina armada. Vas cargando cada ejercicio a medida que te lo dan.</p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-accent">chevron_right</span>
+        </button>
+
+        <button
+          data-tour="select-rutina-retroactivo"
+          onClick={() => { setModoCarga('retroactivo'); setRutina(null); setStep('select-ejercicio') }}
+          className="w-full card p-4 flex items-center justify-between text-left mb-5 border-outline-variant"
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-accent">history_edu</span>
+            <div>
+              <p className="text-body-md font-semibold text-on-surface">Cargar entreno que ya hice hoy</p>
+              <p className="text-label-md text-on-surface-variant">Sin cronómetro ni descanso — solo para dejar registrado lo que hiciste.</p>
             </div>
           </div>
           <span className="material-symbols-outlined text-accent">chevron_right</span>
@@ -517,7 +574,7 @@ export default function EntrenamientoActivo() {
         ) : (
           <div data-tour="select-rutina-lista" className="space-y-2">
             {rutinas.map(r => (
-              <button key={r.id} onClick={() => elegirRutina(r)} className="w-full card p-4 flex items-center justify-between text-left">
+              <button key={r.id} onClick={() => { setModoCarga('live'); elegirRutina(r) }} className="w-full card p-4 flex items-center justify-between text-left">
                 <div>
                   <p className="text-body-md font-semibold text-on-surface">{r.nombre}</p>
                   <p className="text-label-md text-on-surface-variant">{(r.ejercicios || []).length} ejercicios</p>
@@ -820,21 +877,25 @@ export default function EntrenamientoActivo() {
         />
         <CargaStepper label="Repeticiones" value={reps} onChange={setReps} saltos={SALTOS_REPS} unidad="reps" min={0} />
 
-        <SelectorRPE value={rpe} onChange={setRpe} />
+        {modoCarga !== 'retroactivo' && (
+          <>
+            <SelectorRPE value={rpe} onChange={setRpe} />
 
-        <div className="card py-6">
-          <DescansoRing
-            segundos={segundosDescanso}
-            descansando={descansando}
-            onToggle={() => setDescansando(d => !d)}
-            objetivo={descansoObjetivo}
-            tourTarget="activo-descanso"
-          />
-        </div>
+            <div className="card py-6">
+              <DescansoRing
+                segundos={segundosDescanso}
+                descansando={descansando}
+                onToggle={() => setDescansando(d => !d)}
+                objetivo={descansoObjetivo}
+                tourTarget="activo-descanso"
+              />
+            </div>
 
-        <p className="text-label-md text-on-surface-variant/70 text-center -mt-2">
-          ~{Math.round(caloriasPorSerie(rpe, pesoCorporalKg))} kcal estimadas esta serie
-        </p>
+            <p className="text-label-md text-on-surface-variant/70 text-center -mt-2">
+              ~{Math.round(caloriasPorSerie(rpe, pesoCorporalKg))} kcal estimadas esta serie
+            </p>
+          </>
+        )}
 
         {pr && (
           <p className="text-body-sm text-center text-on-surface-variant">
@@ -868,7 +929,10 @@ export default function EntrenamientoActivo() {
     const semana = volumenPorDiaSemana(historial, ultimaSesionGuardada)
     const maxSemana = Math.max(1, ...semana.map(d => d.volumen))
     const { racha: rachaActual } = calcularRachaDetalle([...historial, ultimaSesionGuardada].filter(Boolean))
-    const calorias = ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg)
+    // Sesión cargada en modo retroactivo: no hay duración real, así que no
+    // tiene sentido ni mostrar ni recalcular calorías a partir de ella.
+    const esRetroactiva = ultimaSesionGuardada?.duracion_min == null
+    const calorias = esRetroactiva ? null : (ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg))
     const topEjercicios = topEjerciciosPorVolumen(sesionEjercicios, 3)
     const logrosDeEstaSesion = calcularLogrosNuevos(historial, ultimaSesionGuardada)
 
@@ -914,10 +978,16 @@ export default function EntrenamientoActivo() {
           </div>
         </div>
 
-        <p className="text-label-md text-on-surface-variant text-center mb-6">
-          Duración de la sesión: {formatDuracion(ultimaSesionGuardada?.duracion_min || 0)}
-          {' · '}~{ultimaSesionGuardada?.calorias_estimadas ?? caloriasSesion(sesionEjercicios, ultimaSesionGuardada?.duracion_min || 0, pesoCorporalKg)} kcal estimadas
-        </p>
+        {esRetroactiva ? (
+          <p className="text-label-md text-on-surface-variant text-center mb-6">
+            Cargado como entreno ya hecho
+          </p>
+        ) : (
+          <p className="text-label-md text-on-surface-variant text-center mb-6">
+            Duración de la sesión: {formatDuracion(ultimaSesionGuardada?.duracion_min || 0)}
+            {' · '}~{calorias} kcal estimadas
+          </p>
+        )}
 
         {logrosDeEstaSesion.length > 0 && (
           <div className="card p-4 mb-5 border-[#E3B341]/40" style={{ background: 'rgba(227, 179, 65, 0.08)' }}>
