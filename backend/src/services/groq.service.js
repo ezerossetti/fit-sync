@@ -2,17 +2,9 @@
 // La API key es gratuita: se saca en https://console.groq.com/keys
 // y se guarda en el .env del backend como GROQ_API_KEY (nunca se manda al frontend).
 
-// Dos modelos, según cuánta "inteligencia" necesita cada modo:
-// - GROQ_MODEL_LIGERO: para todo lo conversacional (chat, comentarios, resúmenes,
-//   sugerencias, técnica). Free tier: 30 RPM / 14.400 RPD / mucho más TPD que el 120b.
-//   Es el que se usa todo el tiempo, así que necesita el límite más generoso.
-// - GROQ_MODEL_RUTINA: solo para generar_rutina, que exige devolver un JSON
-//   estricto con nombres de ejercicios exactos — ahí conviene el modelo más
-//   grande. Se usa poco (es una acción puntual, no conversación), así que su
-//   límite más chico (1.000 RPD / 200K TPD) alcanza de sobra.
-// Modelo actualizado: Groq deprecó llama-3.3-70b-versatile el 17/6/2026.
-const GROQ_MODEL_LIGERO = 'llama-3.1-8b-instant';
-const GROQ_MODEL_RUTINA = 'openai/gpt-oss-120b';
+// Modelos configurables para migrar sin cambiar el cliente.
+const GROQ_MODEL_LIGERO = process.env.GROQ_MODEL_LIGERO || 'openai/gpt-oss-20b';
+const GROQ_MODEL_RUTINA = process.env.GROQ_MODEL_RUTINA || 'openai/gpt-oss-120b';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // Instrucciones de sistema por tipo de interacción. Todas comparten la misma
@@ -125,7 +117,7 @@ export const groqService = {
   generarRespuesta: async (modo, { contextoJSON, mensajeUsuario, historial = [] }) => {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      throw new Error('Falta configurar GROQ_API_KEY en el .env del backend');
+      throw Object.assign(new Error('Coach no configurado'), { code: 'COACH_NOT_CONFIGURED' });
     }
 
     const systemInstruction = SYSTEM_PROMPTS[modo];
@@ -152,15 +144,11 @@ export const groqService = {
       model: config.model || GROQ_MODEL_LIGERO,
       messages,
       temperature: config.temperature,
-      max_tokens: config.maxTokens,
-      // openai/gpt-oss-120b es un modelo de razonamiento: sin esto, puede gastar
-      // el presupuesto de tokens "pensando" antes de escribir la respuesta final,
-      // sobre todo en modos con maxTokens chico (analisis_tecnica, chequeo_inactividad).
-      // 'low' alcanza de sobra para estas respuestas cortas y estructuradas.
-      // (llama-3.1-8b-instant ignora este parámetro sin romperse: no es un modelo
-      // de razonamiento, así que no hace falta condicionarlo por modo.)
-      reasoning_effort: 'low',
+      max_tokens: config.maxTokens + 2048,
+
     };
+
+    if (body.model.startsWith('openai/gpt-oss-')) body.reasoning_effort = 'low';
 
     // Modo estructurado (generar_rutina): fuerza que Groq devuelva únicamente
     // un objeto JSON, así el controller lo puede parsear sin depender de que
@@ -171,6 +159,7 @@ export const groqService = {
 
     const resp = await fetch(GROQ_URL, {
       method: 'POST',
+      signal: AbortSignal.timeout(45000),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
@@ -179,8 +168,8 @@ export const groqService = {
     });
 
     if (!resp.ok) {
-      const errText = await resp.text();
-      const error = new Error(`Error de Groq (${resp.status}): ${errText}`);
+      await resp.text();
+      const error = new Error(`Proveedor del coach: HTTP ${resp.status}`);
       error.status = resp.status;
       // Cuando Groq corta por límite de la cuota gratis (429), el controller
       // necesita distinguir esto de un error real para mostrarle al usuario

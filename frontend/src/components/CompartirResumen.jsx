@@ -1,257 +1,83 @@
 import { useEffect, useRef, useState } from 'react'
+import { Share2, X, ImagePlus, Download } from 'lucide-react'
 import { dibujarTarjetaResumen, dibujarStickerResumen, esperarFuentes } from '../utils/shareCard'
-import { instruccionesStickerTransparente } from '../utils/instagramShare'
 
-// Tarjeta compartible del resumen de sesión (historias de Instagram y
-// similares). Renderiza a canvas offscreen, muestra una preview en un modal
-// y comparte vía Web Share API (con archivo) si el navegador lo soporta;
-// si no, cae a descarga directa del PNG.
-//
-// Tiene dos modos de generación:
-// - 'sticker': PNG transparente salvo un panel compacto abajo (estilo
-//   Strava). Pensado para compartir directo a Instagram: el share sheet
-//   nativo detecta la transparencia y IG lo coloca como sticker sobre la
-//   foto/cámara que el usuario elija en el editor de Historia.
-// - 'completa': la tarjeta de siempre, con fondo propio y todos los datos
-//   (gráfico semanal, logros, top ejercicios). Para quien prefiere una
-//   imagen ya terminada, sin depender de agregarle una foto después.
-export default function CompartirResumen({
-  rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana,
-  calorias, racha, topEjercicios, logrosNuevos,
-}) {
-  const [abierto, setAbierto] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [generando, setGenerando] = useState(false)
-  const [error, setError] = useState(null)
-  const [modo, setModo] = useState('sticker')
-  const canvasRef = useRef(null)
-  const blobRef = useRef(null)
-
-  const datosTarjeta = {
-    rutinaNombre, fecha, volumenTotal, totalSeries, duracionMin, prs, semana,
-    calorias, racha, topEjercicios, logrosNuevos,
-  }
-
-  const puedeCompartirArchivos = typeof navigator !== 'undefined'
-    && typeof navigator.canShare === 'function'
-    && typeof navigator.share === 'function'
-
-  const generar = async (modoActual = modo) => {
-    setGenerando(true)
-    setError(null)
+export default function CompartirResumen(datos) {
+  const dialog = useRef(null), opener = useRef(null), generation = useRef(0), photo = useRef(null)
+  const [preview, setPreview] = useState(null)
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [error, setError] = useState('')
+  const [withPhoto, setWithPhoto] = useState(false)
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
+  useEffect(() => () => { generation.current++; photo.current?.close?.() }, [])
+  async function generate(image = null) {
+    const id = ++generation.current
+    setBusy(true); setFile(null); setError('')
     try {
-      await esperarFuentes()
-      const canvas = canvasRef.current
-      if (modoActual === 'sticker') {
-        dibujarStickerResumen(canvas, datosTarjeta)
-      } else {
-        dibujarTarjetaResumen(canvas, datosTarjeta)
-      }
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.95))
+      await Promise.race([esperarFuentes(), new Promise(resolve => setTimeout(resolve, 2500))])
+      const canvas = document.createElement('canvas')
+      if (image) {
+        const sticker = document.createElement('canvas')
+        dibujarStickerResumen(sticker, datos)
+        canvas.width = 1080; canvas.height = 1920
+        const ctx = canvas.getContext('2d')
+        const scale = Math.max(canvas.width / image.width, canvas.height / image.height)
+        ctx.drawImage(image, (canvas.width-image.width*scale)/2, (canvas.height-image.height*scale)/2, image.width*scale, image.height*scale)
+        ctx.drawImage(sticker, 0, 0, canvas.width, canvas.height)
+      } else dibujarTarjetaResumen(canvas, datos)
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
       if (!blob) throw new Error('No se pudo generar la imagen')
-      blobRef.current = blob
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev)
-        return URL.createObjectURL(blob)
-      })
-    } catch (e) {
-      console.error(e)
-      setError('No se pudo generar la tarjeta. Probá de nuevo.')
-    } finally {
-      setGenerando(false)
-    }
+      if (id !== generation.current) return
+      setFile(new File([blob], 'fitsync-entrenamiento.png', { type: 'image/png' }))
+      setPreview(URL.createObjectURL(blob)); setWithPhoto(Boolean(image))
+    } catch {
+      if (id === generation.current) setError('No pudimos preparar la imagen. Probá con otra foto o con la tarjeta.')
+    } finally { if (id === generation.current) setBusy(false) }
   }
-
-  const abrir = async () => {
-    // Si no hay forma de compartir archivos, "con tu foto" no tiene sentido
-    // como punto de partida: nadie va a poder pegarle una foto atrás, así
-    // que arrancamos directo en la tarjeta completa.
-    const modoInicial = puedeCompartirArchivos ? 'sticker' : 'completa'
-    setModo(modoInicial)
-    setAbierto(true)
-    await generar(modoInicial)
-  }
-
-  const cambiarModo = async (nuevoModo) => {
-    if (nuevoModo === modo || generando) return
-    setModo(nuevoModo)
-    await generar(nuevoModo)
-  }
-
-  const cerrar = () => {
-    setAbierto(false)
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-    blobRef.current = null
-  }
-
-  useEffect(() => {
-    // Limpieza si el componente se desmonta con el modal abierto (p. ej. al
-    // navegar a "Volver al inicio" desde el resumen).
-    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const nombreArchivo = modo === 'sticker' ? 'fitsync-sticker.png' : 'fitsync-resumen.png'
-
-  const compartir = async () => {
-    if (!blobRef.current) return
-
-    // BUGFIX: la versión anterior intentaba un deep link directo a
-    // Instagram (instagram-stories://share con la imagen en la URL) para
-    // entrar al editor de Historia con el sticker ya puesto. Esa no es la
-    // API real de Meta (que requiere escribir en el UIPasteboard nativo con
-    // una clave especial, algo que un navegador no puede hacer) y nunca
-    // funcionó: el link fallaba en silencio y todo terminaba en el share
-    // sheet genérico, donde Instagram recibe la imagen como post normal y
-    // aplana la transparencia a negro sólido.
-    //
-    // En modo "sticker" el share sheet genérico de Web Share API tiene el
-    // mismo problema (Instagram no sabe que es un sticker con fondo
-    // transparente, y en varios flujos lo trata como post/feed). La forma
-    // que sí funciona siempre es que el usuario descargue el PNG y lo
-    // agregue como sticker desde la galería dentro del editor de Historia
-    // — ver instruccionesStickerTransparente(). Por eso acá directamente
-    // descargamos en vez de arriesgarnos al share genérico.
-    if (modo === 'sticker') {
-      descargar()
-      return
-    }
-
-    const file = new File([blobRef.current], nombreArchivo, { type: 'image/png' })
-    const shareData = {
-      files: [file],
-      title: 'Mi sesión en FitSync',
-      text: `${rutinaNombre} · ${totalSeries} series · ${volumenTotal} kg de volumen 💪`,
-    }
+  function open() { dialog.current.showModal(); generate(photo.current) }
+  function close() { generation.current++; setBusy(false); dialog.current.close(); opener.current?.focus() }
+  async function selectPhoto(event) {
+    const selected = event.target.files?.[0]; event.target.value = ''
+    if (!selected) return
+    if (selected.size > 25 * 1024 * 1024) { setError('Elegí una foto de menos de 25 MB.'); return }
+    setBusy(true)
+    const id = ++generation.current
     try {
-      if (puedeCompartirArchivos && navigator.canShare(shareData)) {
-        await navigator.share(shareData)
-        return
-      }
-    } catch (e) {
-      // El usuario canceló el share sheet, o el navegador lo rechazó: no es
-      // un error real, simplemente ofrecemos la descarga como alternativa.
-      if (e?.name === 'AbortError') return
-    }
-    descargar()
+      const bitmap = await createImageBitmap(selected)
+      if (id !== generation.current) { bitmap.close(); return }
+      photo.current?.close?.(); photo.current = bitmap
+      await generate(bitmap)
+    } catch { if (id === generation.current) { setError('No pudimos abrir esa foto. Probá con una imagen JPG o PNG.'); setBusy(false) } }
   }
-
-  const descargar = () => {
-    if (!previewUrl) return
-    const a = document.createElement('a')
-    a.href = previewUrl
-    a.download = nombreArchivo
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+  function download() {
+    if (!preview || !file) return
+    const a = document.createElement('a'); a.href = preview; a.download = file.name; a.click()
+    setError('Si se guardó en Archivos, abrí la imagen y elegí Compartir → Guardar imagen. Después podés elegirla en una historia de Instagram.')
   }
-
-  return (
-    <>
-      <button
-        onClick={abrir}
-        className="btn-secondary w-full py-3 text-body-md flex items-center justify-center gap-2"
-      >
-        <span className="material-symbols-outlined text-[18px]">ios_share</span>
-        Compartir resumen
-      </button>
-
-      {/* Canvas offscreen: siempre montado para poder redibujar sin abrir el modal */}
-      <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
-
-      {abierto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="card w-full max-w-sm p-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-body-md font-semibold text-on-surface">Compartir sesión</p>
-              <button onClick={cerrar} className="text-on-surface-variant p-1" aria-label="Cerrar">
-                <span className="material-symbols-outlined text-[22px]">close</span>
-              </button>
-            </div>
-
-            {/* Toggle de modo: sticker transparente vs tarjeta completa */}
-            <div className="flex gap-1 p-1 rounded-md bg-surface-container-lowest border border-outline-variant mb-3">
-              <button
-                onClick={() => cambiarModo('sticker')}
-                disabled={generando}
-                className={`flex-1 py-2 rounded text-body-sm font-semibold transition-colors disabled:opacity-50 ${
-                  modo === 'sticker' ? 'bg-accent text-on-accent' : 'text-on-surface-variant'
-                }`}
-              >
-                Con tu foto
-              </button>
-              <button
-                onClick={() => cambiarModo('completa')}
-                disabled={generando}
-                className={`flex-1 py-2 rounded text-body-sm font-semibold transition-colors disabled:opacity-50 ${
-                  modo === 'completa' ? 'bg-accent text-on-accent' : 'text-on-surface-variant'
-                }`}
-              >
-                Tarjeta completa
-              </button>
-            </div>
-
-            <div
-              className="rounded-lg overflow-hidden border border-outline-variant aspect-[9/16] flex items-center justify-center"
-              style={modo === 'sticker' ? {
-                backgroundImage: 'linear-gradient(45deg, #2a2a2e 25%, transparent 25%), linear-gradient(-45deg, #2a2a2e 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2a2a2e 75%), linear-gradient(-45deg, transparent 75%, #2a2a2e 75%)',
-                backgroundSize: '24px 24px',
-                backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
-                backgroundColor: '#1b1b1d',
-              } : undefined}
-            >
-              {generando && (
-                <p className="text-label-md text-on-surface-variant">Generando tarjeta…</p>
-              )}
-              {error && !generando && (
-                <p className="text-label-md text-error px-4 text-center">{error}</p>
-              )}
-              {previewUrl && !generando && !error && (
-                <img src={previewUrl} alt="Vista previa de la tarjeta de resumen" className="w-full h-full object-contain" />
-              )}
-            </div>
-
-            {modo === 'sticker' && !generando && (
-              <p className="text-label-md text-on-surface-variant text-center mt-2 px-2">
-                El cuadriculado es transparencia, no se ve así en Instagram. {instruccionesStickerTransparente()}
-              </p>
-            )}
-
-            <div className="flex gap-2 mt-4">
-              {modo === 'sticker' ? (
-                <button
-                  onClick={descargar}
-                  disabled={generando || !previewUrl}
-                  className="btn-primary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
-                >
-                  <span className="material-symbols-outlined text-[18px]">download</span>
-                  Descargar
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={descargar}
-                    disabled={generando || !previewUrl}
-                    className="btn-secondary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                    Descargar
-                  </button>
-                  <button
-                    onClick={compartir}
-                    disabled={generando || !previewUrl}
-                    className="btn-primary flex-1 py-3 text-body-sm flex items-center justify-center gap-2 disabled:opacity-40"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">ios_share</span>
-                    {puedeCompartirArchivos ? 'Compartir' : 'Descargar'}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  )
+  async function share() {
+    if (!file || sharing) return
+    const data = { files: [file] }
+    if (!navigator.share || !navigator.canShare?.(data)) { download(); return }
+    setSharing(true); setError('')
+    try { await navigator.share(data) }
+    catch (e) { if (e.name !== 'AbortError') setError('No se pudo abrir Compartir. Podés guardar la imagen y subirla desde Instagram.') }
+    finally { setSharing(false) }
+  }
+  return <>
+    <button ref={opener} onClick={open} className="btn-secondary w-full share-trigger"><Share2 size={20}/>Compartir resumen</button>
+    <dialog ref={dialog} className="share-sheet" aria-labelledby="share-title" onCancel={close} onClick={e => { if (e.target === dialog.current) close() }}>
+      <div className="sheet-handle"/>
+      <header><div><p>HECHO POR VOS</p><h2 id="share-title">Tu entrenamiento.</h2></div><button autoFocus className="toolbar-button" aria-label="Cerrar compartir" onClick={close}><X size={21}/></button></header>
+      <div className="share-body">
+        <div className="share-preview" aria-busy={busy}>{preview && !busy ? <img src={preview} alt="Historia con el resumen de tu entrenamiento"/> : <p>{busy ? 'Preparando tu historia…' : 'Elegí un formato para continuar'}</p>}</div>
+        <div className="share-options"><label className={`photo-picker ${busy ? 'is-disabled' : ''}`}><ImagePlus size={19}/>{withPhoto ? 'Cambiar foto' : 'Agregar mi foto'}<input type="file" accept="image/*" onChange={selectPhoto} disabled={busy} aria-label="Agregar mi foto"/></label><button onClick={() => { photo.current?.close?.(); photo.current = null; generate(null) }} disabled={busy} aria-pressed={!withPhoto}>Solo tarjeta</button></div>
+        <p className="share-hint">Lista para historias · 9:16. Tu foto se procesa en este dispositivo.</p>
+        <p className="share-hint">En Compartir, elegí Instagram si aparece. También podés guardar la imagen y seleccionarla al crear tu historia.</p>
+        {error && <p className="share-notice" role="status">{error}</p>}
+      </div>
+      <footer><button onClick={download} disabled={busy || !file || sharing} className="btn-secondary" aria-label="Guardar imagen"><Download size={20}/></button><button onClick={share} disabled={busy || !file || sharing} className="btn-primary"><Share2 size={20}/>{sharing ? 'Compartiendo…' : 'Compartir imagen'}</button></footer>
+    </dialog>
+  </>
 }

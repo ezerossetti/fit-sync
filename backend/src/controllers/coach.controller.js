@@ -22,8 +22,12 @@ const manejarErrorCoach = (error, res, mensajeGenerico) => {
       retryAfterSeconds: error.retryAfterSeconds ?? null,
     });
   }
-  console.error(mensajeGenerico, error);
-  res.status(500).json({ success: false, message: mensajeGenerico, error: error.message });
+  console.error(mensajeGenerico, { code: error.code, status: error.status, name: error.name });
+  const message = error.code === 'COACH_NOT_CONFIGURED' || [401,403].includes(error.status)
+    ? 'Chiche necesita configurar su conexión de IA en el servidor.'
+    : error.name === 'TimeoutError' ? 'Chiche tardó demasiado. Tu mensaje sigue disponible para reintentar.'
+    : 'Chiche no pudo responder ahora. Probá de nuevo en un momento.';
+  res.status(503).json({ success: false, message });
 };
 
 export const coachController = {
@@ -33,11 +37,12 @@ export const coachController = {
       const usuarioId = req.usuarioId;
       const { mensaje, contexto } = req.body;
 
-      if (!mensaje) {
+      if (typeof mensaje !== 'string' || !mensaje.trim() || mensaje.length > 4000) {
         return res.status(400).json({ success: false, message: 'Falta el campo mensaje' });
       }
 
-      const historial = await coachModel.obtenerHistorialChat(usuarioId, 20);
+      let memoriaDisponible = true;
+      const historial = await coachModel.obtenerHistorialChat(usuarioId, 20).catch(() => { memoriaDisponible = false; return []; });
       // Al modelo solo le mandamos los últimos N turnos (no los 20 que
       // guardamos para pintar el historial completo en la UI).
       const historialParaContexto = historial.slice(-TURNOS_HISTORIAL_PARA_CONTEXTO);
@@ -49,10 +54,12 @@ export const coachController = {
       });
 
       // Persistimos ambos turnos para mantener memoria de la conversación
-      await coachModel.guardarMensaje(usuarioId, 'user', mensaje);
-      await coachModel.guardarMensaje(usuarioId, 'model', respuesta);
+      try {
+        await coachModel.guardarMensaje(usuarioId, 'user', mensaje);
+        await coachModel.guardarMensaje(usuarioId, 'model', respuesta);
+      } catch { memoriaDisponible = false; }
 
-      res.status(200).json({ success: true, data: { respuesta } });
+      res.status(200).json({ success: true, data: { respuesta, advertencia: memoriaDisponible ? null : 'Respondí, pero no pude guardar la conversación.' } });
     } catch (error) {
       manejarErrorCoach(error, res, 'Error en el chat del coach');
     }
@@ -100,7 +107,7 @@ export const coachController = {
       }
 
       if (!forzarRegenerar) {
-        const cacheado = await coachModel.obtenerResumenCacheado(usuarioId, tipo, periodoInicio);
+        const cacheado = await coachModel.obtenerResumenCacheado(usuarioId, tipo, periodoInicio).catch(() => null);
         if (cacheado) {
           return res.status(200).json({ success: true, data: { resumen: cacheado.contenido, cache: true } });
         }
@@ -111,7 +118,7 @@ export const coachController = {
         mensajeUsuario: `Generá el resumen ${tipo} con feedback.`,
       });
 
-      await coachModel.guardarResumen(usuarioId, tipo, periodoInicio, periodoFin, respuesta);
+      await coachModel.guardarResumen(usuarioId, tipo, periodoInicio, periodoFin, respuesta).catch(() => console.warn('No se pudo guardar el resumen del coach'));
 
       res.status(200).json({ success: true, data: { resumen: respuesta, cache: false } });
     } catch (error) {

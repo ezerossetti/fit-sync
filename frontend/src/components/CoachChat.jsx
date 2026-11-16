@@ -23,6 +23,8 @@ const mensajeError = (err, fallback) => {
   if (err?.response?.status === 429 || err?.response?.data?.rateLimited) {
     return 'El coach está muy pedido ahora mismo (se usó mucho hoy). Probá de nuevo en unos minutos.'
   }
+  if (err?.response?.status === 503) return err.response.data.message || fallback
+  if (err?.code === 'ECONNABORTED') return 'Chiche tardó demasiado. Reintentá con tu mensaje.'
   return fallback
 }
 
@@ -38,6 +40,29 @@ export default function CoachChat() {
   const [error, setError] = useState(null)
   const [nombreUsuario, setNombreUsuario] = useState(null)
   const scrollRef = useRef(null)
+  useEffect(() => {
+    if (!abierto) return
+    const previous = document.activeElement
+    const panel = document.querySelector('.coach-panel')
+    const focusables = () => [...panel.querySelectorAll('button:not(:disabled),input:not(:disabled),select,textarea,[tabindex="0"]')].filter(el => el.getClientRects().length)
+    panel.querySelector('button[aria-label="Cerrar"]')?.focus()
+    const keydown = e => {
+      if (e.key === 'Escape') setAbierto(false)
+      if (e.key !== 'Tab') return
+      const items = focusables(), first = items[0], last = items.at(-1)
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
+      if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
+    }
+    const resize = () => { if (innerWidth < 768) panel.style.height = `${window.visualViewport?.height || innerHeight}px` }
+    resize(); window.visualViewport?.addEventListener('resize', resize)
+    panel.addEventListener('keydown', keydown)
+    return () => { panel.removeEventListener('keydown', keydown); window.visualViewport?.removeEventListener('resize', resize); previous?.focus() }
+  }, [abierto])
+  useEffect(() => {
+    const open = () => setAbierto(true)
+    window.addEventListener('fitsync-open-coach', open)
+    return () => window.removeEventListener('fitsync-open-coach', open)
+  }, [])
 
   // Panel inline activo sobre el input: null | 'tecnica' | 'rutina'
   const [panelActivo, setPanelActivo] = useState(null)
@@ -63,7 +88,7 @@ export default function CoachChat() {
   const cargarHistorial = async () => {
     try {
       const historial = await coachService.getHistorial()
-      setMensajes(historial.map((h) => ({ rol: h.rol, contenido: h.contenido })))
+      setMensajes(prev => prev.length ? prev : (Array.isArray(historial) ? historial : []).map((h) => ({ rol: h.rol, contenido: h.contenido })))
     } catch {
       // Si falla, arrancamos con chat vacío sin romper la UI
     }
@@ -74,7 +99,7 @@ export default function CoachChat() {
     const [sesiones, rutinas, personalizados] = await Promise.all([
       sesionesService.getAll(),
       rutinasService.getAll(),
-      ejerciciosPersonalizadosService.getAll(),
+      ejerciciosPersonalizadosService.getAll().catch(() => []),
     ])
     return { sesiones, rutinas, personalizados }
   }
@@ -91,9 +116,12 @@ export default function CoachChat() {
     try {
       const { sesiones, rutinas, personalizados } = await cargarDatosBase()
       const contexto = construirContextoChat(sesiones, rutinas, personalizados, nombreUsuario)
-      const { respuesta } = await coachService.chat(texto, contexto)
+      const { respuesta, advertencia } = await coachService.chat(texto, contexto)
+      if (advertencia) setError(advertencia)
       setMensajes((prev) => [...prev, { rol: 'model', contenido: respuesta }])
     } catch (err) {
+      setInput(texto)
+      setMensajes(prev => prev.slice(0, -1))
       setError(mensajeError(err, 'No se pudo conectar con el coach. Probá de nuevo en un momento.'))
     } finally {
       setCargando(false)
@@ -264,21 +292,11 @@ export default function CoachChat() {
 
   return (
     <>
-      {/* Botón flotante */}
-      <button
-        data-tour="home-coach"
-        onClick={() => setAbierto(true)}
-        className="coach-launcher"
-        style={{ display: abierto ? 'none' : 'flex' }}
-        aria-label="Abrir coach IA"
-      >
-        <span className="material-symbols-outlined text-accent text-[26px]">forum</span>
-      </button>
-
       {/* Panel de chat */}
       {abierto && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-surface-container-lowest md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] md:rounded-xl md:border md:border-outline-variant md:shadow-plate"
+          role="dialog" aria-modal="true" aria-label="Coach Chiche"
+          className="coach-panel fixed inset-0 z-50 flex flex-col bg-surface-container-lowest md:inset-auto md:bottom-4 md:right-4 md:w-96 md:h-[600px] md:rounded-xl md:border md:border-outline-variant md:shadow-plate"
           style={{ paddingTop: 'env(safe-area-inset-top)' }}
         >
           <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-outline-variant bg-primary">
@@ -483,11 +501,13 @@ export default function CoachChat() {
             <input
               className="input-field flex-1"
               placeholder="Preguntale algo al coach..."
+              aria-label="Mensaje para Chiche"
+              maxLength={4000}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={cargando}
             />
-            <button type="submit" disabled={cargando || !input.trim()} className="btn-interact bg-primary text-on-primary rounded-lg px-4 disabled:opacity-50">
+            <button type="submit" aria-label="Enviar mensaje" disabled={cargando || !input.trim()} className="btn-interact bg-primary text-on-primary rounded-lg px-4 disabled:opacity-50">
               <span className="material-symbols-outlined text-[20px]">send</span>
             </button>
           </form>

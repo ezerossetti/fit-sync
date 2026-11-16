@@ -1,4 +1,9 @@
-import apiClient from './apiClient'
+import sharedClient from './apiClient'
+// Admite arranque en frío del servidor y el timeout acotado del proveedor.
+const apiClient = {
+  get: (url) => sharedClient.get(url, { timeout: 90000 }),
+  post: (url, body) => sharedClient.post(url, body, { timeout: 90000 }),
+}
 
 const coachService = {
   // Chat libre. contexto: objeto armado con contextoCoach.js
