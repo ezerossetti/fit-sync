@@ -1,22 +1,26 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { TourProvider } from './context/TourContext'
 import TopBar from './components/TopBar'
 import BottomNav from './components/BottomNav'
 import Login from './pages/Login'
-import Home from './pages/Home'
-import Rutinas from './pages/Rutinas'
-import EntrenamientoActivo from './pages/EntrenamientoActivo'
-import Historial from './pages/Historial'
-import Perfil from './pages/Perfil'
+const Home = lazy(() => import('./pages/Home'))
+const Rutinas = lazy(() => import('./pages/Rutinas'))
+const EntrenamientoActivo = lazy(() => import('./pages/EntrenamientoActivo'))
+const Historial = lazy(() => import('./pages/Historial'))
+const Perfil = lazy(() => import('./pages/Perfil'))
 import CoachChat from './components/CoachChat'
-import InstallGate from './components/InstallGate'
 import PendingSyncBanner from './components/PendingSyncBanner'
 import TourOverlay from './components/TourOverlay'
-import QueHayDeNuevo from './components/QueHayDeNuevo'
+import usePendingSessionSync from './hooks/usePendingSessionSync'
 
 export default function App() {
   const { session, loading } = useAuth()
+  const sync = usePendingSessionSync()
+  const { pathname } = useLocation()
+  const entrenamiento = pathname.startsWith('/entrenar')
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
 
   if (loading) {
     return (
@@ -29,22 +33,18 @@ export default function App() {
   if (!session) {
     return (
       <>
-        <InstallGate />
         <Login />
       </>
     )
   }
 
   return (
-    <TourProvider>
-      <div className="min-h-screen bg-background">
-        <InstallGate />
-        <PendingSyncBanner />
-        <TopBar />
-        <main
-          className="max-w-container-max mx-auto px-margin-mobile pb-28"
-          style={{ paddingTop: 'calc(72px + env(safe-area-inset-top))' }}
-        >
+    <TourProvider key={session.user.id}>
+      <div className={`app-shell ${entrenamiento ? 'training-shell' : ''}`}>
+        <TopBar sync={sync} />
+        <main className="app-main">
+          <PendingSyncBanner sync={sync} />
+          <Suspense fallback={<div className="skeleton-card" aria-label="Cargando pantalla"/>}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/rutinas" element={<Rutinas />} />
@@ -54,11 +54,12 @@ export default function App() {
             <Route path="/perfil" element={<Perfil />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
         <BottomNav />
-        <CoachChat />
+        {!entrenamiento && <CoachChat />}
         <TourOverlay />
-        <QueHayDeNuevo />
+
       </div>
     </TourProvider>
   )

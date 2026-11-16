@@ -27,7 +27,9 @@ export function TourProvider({ children }) {
    * @param {{force?: boolean}} opts - force=true ignora si ya fue visto (para "Ver de nuevo")
    */
   const startTour = useCallback((tourId, steps, { force = false } = {}) => {
-    if (!steps || steps.length === 0) return
+    const requested = sessionStorage.getItem('fitsync_requested_tour') === tourId
+    if ((!force && !requested) || !steps || steps.length === 0) return
+    if (requested) sessionStorage.removeItem('fitsync_requested_tour')
     setActiveTour((actual) => {
       if (actual) return actual // ya hay uno corriendo, no interrumpir
       if (!force && yaVisto(tourId)) return null
@@ -69,6 +71,7 @@ export function TourProvider({ children }) {
 
   const resetTour = useCallback((tourId) => {
     localStorage.removeItem(STORAGE_PREFIX + tourId)
+    sessionStorage.setItem('fitsync_requested_tour', tourId)
   }, [])
 
   const resetAllTours = useCallback(() => {

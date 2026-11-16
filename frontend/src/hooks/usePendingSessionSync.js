@@ -1,71 +1,63 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 import sesionesService from '../services/sesiones.service'
-import { leerSesionPendiente, borrarSesionPendiente } from '../utils/sesionDraft'
-
-const REINTENTO_MS = 30000 // por si el evento 'online' no dispara (algunos navegadores mobile)
-
+import { STORAGE_EVENT, leerSesionesPendientes, borrarSesionPendiente } from '../utils/sesionDraft'
 export default function usePendingSessionSync() {
-  const [pendiente, setPendiente] = useState(() => leerSesionPendiente())
+  const { user } = useAuth()
+  const userId = user?.id
+  const [cantidad, setCantidad] = useState(0)
   const [sincronizando, setSincronizando] = useState(false)
-  const [sincronizadoOk, setSincronizadoOk] = useState(false)
-  // Rechazo permanente del backend (400/404/422): reintentar para siempre
-  // no tiene sentido acá, el payload no va a cambiar solo. Se corta el loop
-  // y se le avisa al usuario en vez de girar el spinner sin fin.
   const [errorPermanente, setErrorPermanente] = useState(false)
-
+  const [online, setOnline] = useState(navigator.onLine)
+  const lock = useRef(false)
+  const owner = useRef(userId)
+  owner.current = userId
   const intentarSync = useCallback(async () => {
-    const actual = leerSesionPendiente()
-    if (!actual) return
+    if (lock.current || !userId || !navigator.onLine) return
+    lock.current = true
     setSincronizando(true)
+    setErrorPermanente(false)
     try {
-      await sesionesService.create(actual.payload)
-      borrarSesionPendiente()
-      setPendiente(null)
-      setErrorPermanente(false)
-      setSincronizadoOk(true)
-      setTimeout(() => setSincronizadoOk(false), 4000)
-    } catch (e) {
-      // e.response presente = el backend respondió (llegó la request), no es
-      // un problema de conectividad. 401/403 = sesión vencida, hay que
-      // reloguearse. 400/404/422 = el payload está mal y nunca va a pasar
-      // solo. En esos casos cortamos el reintento automático; el resto
-      // (sin e.response = error de red, o 5xx del server) sigue reintentando.
-      const status = e?.response?.status
-      const esErrorPermanente = status !== undefined && status !== 429 && status < 500
-      setErrorPermanente(esErrorPermanente)
+      for (const item of leerSesionesPendientes(userId)) {
+        const { data } = await supabase.auth.getSession()
+        if (owner.current !== userId || data.session?.user?.id !== userId) break
+        await sesionesService.create(item.payload, data.session.access_token)
+        borrarSesionPendiente(userId, item.payload.id)
+        window.dispatchEvent(new Event('fitsync-session-synced'))
+      }
+    } catch (error) {
+      if (owner.current === userId) setErrorPermanente(!!error.response && error.response.status < 500 && error.response.status !== 429)
     } finally {
-      setSincronizando(false)
+      lock.current = false
+      if (owner.current === userId) {
+        setSincronizando(false)
+        setCantidad(leerSesionesPendientes(userId).length)
+      }
     }
-  }, [])
-
+  }, [userId])
   useEffect(() => {
-    if (!pendiente || errorPermanente) return undefined
+    setErrorPermanente(false)
+    setSincronizando(false)
+    const refresh = () => setCantidad(leerSesionesPendientes(userId).length)
+    const connection = () => { setOnline(navigator.onLine); refresh() }
+    refresh()
+    window.addEventListener(STORAGE_EVENT, refresh)
+    window.addEventListener('storage', refresh)
+    window.addEventListener('online', connection)
+    window.addEventListener('offline', connection)
+    return () => {
+      window.removeEventListener(STORAGE_EVENT, refresh)
+      window.removeEventListener('storage', refresh)
+      window.removeEventListener('online', connection)
+      window.removeEventListener('offline', connection)
+    }
+  }, [userId])
+  useEffect(() => {
+    if (!cantidad || !online || errorPermanente) return
     intentarSync()
-    window.addEventListener('online', intentarSync)
-    const interval = setInterval(intentarSync, REINTENTO_MS)
-    return () => {
-      window.removeEventListener('online', intentarSync)
-      clearInterval(interval)
-    }
-  }, [pendiente, errorPermanente, intentarSync])
-
-  // Si EntrenamientoActivo guarda una nueva sesión pendiente mientras el
-  // banner ya está montado en App.jsx, hay que enterarse sin recargar.
-  useEffect(() => {
-    const onStorage = () => setPendiente(leerSesionPendiente())
-    window.addEventListener('storage', onStorage)
-    const interval = setInterval(() => {
-      const actual = leerSesionPendiente()
-      setPendiente(prev => {
-        if (!!prev === !!actual) return prev
-        return actual
-      })
-    }, 3000)
-    return () => {
-      window.removeEventListener('storage', onStorage)
-      clearInterval(interval)
-    }
-  }, [])
-
-  return { pendiente, sincronizando, sincronizadoOk, errorPermanente, reintentarManual: intentarSync }
+    const interval = setInterval(intentarSync, 30000)
+    return () => clearInterval(interval)
+  }, [cantidad, online, errorPermanente, intentarSync])
+  return { cantidad, online, sincronizando, errorPermanente, reintentarManual: intentarSync }
 }

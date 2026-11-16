@@ -49,10 +49,10 @@ export const sesionModel = {
         rutina_nombre: dataSesion.rutina_nombre,
         ejercicios: dataSesion.ejercicios || [],
         volumen_total: dataSesion.volumen_total || 0,
-        duracion_min: dataSesion.duracion_min || 0,
+        duracion_min: dataSesion.duracion_min ?? null,
         completada: dataSesion.completada || false,
         notas: dataSesion.notas || null,
-        calorias_estimadas: dataSesion.calorias_estimadas || 0
+        calorias_estimadas: dataSesion.calorias_estimadas ?? null
       };
 
       // Si viene un ID predefinido, lo incluimos (útil para tests o IDs específicos)
@@ -66,6 +66,12 @@ export const sesionModel = {
         .select()
         .single();
 
+      // Replaying the same client UUID is a read, never an overwrite. This also
+      // handles two concurrent inserts because the primary key is unique.
+      if (error?.code === '23505' && payload.id) {
+        const existing = await sesionModel.getById(payload.id, payload.usuario_id);
+        if (existing) return existing;
+      }
       if (error) {
         throw error;
       }

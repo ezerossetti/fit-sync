@@ -1,3 +1,6 @@
+import { ArrowUpRight, MoreHorizontal, Plus, Dumbbell, ArrowUp, ArrowDown } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { leerBorrador } from '../utils/sesionDraft'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
@@ -15,7 +18,7 @@ function NumberControl({ value, onChange, min = 1 }) {
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="w-7 h-7 rounded-full border border-accent/40 text-accent flex items-center justify-center active:bg-accent/10"
+        className="w-11 h-11 rounded-xl border border-accent/40 text-accent flex items-center justify-center active:bg-accent/10"
         aria-label="Restar"
       >
         <span className="material-symbols-outlined text-[16px]">remove</span>
@@ -24,7 +27,7 @@ function NumberControl({ value, onChange, min = 1 }) {
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="w-7 h-7 rounded-full border border-accent/40 text-accent flex items-center justify-center active:bg-accent/10"
+        className="w-11 h-11 rounded-xl border border-accent/40 text-accent flex items-center justify-center active:bg-accent/10"
         aria-label="Sumar"
       >
         <span className="material-symbols-outlined text-[16px]">add</span>
@@ -169,16 +172,16 @@ function ExerciseBuilder({ ejercicios, setEjercicios, personalizados, onCrearPer
               <button
                 type="button"
                 onClick={() => quitar(idx)}
-                className="absolute top-3 right-3 w-7 h-7 rounded-md bg-error-container/40 text-error flex items-center justify-center"
+                className="absolute top-3 right-3 w-11 h-11 rounded-md bg-error-container/40 text-error flex items-center justify-center"
                 aria-label="Quitar ejercicio"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
               </button>
 
-              <p className="text-body-md font-semibold text-on-surface pr-8">{ej.nombre}</p>
+              <p className="text-body-md font-semibold text-on-surface pr-12">{ej.nombre}</p>
               <p className="text-label-md text-on-surface-variant mb-3">{ej.grupo || 'Personalizado'}</p>
 
-              <div className="flex items-center gap-6 mb-3">
+              <div className="flex items-center gap-3 flex-wrap mb-3">
                 <div>
                   <p className="text-label-md text-on-surface-variant uppercase mb-1">Series</p>
                   <NumberControl value={ej.series_objetivo} onChange={(v) => actualizar(idx, 'series_objetivo', v)} />
@@ -189,6 +192,7 @@ function ExerciseBuilder({ ejercicios, setEjercicios, personalizados, onCrearPer
                 </div>
               </div>
 
+              <div className="flex items-center gap-2 mb-3"><span className="text-label-md text-on-surface-variant flex-1">Posición {idx+1}</span>{[-1,1].map(direction => <button key={direction} type="button" disabled={idx+direction<0 || idx+direction>=ejercicios.length} aria-label={`${direction<0?'Subir':'Bajar'} ${ej.nombre}`} className="w-11 h-11 rounded-lg bg-surface-container-high flex items-center justify-center disabled:opacity-25" onClick={() => { setEjercicios(prev => { const next=[...prev]; [next[idx],next[idx+direction]]=[next[idx+direction],next[idx]]; return next }); setAlternativasAbiertas(null) }}>{direction<0?<ArrowUp size={16}/>:<ArrowDown size={16}/>}</button>)}</div>
               {alternativas.length > 0 && (
                 <>
                   <button
@@ -225,6 +229,8 @@ function ExerciseBuilder({ ejercicios, setEjercicios, personalizados, onCrearPer
 }
 
 export default function Rutinas() {
+  const { user } = useAuth()
+
   const [rutinas, setRutinas] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -323,7 +329,7 @@ export default function Rutinas() {
       await rutinasService.delete(id)
       await cargar()
     } catch (e) {
-      console.error(e)
+      setError('No se pudo eliminar la rutina. Volvé a intentarlo.')
     }
   }
 
@@ -422,60 +428,18 @@ export default function Rutinas() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="font-display text-headline-lg-mobile text-on-surface">Mis rutinas</h1>
-      </div>
-      <p className="text-body-sm text-on-surface-variant mb-5">Organizá tus días de entrenamiento.</p>
-
-      <button data-tour="rutinas-nueva" onClick={abrirNueva} className="btn-primary w-full py-3 text-body-md mb-5 flex items-center justify-center gap-2">
-        <span className="material-symbols-outlined text-[18px]">add</span> Nueva rutina
-      </button>
-
-      {error && <p className="text-body-sm text-error mb-3">{error}</p>}
-
-      {loading ? (
-        <p className="text-body-sm text-on-surface-variant">Cargando rutinas...</p>
-      ) : rutinas.length === 0 ? (
-        <div className="card p-6 text-center">
-          <span className="material-symbols-outlined text-on-surface-variant text-[32px] mb-2">checklist</span>
-          <p className="text-body-md text-on-surface">Todavía no creaste ninguna rutina</p>
+    <div className="page-enter">
+      <div className="page-heading"><div><p className="eyebrow">TU PLAN, A TU MANERA</p><h1>Tus rutinas<span className="text-accent">.</span></h1><p>Menos improvisar. Más entrenar.</p></div><Dumbbell size={26} className="text-accent"/></div>
+      <button data-tour="rutinas-nueva" onClick={abrirNueva} className="btn-primary w-full mb-6 flex items-center justify-center gap-2 text-body-sm"><Plus size={18}/> Crear rutina</button>
+      {error && <div className="notice mb-4" role="alert">{error}</div>}
+      {loading ? <div className="skeleton-card" aria-label="Cargando rutinas"/> : rutinas.length === 0 ? <button className="empty-state w-full" onClick={abrirNueva}><Dumbbell size={28}/><h3>Armá tu primera rutina</h3><p>Elegí ejercicios, series y repeticiones.<br/>La próxima vez ya está todo listo.</p></button> : <div className="space-y-4">{rutinas.map((r,i) => <article className="card routine-card" key={r.id}>
+        <p className="routine-index">RUTINA {String(i+1).padStart(2,'0')} · {(r.ejercicios || []).reduce((a,e) => a+(e.series_objetivo || 3),0)} SERIES</p>
+        <h2>{r.nombre}</h2>{r.descripcion && <p className="text-body-sm text-on-surface-variant mt-2">{r.descripcion}</p>}
+        <div className="routine-chips">{(r.ejercicios || []).slice(0,4).map((e,j) => <span key={j}>{e.nombre}</span>)}{r.ejercicios?.length > 4 && <span>+{r.ejercicios.length-4} más</span>}{!r.ejercicios?.length && <span>Sin ejercicios todavía</span>}</div>
+        <div className="flex gap-3"><button onClick={() => navigate(leerBorrador(user.id) ? '/entrenar' : `/entrenar/${r.id}`)} data-tour={i===0 ? 'rutinas-entrenar-btn' : undefined} className="btn-secondary flex-1 flex justify-between items-center px-4 text-body-sm">Entrenar <ArrowUpRight size={18}/></button>
+          <details className="routine-menu"><summary aria-label={`Opciones de ${r.nombre}`}><MoreHorizontal size={20}/></summary><div><button onClick={() => abrirEditar(r)}>Editar rutina</button><button onClick={async e => { e.currentTarget.closest('details').open=false; await duplicar(r) }}>Duplicar rutina</button><button className="text-error" onClick={async e => { e.currentTarget.closest('details').open=false; await eliminar(r.id) }}>Eliminar rutina</button></div></details>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {rutinas.map(r => (
-            <div key={r.id} className="card p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-body-lg font-semibold text-on-surface">{r.nombre}</p>
-                  {r.descripcion && <p className="text-body-sm text-on-surface-variant mt-0.5">{r.descripcion}</p>}
-                  <p className="text-label-md text-on-surface-variant mt-2">
-                    {(r.ejercicios || []).length} ejercicios · {(r.ejercicios || []).map(e => e.nombre).join(', ') || 'sin ejercicios'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-outline-variant">
-                <button
-                  onClick={() => navigate(`/entrenar/${r.id}`)}
-                  data-tour={r.id === rutinas[0]?.id ? 'rutinas-entrenar-btn' : undefined}
-                  className="btn-secondary flex-1 py-2 text-body-sm flex items-center justify-center gap-1"
-                >
-                  <span className="material-symbols-outlined text-[16px]">bolt</span> Entrenar
-                </button>
-                <button onClick={() => abrirEditar(r)} className="px-3 py-2 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[18px]">edit</span>
-                </button>
-                <button onClick={() => duplicar(r)} className="px-3 py-2 text-on-surface-variant" aria-label="Duplicar rutina">
-                  <span className="material-symbols-outlined text-[18px]">content_copy</span>
-                </button>
-                <button onClick={() => eliminar(r.id)} className="px-3 py-2 text-error">
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </article>)}</div>}
     </div>
   )
 }

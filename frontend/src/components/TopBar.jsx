@@ -1,22 +1,12 @@
-import logo from '../assets/logo.png'
-
-export default function TopBar({ title }) {
-  return (
-    <header
-      className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-margin-mobile bg-surface-container-lowest/95 backdrop-blur border-b border-outline-variant"
-      style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(56px + env(safe-area-inset-top))' }}
-    >
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
-          <img src={logo} alt="FitSync" className="w-full h-full object-contain" />
-        </div>
-        <span className="font-display font-bold text-headline-sm text-on-primary-container tracking-tight leading-none">
-          {title || 'FitSync'}
-        </span>
-      </div>
-      <button className="text-on-surface-variant hover:opacity-80 transition-opacity" aria-label="Sincronizado">
-        <span className="material-symbols-outlined text-[20px]">cloud_done</span>
-      </button>
-    </header>
-  )
+import { Link } from 'react-router-dom'
+import { Activity, CloudOff, RefreshCw, CloudCheck } from 'lucide-react'
+export default function TopBar({ sync }) {
+  const label = sync.errorPermanente ? 'Revisar guardado' : sync.sincronizando ? 'Guardando' : sync.cantidad ? `${sync.cantidad} pendiente${sync.cantidad > 1 ? 's' : ''}` : !sync.online ? 'Sin conexión' : 'Al día'
+  const Icon = sync.sincronizando ? RefreshCw : !sync.online || sync.cantidad ? CloudOff : CloudCheck
+  return <header className="app-topbar">
+    <Link to="/" className="brand" aria-label="FitSync, inicio"><span className="brand-symbol"><Activity size={23} strokeWidth={2.6} /></span><span>fit<span className="text-accent">sync</span><span className="brand-dot">.</span></span></Link>
+    <button onClick={sync.reintentarManual} disabled={sync.sincronizando || !sync.cantidad} className={`sync-status ${sync.errorPermanente ? 'text-error' : ''}`} aria-label={label}>
+      <Icon size={15} className={sync.sincronizando ? 'animate-spin' : ''}/><span>{label}</span>
+    </button>
+  </header>
 }

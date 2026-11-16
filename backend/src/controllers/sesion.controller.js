@@ -1,3 +1,5 @@
+import { validarSesion } from '../utils/validarSesion.js';
+import { rutinaModel } from '../models/rutina.model.js';
 import { sesionModel } from '../models/sesion.model.js';
 
 export const sesionController = {
@@ -50,7 +52,16 @@ export const sesionController = {
   create: async (req, res) => {
     try {
       const usuarioId = req.params.usuarioId;
-      const { fecha, rutina_id, rutina_nombre, ejercicios, volumen_total, duracion_min, completada, notas, calorias_estimadas } = req.body;
+      const validation = validarSesion(req.body);
+      if (validation.error) return res.status(400).json({ success: false, message: validation.error });
+      const { id, fecha, rutina_id, rutina_nombre, ejercicios, volumen_total, duracion_min, completada, notas, calorias_estimadas } = validation.data;
+      if (id) {
+        const existing = await sesionModel.getById(id, usuarioId);
+        if (existing) return res.status(200).json({ success: true, data: existing });
+      }
+      if (rutina_id && !await rutinaModel.getById(rutina_id, usuarioId)) {
+        return res.status(400).json({ success: false, message: 'La rutina no pertenece a esta cuenta o ya no existe.' });
+      }
 
       // Validaciones básicas.
       // rutina_id es opcional: una "Sesión libre" (sin rutina precargada, ej.
@@ -64,6 +75,7 @@ export const sesionController = {
       }
 
       const nuevaSesion = await sesionModel.create({
+        id,
         usuario_id: usuarioId,
         fecha,
         rutina_id,
@@ -113,6 +125,12 @@ export const sesionController = {
       if (notas !== undefined) datosActualizacion.notas = notas;
       if (calorias_estimadas !== undefined) datosActualizacion.calorias_estimadas = calorias_estimadas;
 
+      const current = await sesionModel.getById(sesionId, req.usuarioId);
+      if (!current) return res.status(404).json({ success: false, message: 'Sesión no encontrada' });
+      const validation = validarSesion({ ...current, ...datosActualizacion, id: undefined });
+      if (validation.error) return res.status(400).json({ success: false, message: validation.error });
+      if (rutina_id && !await rutinaModel.getById(rutina_id, req.usuarioId)) return res.status(400).json({ success: false, message: 'Rutina inválida para esta cuenta.' });
+      datosActualizacion.volumen_total = validation.data.volumen_total;
       const sesionActualizada = await sesionModel.update(sesionId, req.usuarioId, datosActualizacion);
 
       if (!sesionActualizada) {

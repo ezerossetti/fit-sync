@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "screenshots": 4,
+  "widths": [
+    320,
+    390,
+    430,
+    768
+  ],
+  "flows": [
+    "navigation",
+    "workout",
+    "undo",
+    "edit set",
+    "repeat load",
+    "save and sync",
+    "history detail",
+    "two offline workouts",
+    "reconnection sync",
+    "private offline cache"
+  ],
+  "errors": []
+}

@@ -41,6 +41,9 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith(`fitsync:api:${session?.user?.id}:`)) localStorage.removeItem(key)
+    }
   }
 
   const value = {

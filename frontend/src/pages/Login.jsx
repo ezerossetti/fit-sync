@@ -64,7 +64,7 @@ export default function Login() {
               Cargá tus series con botones, sin tipear. FitSync recuerda tu última sesión para que nunca pierdas el hilo de tu fuerza.
             </p>
           </div>
-          <p className="relative text-label-md text-on-surface-variant opacity-60">FitSync · Tu fuerza, en datos.</p>
+          <p className="relative text-label-md text-on-surface-variant opacity-60">FitSync · Tu entrenamiento empieza acá.</p>
         </div>
 
         {/* Panel del formulario */}
@@ -75,7 +75,7 @@ export default function Login() {
               <img src={logo} alt="FitSync" className="w-full h-full object-contain" />
             </div>
             <h1 className="font-display text-headline-lg-mobile text-on-surface">FitSync</h1>
-            <p className="text-label-md text-accent tracking-widest mt-1 uppercase">Tu fuerza, en datos.</p>
+            <p className="text-label-md text-accent tracking-widest mt-1 uppercase">Tu entrenamiento empieza acá.</p>
           </div>
 
           <h2 className="hidden md:block font-display text-headline-md text-on-surface mb-1">
@@ -89,6 +89,7 @@ export default function Login() {
             {esRegistro && (
               <input
                 className="input-field"
+                aria-label="Nombre"
                 placeholder="Nombre"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
@@ -100,6 +101,7 @@ export default function Login() {
             <input
               className="input-field"
               type="email"
+              aria-label="Email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -111,6 +113,7 @@ export default function Login() {
               <input
                 className="input-field pr-11"
                 type={verPassword ? 'text' : 'password'}
+                aria-label="Contraseña"
                 placeholder="Contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -147,7 +150,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={cargando}
-              className="btn-interact w-full bg-primary hover:opacity-90 text-on-primary font-semibold text-body-md py-3.5 rounded-lg flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+              className="btn-primary w-full font-semibold text-body-md py-3.5 flex items-center justify-center gap-2 mt-2"
             >
               {cargando ? (
                 <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
@@ -181,7 +184,7 @@ export default function Login() {
           </button>
 
           <p className="text-label-md text-on-surface-variant text-center opacity-50 mt-8">
-            Al continuar, aceptás nuestros Términos de Servicio y Política de Privacidad.
+            Tu espacio personal para entrenar con intención.
           </p>
         </div>
       </div>

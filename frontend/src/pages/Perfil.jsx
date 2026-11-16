@@ -22,6 +22,10 @@ export default function Perfil() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const { resetTour, resetAllTours, startTour } = useTour()
+  const [vista, setVista] = useState('ajustes')
+  const [metaSemanal, setMetaSemanal] = useState(3)
+  const [prefsStatus, setPrefsStatus] = useState('')
+  const [prefsSaving, setPrefsSaving] = useState(false)
   const [perfil, setPerfil] = useState(null)
   const [historial, setHistorial] = useState([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +62,7 @@ export default function Perfil() {
           ejerciciosPersonalizadosService.getAll().catch(() => []),
         ])
         setPerfil(p)
+        setPrefsListas(!!p)
         setNombreForm(p?.nombre || '')
         setHistorial(s || [])
         setEjerciciosPersonalizados(ep || [])
@@ -65,7 +70,8 @@ export default function Perfil() {
           const d = p.preferencias.descansoDefault ?? 90
           setDescansoDefault(d)
           setDescansoInput(String(d))
-          setUnidad(p.preferencias.unidad ?? 'Kilogramos')
+          setUnidad('Kilogramos')
+          setMetaSemanal(p.preferencias.metaSemanal || 3)
           const peso = Number(p.preferencias.pesoCorporalKg) || 75
           setPesoCorporalKg(peso)
           setPesoCorporalInput(String(peso))
@@ -76,7 +82,7 @@ export default function Perfil() {
       } finally {
         setLoading(false)
         setCargandoPersonalizados(false)
-        setPrefsListas(true) // evita guardar de vuelta los valores por defecto antes de cargar los reales
+
       }
     })()
 
@@ -93,13 +99,14 @@ export default function Perfil() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Guarda las preferencias en el backend cada vez que cambian (después de la carga inicial)
-  useEffect(() => {
-    if (!prefsListas) return
-    usuarioService.updateMe({
-      preferencias: { descansoDefault, unidad, pesoCorporalKg, barraKg }
-    }).catch(err => console.error('No se pudieron guardar las preferencias:', err))
-  }, [descansoDefault, unidad, pesoCorporalKg, barraKg, prefsListas])
+  const guardarPreferencias = async () => {
+    setPrefsSaving(true); setPrefsStatus('')
+    try {
+      await usuarioService.updateMe({ preferencias: { ...perfil?.preferencias, descansoDefault, unidad: 'Kilogramos', pesoCorporalKg, barraKg, metaSemanal } })
+      setPrefsStatus('Preferencias guardadas.')
+    } catch { setPrefsStatus('No se pudieron guardar. Revisá la conexión y volvé a intentar.') }
+    finally { setPrefsSaving(false) }
+  }
 
   const guardarNombre = async (e) => {
     e.preventDefault()
@@ -200,7 +207,7 @@ export default function Perfil() {
   const nombre = perfil?.nombre || user?.user_metadata?.nombre || 'Deportista'
   const inicial = nombre?.[0]?.toUpperCase() || '?'
 
-  const rachaSemanal = calcularRachaSemanal(historial)
+  const rachaSemanal = calcularRachaSemanal(historial, metaSemanal)
   const volumen = volumenTotalHistorico(historial)
   const completados = sesionesCompletadas(historial)
   const horas = horasActivasTotales(historial)
@@ -230,7 +237,8 @@ export default function Perfil() {
   }
 
   return (
-    <div className="pb-4">
+    <div className="pb-4 page-enter profile-page">
+      <p className="eyebrow mb-5">HECHO PARA TU FORMA DE ENTRENAR</p>
       {/* Header de perfil */}
       <div className="flex flex-col items-center text-center mb-6">
         <div className="relative">
@@ -282,6 +290,8 @@ export default function Perfil() {
         </div>
       </div>
 
+      <div className="segmented-control" role="tablist" aria-label="Tu perfil"><button role="tab" aria-selected={vista==='ajustes'} onClick={() => setVista('ajustes')}>Tu entrenamiento</button><button role="tab" aria-selected={vista==='logros'} onClick={() => setVista('logros')}>Tus logros</button></div>
+      <div className={vista === 'logros' ? '' : 'hidden'}>
       {/* Estadísticas */}
       <div className="flex items-center gap-2 mb-3">
         <span className="material-symbols-outlined text-accent text-[20px]">bar_chart</span>
@@ -426,6 +436,9 @@ export default function Perfil() {
         onCerrar={() => setLogroACompartir(null)}
       />
 
+      </div>
+      <div className={vista === 'ajustes' ? '' : 'hidden'}>
+      <div className="card p-4 mb-6"><h2 className="text-body-sm font-semibold mb-1">Tu meta semanal</h2><p className="text-label-md text-on-surface-variant mb-3">Elegí cuántos días querés entrenar.</p><div className="flex gap-1">{[1,2,3,4,5,6,7].map(n => <button key={n} onClick={() => setMetaSemanal(n)} aria-pressed={metaSemanal===n} className={`flex-1 min-h-11 rounded-lg text-body-sm ${metaSemanal===n ? 'bg-accent text-on-accent' : 'bg-surface-container-high text-on-surface-variant'}`}>{n}</button>)}</div></div>
       {/* Preferencias */}
       <div className="flex items-center gap-2 mb-3">
         <span className="material-symbols-outlined text-accent text-[20px]">tune</span>
@@ -471,15 +484,7 @@ export default function Perfil() {
             Sin límite: escribí el valor exacto que quieras (ej: 45, 75, 240...).
           </p>
         </div>
-        <button onClick={() => setUnidad(u => (u === 'Kilogramos' ? 'Libras' : 'Kilogramos'))} className="w-full flex items-center justify-between p-4 text-left border-b border-outline-variant">
-          <span className="flex items-center gap-2 text-body-sm text-on-surface">
-            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">scale</span>
-            Unidades de peso
-          </span>
-          <span className="flex items-center gap-1 text-body-sm text-on-surface-variant">
-            {unidad} <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          </span>
-        </button>
+        <div className="p-4 border-b border-outline-variant flex justify-between text-body-sm"><span>Unidad de peso</span><span className="text-on-surface-variant">Kilogramos · kg</span></div>
         <div className="p-4">
           <span className="flex items-center gap-2 text-body-sm text-on-surface mb-3">
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant">monitor_weight</span>
@@ -529,6 +534,9 @@ export default function Perfil() {
         </div>
       </div>
 
+      <button onClick={guardarPreferencias} disabled={!prefsListas || prefsSaving} className="btn-primary w-full mb-3">{prefsSaving ? 'Guardando…' : 'Guardar preferencias'}</button>
+      <p role="status" className="text-body-sm text-on-surface-variant mb-6">{prefsStatus || (!prefsListas ? 'No pudimos cargar tu perfil. Volvé a abrir esta pantalla con conexión.' : 'Los cambios se aplican al guardar.')}</p>
+      <details className="card p-4 mb-6"><summary className="text-body-sm cursor-pointer min-h-8">FitSync en tu pantalla de inicio</summary><p className="text-body-sm text-on-surface-variant mt-3">En iPhone: abrí FitSync en Safari, tocá Compartir y Agregar a inicio. En Android: abrí el menú de Chrome y elegí Instalar app o Agregar a pantalla de inicio.</p></details>
       {/* Notificaciones */}
       <div className="flex items-center gap-2 mb-3">
         <span className="material-symbols-outlined text-accent text-[20px]">notifications</span>
@@ -623,19 +631,9 @@ export default function Perfil() {
         ))}
       </div>
       <p className="text-label-md text-on-surface-variant mb-2 px-1">
-        Los tutoriales de "antes de la primera serie" y "entrenamiento activo" aparecen solos la primera vez que llegás a esas pantallas dentro de un entrenamiento.
+        Las guías se abren cuando las pedís. Tu entrenamiento no se interrumpe con tutoriales automáticos.
       </p>
-      <button
-        onClick={() => {
-          if (confirm('¿Reiniciar todos los tutoriales? Van a volver a aparecer la próxima vez que entres a cada pantalla.')) {
-            resetAllTours()
-          }
-        }}
-        className="w-full flex items-center justify-center gap-2 py-3 mb-6 text-label-md text-on-surface-variant border border-outline-variant rounded-lg"
-      >
-        <span className="material-symbols-outlined text-[16px]">restart_alt</span>
-        Reiniciar todos los tutoriales
-      </button>
+
       </div>
 
       {/* Ajustes de cuenta */}
@@ -662,8 +660,9 @@ export default function Perfil() {
       </div>
       </div>
 
+      </div>
       <button
-        onClick={signOut}
+        onClick={async () => { try { await signOut() } catch { alert('No se pudo cerrar la sesión. Revisá la conexión y volvé a intentar.') } }}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg border border-error/40 text-error font-semibold text-body-sm"
       >
         <span className="material-symbols-outlined text-[18px]">logout</span>

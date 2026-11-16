@@ -9,19 +9,19 @@ export default {
     extend: {
       colors: {
         // Base surfaces (tonal layering, dark-first)
-        background: '#0D0D0F',
-        surface: '#121412',
-        'surface-dim': '#0D0D0F',
+        background: '#090F18',
+        surface: '#101A28',
+        'surface-dim': '#090F18',
         'surface-bright': '#383938',
-        'surface-container-lowest': '#0A0A0C',
-        'surface-container-low': '#16181D',
-        'surface-container': '#1B1D22',
-        'surface-container-high': '#22242A',
-        'surface-container-highest': '#2C2E35',
-        'on-surface': '#e3e2df',
-        'on-surface-variant': '#c4c6d2',
+        'surface-container-lowest': '#090F18',
+        'surface-container-low': '#0E1825',
+        'surface-container': '#121E2D',
+        'surface-container-high': '#1B2B3D',
+        'surface-container-highest': '#24384C',
+        'on-surface': '#F0F5FA',
+        'on-surface-variant': '#9EAFBF',
         outline: '#8e909b',
-        'outline-variant': '#33353d',
+        'outline-variant': '#26374A',
 
         // Brand
         primary: '#0A2E6E',
@@ -30,7 +30,7 @@ export default {
         'primary-container': '#132a5c',
         'on-primary-container': '#b1c5ff',
 
-        accent: '#29B0E8',
+        accent: '#62D5ED',
         'accent-dim': '#1a7fac',
         'on-accent': '#00202b',
 
@@ -70,7 +70,7 @@ export default {
         'margin-desktop': '32px',
       },
       maxWidth: {
-        'container-max': '1200px',
+        'container-max': '680px',
       },
       boxShadow: {
         'plate': '0 4px 14px rgba(0,0,0,0.4)',

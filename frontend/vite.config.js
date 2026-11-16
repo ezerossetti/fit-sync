@@ -40,16 +40,6 @@ export default defineConfig({
         // sesión (caso real: gimnasio en el sótano).
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/rutinas') || url.pathname.startsWith('/api/sesiones') || url.pathname.startsWith('/api/usuarios'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'fitsync-api-cache',
-              networkTimeoutSeconds: 4,
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
             // Fotos de ejercicios (free-exercise-db) y catálogo: casi nunca cambian,
             // conviene cache-first para que las rutinas se vean offline con fotos y todo.
             urlPattern: ({ url }) => url.origin === 'https://raw.githubusercontent.com' || url.pathname.startsWith('/data/exercises-db.json'),
@@ -64,6 +54,11 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: { manualChunks: { catalog: ['./src/data/exerciseCatalog.js'], react: ['react', 'react-dom', 'react-router-dom'] } },
+    },
+  },
   server: {
     proxy: {
       '/api': {

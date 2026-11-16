@@ -1,78 +1,47 @@
-// Utilidades de persistencia local para EntrenamientoActivo.jsx
-//
-// Dos cosas distintas se guardan acá, con claves separadas:
-//
-// 1. BORRADOR (draft): la sesión en curso, mientras se está entrenando.
-//    Se pisa en cada serie guardada. Sirve para "Retomar sesión" si se
-//    cierra la pestaña, se queda sin batería, etc. Expira solo (12hs).
-//
-// 2. PENDIENTE (pending): una sesión ya TERMINADA (el usuario tocó
-//    "Finalizar sesión") pero que no se pudo subir al backend por falta
-//    de conexión. Se reintenta subir sola cuando vuelve la señal.
-
-const DRAFT_KEY = 'fitsync_sesion_draft'
-const DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000 // 12hs: pasado esto, se descarta solo por viejo
-
-const PENDING_KEY = 'fitsync_sesion_pendiente'
-
-// ---------- Borrador de sesión en curso ----------
-
-export function guardarBorrador(data) {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...data, guardadoEn: Date.now() }))
-  } catch (e) {
-    console.error('No se pudo guardar el borrador de sesión', e)
-  }
+export const STORAGE_EVENT = 'fitsync-workouts-changed'
+const prefix = (userId) => {
+  if (!userId) throw new Error('Necesitás iniciar sesión para guardar el entrenamiento.')
+  return `fitsync:v2:${userId}:`
 }
-
-export function leerBorrador() {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY)
-    if (!raw) return null
-    const data = JSON.parse(raw)
-    if (!data?.guardadoEn || Date.now() - data.guardadoEn > DRAFT_MAX_AGE_MS) {
-      borrarBorrador()
-      return null
-    }
-    return data
-  } catch (e) {
-    console.error('No se pudo leer el borrador de sesión', e)
-    return null
-  }
+const notify = () => { if (typeof window !== 'undefined') window.dispatchEvent(new Event(STORAGE_EVENT)) }
+const read = (key) => { try { return JSON.parse(localStorage.getItem(key)) } catch { return null } }
+export function guardarBorrador(data, userId) {
+  localStorage.setItem(`${prefix(userId)}draft`, JSON.stringify({ ...data, usuarioId: userId, guardadoEn: Date.now() }))
+  notify()
 }
-
-export function borrarBorrador() {
-  try {
-    localStorage.removeItem(DRAFT_KEY)
-  } catch (e) {
-    console.error('No se pudo borrar el borrador de sesión', e)
-  }
+export function leerBorrador(userId) { return userId ? read(`${prefix(userId)}draft`) : null }
+export function borrarBorrador(userId, sessionId) {
+  const current = leerBorrador(userId)
+  if (!sessionId || current?.sessionId === sessionId) localStorage.removeItem(`${prefix(userId)}draft`)
+  notify()
 }
-
-// ---------- Sesión terminada pendiente de sincronizar ----------
-
-export function guardarSesionPendiente(payload) {
-  try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify({ payload, guardadoEn: Date.now() }))
-  } catch (e) {
-    console.error('No se pudo guardar la sesión pendiente de sync', e)
-  }
+export function guardarSesionPendiente(payload, userId) {
+  if (!payload.id) throw new Error('La sesión necesita un identificador antes de guardarse.')
+  localStorage.setItem(`${prefix(userId)}pending:${payload.id}`, JSON.stringify({ payload, usuarioId: userId, guardadoEn: Date.now() }))
+  notify()
 }
-
-export function leerSesionPendiente() {
-  try {
-    const raw = localStorage.getItem(PENDING_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch (e) {
-    console.error('No se pudo leer la sesión pendiente de sync', e)
-    return null
-  }
+export function leerSesionesPendientes(userId) {
+  if (!userId) return []
+  const start = `${prefix(userId)}pending:`
+  return Object.keys(localStorage).filter(k => k.startsWith(start)).map(read)
+    .filter(x => x?.usuarioId === userId && x?.payload?.id).sort((a, b) => a.guardadoEn - b.guardadoEn)
 }
-
-export function borrarSesionPendiente() {
-  try {
-    localStorage.removeItem(PENDING_KEY)
-  } catch (e) {
-    console.error('No se pudo borrar la sesión pendiente de sync', e)
+export function borrarSesionPendiente(userId, id) {
+  localStorage.removeItem(`${prefix(userId)}pending:${id}`)
+  borrarBorrador(userId, id)
+  notify()
+}
+export function hayDatosAnteriores() { return !!(read('fitsync_sesion_draft') || read('fitsync_sesion_pendiente')) }
+// Legacy records had no owner. Recovery requires explicit user confirmation.
+export function recuperarDatosAnteriores(userId) {
+  const pending = read('fitsync_sesion_pendiente')
+  const draft = read('fitsync_sesion_draft')
+  if (pending?.payload) {
+    guardarSesionPendiente({ ...pending.payload, id: pending.payload.id || crypto.randomUUID() }, userId)
+    localStorage.removeItem('fitsync_sesion_pendiente')
+    localStorage.removeItem('fitsync_sesion_draft')
+  } else if (draft) {
+    guardarBorrador({ ...draft, sessionId: draft.sessionId || crypto.randomUUID() }, userId)
+    localStorage.removeItem('fitsync_sesion_draft')
   }
 }

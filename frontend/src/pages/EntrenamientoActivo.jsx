@@ -1,4 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Check, Pause, Play, Timer, Pencil, RotateCcw } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
+import useRestTimer from '../hooks/useRestTimer'
+import LoadControl from '../components/LoadControl'
 import { useNavigate, useParams } from 'react-router-dom'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
@@ -290,6 +295,14 @@ function DescansoRing({ segundos, descansando, onToggle, objetivo = DESCANSO_OBJ
 export default function EntrenamientoActivo() {
   const { rutinaId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const sessionId = useRef(crypto.randomUUID())
+  const [saveError, setSaveError] = useState('')
+  const [editingSet, setEditingSet] = useState(null)
+  const [lastUndo, setLastUndo] = useState(null)
+  const saveLock = useRef(false)
+  const setLock = useRef(false)
+
 
   const [rutinas, setRutinas] = useState([])
   const [historial, setHistorial] = useState([])
@@ -308,9 +321,7 @@ export default function EntrenamientoActivo() {
   const [rpe, setRpe] = useState(null)
   const [pesoCorporalKg, setPesoCorporalKg] = useState(75)
   const [barraKg, setBarraKg] = useState(20)
-  const [segundosDescanso, setSegundosDescanso] = useState(0)
-  const [descansando, setDescansando] = useState(false)
-  const intervalRef = useRef(null)
+  const { seconds: segundosDescanso, setSeconds: setSegundosDescanso, running: descansando, setRunning: setDescansando } = useRestTimer(descansoObjetivo)
   const inicioSesionRef = useRef(null)
   const [guardando, setGuardando] = useState(false)
   const [ultimaSesionGuardada, setUltimaSesionGuardada] = useState(null)
@@ -332,6 +343,9 @@ export default function EntrenamientoActivo() {
   const [modoSeleccionBloque, setModoSeleccionBloque] = useState(false) // eligiendo miembros del próximo bloque
   const [bloqueSeleccionTemp, setBloqueSeleccionTemp] = useState([])
   const { startTour } = useTour()
+  useEffect(() => { window.scrollTo(0, 0) }, [step])
+  useEffect(() => { setLock.current = false }, [sesionEjercicios])
+  useEffect(() => { if (!lastUndo) return; const t = setTimeout(() => setLastUndo(null), 7000); return () => clearTimeout(t) }, [lastUndo])
 
   // Tours de esta pantalla: se disparan la primera vez que el usuario llega
   // a cada paso del flujo. Como startTour ya chequea localStorage, entrar y
@@ -361,7 +375,11 @@ export default function EntrenamientoActivo() {
         setDescansoObjetivo(p?.preferencias?.descansoDefault ?? DESCANSO_OBJETIVO_DEFAULT)
         setPesoCorporalKg(Number(p?.preferencias?.pesoCorporalKg) || 75)
         setBarraKg(Number(p?.preferencias?.barraKg) || 20)
-        if (rutinaId) {
+        const existingDraft = leerBorrador(user.id)
+        if (existingDraft?.sesionEjercicios?.length > 0) {
+          setBorradorPendiente(existingDraft)
+          setStep('retomar')
+        } else if (rutinaId) {
           // Si viene por link directo a una rutina, eso manda: no interrumpimos
           // con la pantalla de "retomar borrador".
           const encontrada = (r || []).find(x => String(x.id) === String(rutinaId))
@@ -370,14 +388,16 @@ export default function EntrenamientoActivo() {
             setStep((encontrada.ejercicios || []).length > 0 ? 'calentamiento-general' : 'select-ejercicio')
           }
         } else {
-          const borrador = leerBorrador()
+          const borrador = leerBorrador(user.id)
           if (borrador?.sesionEjercicios?.length > 0) {
             setBorradorPendiente(borrador)
             setStep('retomar')
           }
         }
       } catch (e) {
-        console.error(e)
+        const local = leerBorrador(user.id)
+        if (local) { setBorradorPendiente(local); setStep('retomar') }
+        else setSaveError('No pudimos cargar tus rutinas. Podés iniciar una sesión libre o volver a intentar.')
       } finally {
         setLoading(false)
       }
@@ -388,43 +408,25 @@ export default function EntrenamientoActivo() {
     if (!inicioSesionRef.current) inicioSesionRef.current = Date.now()
   }, [])
 
-  useEffect(() => {
-    if (descansando) {
-      intervalRef.current = setInterval(() => {
-        setSegundosDescanso(s => {
-          const nuevo = s + 1
-          // Alarma de fin de descanso: se dispara UNA sola vez, justo cuando
-          // el contador cruza el objetivo (vibración + beep), sin necesidad
-          // de estar mirando la pantalla para darse cuenta.
-          if (nuevo >= descansoObjetivo && s < descansoObjetivo) {
-            dispararAlarmaDescanso()
-          }
-          return nuevo
-        })
-      }, 1000)
-    } else {
-      clearInterval(intervalRef.current)
-    }
-    return () => clearInterval(intervalRef.current)
-  }, [descansando, descansoObjetivo])
-
   // Autosave del borrador: se pisa en cada serie guardada (o cambio de notas)
   // mientras hay una sesión en curso. No se guarda en 'select-rutina' (todavía
   // no hay nada que perder) ni en 'retomar'/'resumen' (ahí ya se decidió o ya
   // terminó). Así, si se cuelga el teléfono o se pierde señal en el sótano del
   // gym, al volver a entrar aparece "Retomar sesión".
   useEffect(() => {
-    if (sesionEjercicios.length === 0) return
+    if (sesionEjercicios.length === 0 && step !== 'activo') return
     if (!['select-ejercicio', 'pre-serie', 'activo'].includes(step)) return
-    guardarBorrador({
+    try { guardarBorrador({
+      sessionId: sessionId.current,
+      rutinaSnapshot: rutina,
       rutinaId: rutina?.id ?? null,
       rutinaNombre: rutina?.nombre ?? null,
       sesionEjercicios,
       notas,
       inicioSesion: inicioSesionRef.current,
       modoCarga,
-    })
-  }, [sesionEjercicios, notas, step, rutina, modoCarga])
+    }, user.id) } catch { setSaveError('No hay espacio para guardar en este teléfono. No cierres la app hasta finalizar con conexión.') }
+  }, [sesionEjercicios, notas, step, rutina, modoCarga, user.id])
 
   // Notificación local de "logro importante desbloqueado" (oro/platino). Se
   // recalcula lo mismo que ya se muestra en la tarjeta de resumen
@@ -468,6 +470,8 @@ export default function EntrenamientoActivo() {
   // rotar entre ejercicios de un mismo bloque/superserie, para no tener que
   // salir y volver a entrar a cada uno en cada vuelta del circuito.
   const elegirEjercicio = (ej, destino = 'pre-serie') => {
+    setEditingSet(null)
+    if (sesionEjercicios.length === 0 && !borradorPendiente) inicioSesionRef.current = Date.now()
     setEjercicioActual(ej)
     const yaEnSesion = sesionEjercicios.find(e => e.nombre === ej.nombre)
     const ultimaDeHoy = yaEnSesion?.series?.[yaEnSesion.series.length - 1]
@@ -477,8 +481,8 @@ export default function EntrenamientoActivo() {
       setReps(ultimaDeHoy.reps)
     } else {
       const previo = ultimoRegistroEjercicio(historial, ej.nombre)
-      setPeso(previo?.mejorSet?.peso ?? 20)
-      setReps(previo?.mejorSet?.reps ?? (ej.reps_objetivo || 8))
+      setPeso(previo?.series?.[0]?.peso ?? 20)
+      setReps(previo?.series?.[0]?.reps ?? (ej.reps_objetivo || 8))
     }
     setRpe(null)
     setDescansando(false)
@@ -572,6 +576,16 @@ export default function EntrenamientoActivo() {
   // la lista, el usuario re-toque por error el ejercicio ya completo y siga
   // cargando series de más). Solo si no queda ninguno pendiente vuelve a la lista.
   const guardarSerie = (pesoOverride, repsOverride, rpeOverride) => {
+    if (setLock.current) return
+    if ((repsOverride ?? reps) < 1) { setSaveError('Registrá al menos una repetición.'); return }
+    setLock.current = true
+    setSaveError('')
+    setLastUndo({ ejercicios: sesionEjercicios, ejercicio: ejercicioActual, bloque: bloqueActivo })
+    if (editingSet !== null) {
+      setSesionEjercicios(prev => prev.map(e => e.nombre !== ejercicioActual.nombre ? e : { ...e, series: e.series.map((serie,i) => i === editingSet ? { ...serie, peso, reps, rpe } : serie) }))
+      setEditingSet(null)
+      return
+    }
     const pesoFinal = pesoOverride ?? peso
     const repsFinal = repsOverride ?? reps
     const rpeFinal = rpeOverride !== undefined ? rpeOverride : rpe
@@ -652,7 +666,7 @@ export default function EntrenamientoActivo() {
     if (!ultima) return
     setPeso(ultima.peso)
     setReps(ultima.reps)
-    guardarSerie(ultima.peso, ultima.reps, ultima.rpe ?? null)
+    setRpe(ultima.rpe ?? null)
   }
 
   const volverASeleccionEjercicio = () => {
@@ -667,17 +681,20 @@ export default function EntrenamientoActivo() {
     const rutinaGuardada = borradorPendiente.rutinaId
       ? rutinas.find(r => String(r.id) === String(borradorPendiente.rutinaId))
       : null
-    setRutina(rutinaGuardada || null)
+    sessionId.current = borradorPendiente.sessionId || crypto.randomUUID()
+    setRutina(rutinaGuardada || borradorPendiente.rutinaSnapshot || null)
     setSesionEjercicios(borradorPendiente.sesionEjercicios || [])
     setNotas(borradorPendiente.notas || '')
     setModoCarga(borradorPendiente.modoCarga || 'live')
     inicioSesionRef.current = borradorPendiente.inicioSesion || Date.now()
     setBorradorPendiente(null)
-    setStep(rutinaGuardada || !borradorPendiente.rutinaId ? 'select-ejercicio' : 'select-rutina')
+    setStep('select-ejercicio')
   }
 
   const descartarBorrador = () => {
-    borrarBorrador()
+    if (!confirm('¿Descartar este entrenamiento sin terminar? Esta acción no se puede deshacer.')) return
+    borrarBorrador(user.id)
+    sessionId.current = crypto.randomUUID()
     setBorradorPendiente(null)
     setStep('select-rutina')
   }
@@ -715,51 +732,50 @@ export default function EntrenamientoActivo() {
   }
 
   const finalizarSesion = async () => {
-    setGuardando(true)
-    // BUGFIX: `payload` se declara ACÁ, antes del try, no adentro. Antes
-    // estaba declarado con `const` dentro del bloque try, así que el bloque
-    // catch (que lo necesita para guardarlo como pendiente cuando falla la
-    // conexión) no tenía acceso a esa variable: tiraba
-    // "ReferenceError: payload is not defined" apenas entraba al catch, y la
-    // sesión completa se perdía en vez de quedar guardada offline.
-    let payload = null
+    if (saveLock.current) return
+    saveLock.current = true
+    setGuardando(true); setSaveError('')
+    const esRetroactivo = modoCarga === 'retroactivo'
+    const duracion = Math.max(1, Math.round((Date.now() - inicioSesionRef.current) / 60000))
+    const payload = {
+      id: sessionId.current,
+      fecha: new Date().toISOString(), rutina_id: rutina?.id || null,
+      rutina_nombre: rutina?.nombre || 'Sesión libre', ejercicios: sesionEjercicios,
+      volumen_total: volumenSesion(sesionEjercicios), duracion_min: esRetroactivo ? null : duracion,
+      completada: true, notas: notas.trim() || null,
+      calorias_estimadas: esRetroactivo ? null : caloriasSesion(sesionEjercicios, duracion, pesoCorporalKg),
+    }
     try {
-      const esRetroactivo = modoCarga === 'retroactivo'
-      const duracionMin = (Date.now() - inicioSesionRef.current) / 1000 / 60
-      const duracionRedondeada = Math.max(1, Math.round(duracionMin))
-      payload = {
-        fecha: new Date().toISOString(),
-        rutina_id: rutina?.id,
-        rutina_nombre: rutina?.nombre || 'Sesión libre',
-        ejercicios: sesionEjercicios,
-        volumen_total: volumenSesion(sesionEjercicios),
-        // En modo retroactivo no pasó tiempo real entrenando, así que ni la
-        // duración ni las calorías (que se calculan a partir de ella) tienen
-        // sentido — se mandan null y el resumen las oculta.
-        duracion_min: esRetroactivo ? null : duracionRedondeada,
-        completada: true,
-        notas: notas.trim() || null,
-        calorias_estimadas: esRetroactivo ? null : caloriasSesion(sesionEjercicios, duracionRedondeada, pesoCorporalKg),
-      }
-      const creada = await sesionesService.create(payload)
-      setUltimaSesionGuardada(creada || payload)
-      setGuardadaOffline(false)
-      borrarBorrador()
-      setStep('resumen')
-    } catch (e) {
-      console.error(e)
-      // Sin conexión (u otro error de red): no perdemos el entrenamiento.
-      // Se guarda localmente como "pendiente" y el banner en App.jsx la
-      // reintenta subir sola cuando vuelve la señal. El borrador NO se
-      // borra todavía: recién se limpia cuando el POST realmente entra.
-      if (payload) guardarSesionPendiente(payload)
+      // Persist first: interruption between tap and HTTP response cannot lose work.
+      guardarSesionPendiente(payload, user.id)
+      borrarBorrador(user.id, sessionId.current)
       setUltimaSesionGuardada(payload)
       setGuardadaOffline(true)
+      setLastUndo(null)
       setStep('resumen')
-    } finally {
-      setGuardando(false)
-    }
+    } catch {
+      // Storage full: try a direct save, but retain the screen and draft on failure.
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (data.session?.user?.id !== user.id) throw new Error('Sesión vencida')
+        const saved = await sesionesService.create(payload, data.session.access_token)
+        borrarBorrador(user.id, sessionId.current)
+        setUltimaSesionGuardada(saved); setGuardadaOffline(false); setLastUndo(null); setStep('resumen')
+      } catch { setSaveError('No pudimos guardar el entrenamiento. Conservá esta pantalla abierta y reintentá con conexión.') }
+    } finally { setGuardando(false); saveLock.current = false }
   }
+  const deshacer = () => {
+    if (!lastUndo) return
+    setSesionEjercicios(lastUndo.ejercicios)
+    setEjercicioActual(lastUndo.ejercicio)
+    setBloqueActivo(lastUndo.bloque)
+    setEditingSet(null); setStep('activo'); setDescansando(false); setSegundosDescanso(0); setLastUndo(null)
+  }
+  const frame = (children) => <>
+    {lastUndo && <div className="workout-feedback" role="status"><span>Serie guardada</span><button onClick={deshacer}>Deshacer</button></div>}
+    {saveError && <div className="notice mb-4" role="alert">{saveError}</div>}
+    {children}
+  </>
 
   // ---------- RENDER ----------
 
@@ -770,7 +786,7 @@ export default function EntrenamientoActivo() {
   if (step === 'retomar') {
     const cantEjercicios = borradorPendiente?.sesionEjercicios?.length || 0
     const cantSeries = (borradorPendiente?.sesionEjercicios || []).reduce((a, e) => a + e.series.length, 0)
-    return (
+    return frame(
       <div>
         <div className="text-center mb-6">
           <span className="material-symbols-outlined text-accent text-[52px]">history</span>
@@ -792,7 +808,7 @@ export default function EntrenamientoActivo() {
   }
 
   if (step === 'select-rutina') {
-    return (
+    return frame(
       <div>
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Entrenar</h1>
         <p className="text-body-sm text-on-surface-variant mb-5">¿Cómo vas a entrenar hoy?</p>
@@ -806,7 +822,7 @@ export default function EntrenamientoActivo() {
             <span className="material-symbols-outlined text-accent">bolt</span>
             <div>
               <p className="text-body-md font-semibold text-on-surface">Sesión libre</p>
-              <p className="text-label-md text-on-surface-variant">Sin rutina armada. Vas cargando cada ejercicio a medida que te lo dan.</p>
+              <p className="text-label-md text-on-surface-variant">Elegí tus ejercicios sobre la marcha.</p>
             </div>
           </div>
           <span className="material-symbols-outlined text-accent">chevron_right</span>
@@ -852,7 +868,7 @@ export default function EntrenamientoActivo() {
 
   if (step === 'calentamiento-general') {
     const items = calentamientoSugeridoRutina(rutina?.ejercicios || [], personalizados)
-    return (
+    return frame(
       <div>
         <button onClick={() => { setRutina(null); setStep('select-rutina') }} className="flex items-center gap-1 text-accent text-body-sm mb-4">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span> Cambiar rutina
@@ -870,13 +886,13 @@ export default function EntrenamientoActivo() {
     // Sesión libre: no hay lista fija de ejercicios. Se buscan en el catálogo
     // (o se cargan como texto libre si el entrenador usa un nombre que no está
     // catalogado) y se van agregando a medida que se los dan, uno por uno.
-    return (
+    return frame(
       <div>
         <button onClick={() => setStep('select-rutina')} className="flex items-center gap-1 text-accent text-body-sm mb-4">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span> Cambiar modo
         </button>
         <h1 className="font-display text-headline-lg-mobile text-on-surface mb-1">Sesión libre</h1>
-        <p className="text-body-sm text-on-surface-variant mb-4">Buscá el ejercicio que te acaban de dar y registralo.</p>
+        <p className="text-body-sm text-on-surface-variant mb-4">Buscá un ejercicio y empezá a registrar tus series.</p>
 
         <div data-tour="select-ejercicio-buscador" className="mb-6">
           <BuscadorEjercicio personalizados={personalizados} onElegir={elegirEjercicio} />
@@ -922,7 +938,7 @@ export default function EntrenamientoActivo() {
     // el caso real más común es mixto — vino con la rutina, pero el profe
     // agregó algo sobre la marcha. Se muestran aparte, con la misma chip UI.
     const ejerciciosAgregados = sesionEjercicios.filter(e => !nombresRutina.has(e.nombre))
-    return (
+    return frame(
       <div>
         <button onClick={() => { setBloqueActivo(null); cancelarSeleccionBloque(); setStep('select-rutina') }} className="flex items-center gap-1 text-accent text-body-sm mb-4">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span> Cambiar rutina
@@ -1081,8 +1097,8 @@ export default function EntrenamientoActivo() {
     const info = getExerciseInfo(ejercicioActual.nombre, personalizados)
     const coach = analizarCoachEjercicio(historial, ejercicioActual)
 
-    return (
-      <div>
+    return frame(
+      <div className="active-workout">
         <button onClick={volverASeleccionEjercicio} className="flex items-center gap-1 text-accent text-body-sm mb-4">
           <span className="material-symbols-outlined text-[18px]">arrow_back</span> Elegir otro ejercicio
         </button>
@@ -1157,123 +1173,34 @@ export default function EntrenamientoActivo() {
           </div>
         )}
 
+        <div className="workout-dock"><div>
         <button data-tour="preserie-comenzar" onClick={iniciarSerie} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
           Comenzar serie <span className="material-symbols-outlined">bolt</span>
         </button>
+        </div></div>
       </div>
     )
   }
 
   if (step === 'activo') {
     const hechas = seriesGuardadasEjercicioActual()
-    // BUGFIX real: si la rutina se guardó sin `series_objetivo` (rutinas viejas,
-    // o ejercicios cargados a mano sin ese campo), esto daba 0 y el chequeo de
-    // arriba (`if (objetivo && nuevoConteo >= objetivo)`) nunca cortaba porque
-    // 0 es falsy. Como resultado, "Siguiente" quedaba habilitado para siempre.
-    // Default sensato: 3 series (el mismo que usa el ExerciseBuilder al crear).
     const objetivo = ejercicioActual.series_objetivo || 3
-    const pr = prPersonalEjercicio(historial, ejercicioActual.nombre)
     const previo = ultimoRegistroEjercicio(historial, ejercicioActual.nombre)
-    const faltaParaPR = pr ? +(pr.peso - peso).toFixed(2) : null
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button onClick={volverASeleccionEjercicio} className="flex items-center gap-1 text-accent text-body-sm">
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span> Ejercicios
-          </button>
-          <span className="text-label-md text-on-surface-variant bg-surface-container-high px-2.5 py-1 rounded-full">
-            Serie {hechas + 1}{objetivo ? ` de ${objetivo}` : ''}
-          </span>
-        </div>
-
-        {bloqueActivo && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {bloqueActivo.map(ej => {
-              const hechosEj = sesionEjercicios.find(e => e.nombre === ej.nombre)?.series?.length || 0
-              const objetivoEj = ej.series_objetivo || 3
-              const esActual = ej.nombre === ejercicioActual.nombre
-              const completoEj = hechosEj >= objetivoEj
-              return (
-                <span
-                  key={ej.nombre}
-                  className={`text-label-md px-2 py-1 rounded-full flex items-center gap-1 ${
-                    esActual ? 'bg-accent text-on-primary' : completoEj ? 'text-success bg-success-container' : 'text-on-surface-variant bg-surface-container-high'
-                  }`}
-                >
-                  {completoEj && <span className="material-symbols-outlined text-[12px]">check</span>}
-                  {ej.nombre}
-                </span>
-              )
-            })}
-          </div>
-        )}
-
-        <h1 className="font-display text-headline-md text-on-surface">{ejercicioActual.nombre}</h1>
-
-        {previo && (
-          <div className="card p-3 flex items-center justify-between">
-            <p className="text-body-sm text-on-surface-variant">
-              <span className="text-on-surface-variant/70">Historial anterior · </span>
-              Mejor serie: {previo.mejorSet.peso}kg × {previo.mejorSet.reps} ✓
-            </p>
-            {hechas > 0 && (
-              <button data-tour="activo-repetir" onClick={repetirCarga} className="text-label-md text-accent flex items-center gap-1 shrink-0 ml-2">
-                <span className="material-symbols-outlined text-[16px]">repeat</span> Repetir
-              </button>
-            )}
-          </div>
-        )}
-
-        <CargaStepper
-          label="Carga (kg)"
-          value={peso}
-          onChange={setPeso}
-          saltos={SALTOS_PESO}
-          unidad="kg"
-          tourAdd="activo-stepper-sumar"
-          tourSubtract="activo-stepper-restar"
-        />
-        <CargaStepper label="Repeticiones" value={reps} onChange={setReps} saltos={SALTOS_REPS} unidad="reps" min={0} />
-
-        <CalculadoraDiscos peso={peso} barraKg={barraKg} />
-
-        {modoCarga !== 'retroactivo' && (
-          <>
-            <SelectorRPE value={rpe} onChange={setRpe} />
-
-            <div className="card py-6">
-              <DescansoRing
-                segundos={segundosDescanso}
-                descansando={descansando}
-                onToggle={() => setDescansando(d => !d)}
-                objetivo={descansoObjetivo}
-                tourTarget="activo-descanso"
-              />
-            </div>
-
-            <p className="text-label-md text-on-surface-variant/70 text-center -mt-2">
-              ~{Math.round(caloriasPorSerie(rpe, pesoCorporalKg))} kcal estimadas esta serie
-            </p>
-          </>
-        )}
-
-        {pr && (
-          <p className="text-body-sm text-center text-on-surface-variant">
-            {faltaParaPR > 0
-              ? `Estás a ${formatKg(faltaParaPR)} kg de tu récord personal (${formatKg(pr.peso)} kg)`
-              : '🔥 ¡Estás igualando o superando tu récord personal!'}
-          </p>
-        )}
-
-        <div className="space-y-2">
-          <button data-tour="activo-guardar" onClick={() => guardarSerie()} className="btn-primary w-full py-4 text-body-lg flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">check_circle</span>
-            {bloqueActivo
-              ? 'Serie completada ✓ → Sigue el bloque'
-              : (objetivo && hechas + 1 >= objetivo ? 'Serie completada ✓ → Siguiente' : 'Serie completada ✓')}
-          </button>
-        </div>
+    const referenceIndex = Math.min(editingSet ?? hechas, (previo?.series?.length || 1)-1)
+    const reference = previo?.series?.[referenceIndex]
+    const seriesHoy = sesionEjercicios.find(e => e.nombre === ejercicioActual.nombre)?.series || []
+    return frame(
+      <div className="active-workout page-enter">
+        <div className="workout-heading"><button onClick={volverASeleccionEjercicio}><ArrowLeft size={16}/> Ejercicios</button><span>{editingSet !== null ? `Editando serie ${editingSet+1}` : `Serie ${hechas+1} de ${objetivo}`}</span></div>
+        <p className="eyebrow mb-2">{rutina?.nombre || 'SESIÓN LIBRE'}{bloqueActivo ? ' · SUPERSERIE' : ''}</p>
+        <h1 className="workout-title">{ejercicioActual.nombre}</h1>
+        <div className="reference-strip"><div><span>Tu referencia anterior</span><br/><b>{reference ? `${reference.peso} kg × ${reference.reps} reps · serie ${referenceIndex+1}` : 'Hoy marcás tu punto de partida'}</b></div>{hechas > 0 && <button data-tour="activo-repetir" onClick={repetirCarga}>Repetir<br/>carga</button>}</div>
+        <div className="load-controls"><LoadControl label="PESO" value={peso} unit="kg" increments={SALTOS_PESO} onChange={setPeso} tourAdd="activo-stepper-sumar" tourSubtract="activo-stepper-restar"/><LoadControl label="REPETICIONES" value={reps} unit="reps" increments={SALTOS_REPS} onChange={setReps} min={1}/></div>
+        {modoCarga !== 'retroactivo' && <div className="rest-strip" data-tour="activo-descanso"><Timer size={23} className="text-accent"/><div className="rest-time"><small>{descansando ? 'Tu descanso' : 'Descanso · tocá para iniciar'}</small><strong>{formatTimer(Math.max(0,descansoObjetivo-segundosDescanso))}</strong></div><button aria-label="Agregar 30 segundos de descanso" onClick={() => setDescansoObjetivo(t => t+30)}>+30</button><button onClick={() => setDescansando(d => !d)} aria-label={descansando ? 'Pausar descanso' : 'Iniciar descanso'}>{descansando ? <Pause size={17}/> : <Play size={17}/>}</button><button aria-label="Reiniciar descanso" onClick={() => { setSegundosDescanso(0); setDescansando(false) }}><RotateCcw size={16}/></button></div>}
+        <section className="set-log"><header>Tus series de hoy <span>{hechas} completadas</span></header><table><thead><tr><th>SERIE</th><th>KG</th><th>REPS</th><th>ESTADO</th></tr></thead><tbody>{seriesHoy.map((serie,i) => <tr key={i}><td>{String(i+1).padStart(2,'0')}</td><td>{serie.peso}</td><td>{serie.reps}</td><td><button aria-label={`Editar serie ${i+1}`} onClick={() => { setEditingSet(i); setPeso(serie.peso); setReps(serie.reps); setRpe(serie.rpe); window.scrollTo({top:0,behavior:'smooth'}) }}><Pencil size={14}/></button></td></tr>)}<tr className="current-row"><td>{editingSet !== null ? editingSet+1 : hechas+1}</td><td>{peso}</td><td>{reps}</td><td>{editingSet !== null ? 'Editando' : 'En curso'}</td></tr></tbody></table></section>
+        <details className="workout-tools"><summary>Esfuerzo y calculadora de discos</summary><div><SelectorRPE value={rpe} onChange={setRpe}/><CalculadoraDiscos peso={peso} barraKg={barraKg}/></div></details>
+        {editingSet !== null && <button className="btn-secondary w-full mt-3" onClick={() => setEditingSet(null)}>Cancelar edición</button>}
+        <div className="workout-dock"><div><button data-tour="activo-guardar" onClick={() => guardarSerie()} className="btn-primary"><Check size={19}/>{editingSet !== null ? 'Guardar corrección' : 'Completar serie'}{editingSet === null && hechas+1 >= objetivo ? ' · Siguiente' : ''}</button></div></div>
       </div>
     )
   }
@@ -1303,7 +1230,7 @@ export default function EntrenamientoActivo() {
     const topEjercicios = topEjerciciosPorVolumen(sesionEjercicios, 3)
     const logrosDeEstaSesion = calcularLogrosNuevos(historial, ultimaSesionGuardada)
 
-    return (
+    return frame(
       <div>
         <div className="text-center mb-6">
           <span className="material-symbols-outlined text-success text-[52px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
@@ -1317,7 +1244,7 @@ export default function EntrenamientoActivo() {
           <div className="card p-3 mb-5 border-accent/30 bg-accent/5 flex items-center gap-2">
             <span className="material-symbols-outlined text-accent text-[20px]">cloud_off</span>
             <p className="text-body-sm text-on-surface-variant">
-              Se guardó en tu teléfono porque no había conexión. Se va a subir sola en cuanto vuelva la señal — no hace falta que hagas nada.
+              Tu entrenamiento quedó guardado en este teléfono. El indicador de arriba muestra si ya se sincronizó o si necesita conexión.
             </p>
           </div>
         )}

@@ -1,314 +1,77 @@
+import { useTour } from '../context/TourContext'
+import { TOURS } from '../data/tours'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowUpRight, ArrowRight, Play, Dumbbell, Plus, Check, History, Flame } from 'lucide-react'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
-import { useTour } from '../context/TourContext'
-import { TOURS } from '../data/tours'
-import { saludoPorHora, formatFechaRelativa, volumenSesion, formatKg, calcularRachaSemanal, sugerirDeload, ejerciciosAbandonados, fechaSesion } from '../utils/helpers'
-import { calcularLogros, NIVEL_COLOR } from '../data/achievements'
-
-function inicioDeSemana() {
-  const d = new Date()
-  const day = d.getDay() === 0 ? 7 : d.getDay()
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - day + 1)
-  return d
-}
-
-const LETRA_DIA = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-
-// Arma los 7 días de la semana actual (lunes a domingo) marcando cuáles
-// tienen al menos una sesión registrada, para el calendario estilo
-// Duolingo. Los días futuros (después de hoy) se muestran aparte, apagados,
-// para no confundirlos con días "salteados".
-function diasSemanaEntrenados(sesionesSemana, inicio) {
-  const dias = new Set(sesionesSemana.map(s => fechaSesion(s.fecha).toDateString()))
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  return Array.from({ length: 7 }, (_, i) => {
-    const fecha = new Date(inicio)
-    fecha.setDate(inicio.getDate() + i)
-    return {
-      letra: LETRA_DIA[i],
-      entrenado: dias.has(fecha.toDateString()),
-      esHoy: fecha.toDateString() === hoy.toDateString(),
-      esFuturo: fecha > hoy,
-    }
-  })
-}
-
-// Calendario semanal, tipo Duolingo: un círculo por día con ícono de fuego
-// lleno si hubo sesión ese día, contorno si no. El día de hoy se marca con
-// un anillo para ubicarse rápido dentro de la semana. Debajo, el progreso
-// contra la meta personal (ver calcularRachaSemanal) — esta es la métrica
-// que de verdad importa para la racha, no los días sueltos.
-function CalendarioSemana({ sesionesSemana, inicio, sesionesEstaSemana, meta, metaCumplida }) {
-  const dias = diasSemanaEntrenados(sesionesSemana, inicio)
-  return (
-    <div className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-label-md text-on-surface-variant uppercase">Esta semana</p>
-        <p className={`text-label-md font-semibold ${metaCumplida ? 'text-success' : 'text-on-surface-variant'}`}>
-          {sesionesEstaSemana}/{meta} {metaCumplida && '✓'}
-        </p>
-      </div>
-      <div className="flex justify-between">
-        {dias.map((d, i) => (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <span className="text-label-md text-on-surface-variant">{d.letra}</span>
-            <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                d.entrenado
-                  ? 'bg-accent text-on-primary'
-                  : d.esFuturo
-                    ? 'border border-outline-variant/40 text-on-surface-variant/30'
-                    : 'border border-outline-variant text-on-surface-variant/60'
-              } ${d.esHoy ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : ''}`}
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {d.entrenado ? 'local_fire_department' : 'radio_button_unchecked'}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// Vista previa de 6 logros para Home, usando el mismo catálogo central que
-// Perfil (data/achievements.js) — así nunca se desincronizan entre pantallas.
-// Prioriza mostrar primero los ya desbloqueados y, si sobra lugar, completa
-// con los que están más cerca de desbloquearse (mayor progreso).
-function logrosPreview(sesiones) {
-  const todos = calcularLogros(sesiones)
-  const desbloqueados = todos.filter(l => l.desbloqueado)
-  const bloqueados = todos
-    .filter(l => !l.desbloqueado)
-    .slice()
-    .sort((a, b) => b.progreso - a.progreso)
-  return [...desbloqueados, ...bloqueados].slice(0, 6)
-}
+import { fechaSesion, formatKg, formatFechaRelativa, calcularRachaSemanal, volumenSesion } from '../utils/helpers'
+import { leerBorrador, hayDatosAnteriores, recuperarDatosAnteriores, STORAGE_EVENT } from '../utils/sesionDraft'
 
 export default function Home() {
   const { user } = useAuth()
-  const { startTour, yaVisto } = useTour()
-  const [rutinas, setRutinas] = useState([])
-  const [sesiones, setSesiones] = useState([])
-  const [perfil, setPerfil] = useState(null)
+  const { startTour } = useTour()
+  useEffect(() => { startTour('home', TOURS.home.steps); startTour('bienvenida', TOURS.bienvenida.steps) }, [startTour])
+  const [data, setData] = useState({rutinas: [], sesiones: [], perfil: null})
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  // Primera vez en la app: tour de bienvenida (recorre la barra inferior).
-  // Ya la vio, pero nunca vio el detalle de Home: tour de Home.
-  // Ambos quedan guardados en localStorage, así que esto corre una sola vez
-  // por usuario, no en cada sesión.
+  const [error, setError] = useState('')
+  const [draft, setDraft] = useState(() => leerBorrador(user.id))
+  const [legacy, setLegacy] = useState(hayDatosAnteriores)
+  const cargar = async () => {
+    setLoading(true); setError('')
+    try {
+      const [rutinas, sesiones, perfil] = await Promise.all([rutinasService.getAll(), sesionesService.getAll(), usuarioService.getMe().catch(() => null)])
+      setData({rutinas: rutinas || [], sesiones: (sesiones || []).sort((a,b) => fechaSesion(b.fecha)-fechaSesion(a.fecha)), perfil})
+    } catch { setError('No pudimos cargar tus datos. Tu entrenamiento guardado en este teléfono sigue a salvo.') }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { cargar() }, [user.id])
+  useEffect(() => { window.addEventListener('fitsync-session-synced', cargar); return () => window.removeEventListener('fitsync-session-synced', cargar) }, [])
   useEffect(() => {
-    if (!yaVisto('bienvenida')) {
-      startTour('bienvenida', TOURS.bienvenida.steps)
-    } else {
-      startTour('home', TOURS.home.steps)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [r, s, p] = await Promise.all([
-          rutinasService.getAll(),
-          sesionesService.getAll(),
-          usuarioService.getMe().catch(() => null),
-        ])
-        setRutinas(r || [])
-        setSesiones((s || []).sort((a, b) => fechaSesion(b.fecha) - fechaSesion(a.fecha)))
-        setPerfil(p)
-      } catch (e) {
-        console.error(e)
-        setError('No se pudo conectar con el backend. Puede estar "durmiendo" (free tier de Render) — probá recargar en 30-60 seg.')
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
-
-  const inicio = inicioDeSemana()
-  const sesionesSemana = sesiones.filter(s => fechaSesion(s.fecha) >= inicio)
-  const rachaSemanal = calcularRachaSemanal(sesiones)
-  const deload = sugerirDeload(sesiones)
-  const abandonados = ejerciciosAbandonados(sesiones, rutinas)
-  const ultimaSesion = sesiones[0]
-  const logrosTotales = calcularLogros(sesiones)
-  const logrosDesbloqueados = logrosTotales.filter(l => l.desbloqueado).length
-  const logros = logrosPreview(sesiones)
-  const nombre = perfil?.nombre || user?.user_metadata?.nombre || 'Deportista'
-  const primerNombre = nombre.split(' ')[0]
-
-  return (
-    <div className="space-y-6">
-      {/* Hero greeting */}
-      <div>
-        <p className="text-body-sm text-on-surface-variant">{saludoPorHora()},</p>
-        <h1 className="font-display text-headline-lg-mobile text-on-surface">{primerNombre} 💪</h1>
-      </div>
-
-      {error && (
-        <div className="card p-4 border-error-container">
-          <p className="text-body-sm text-error">{error}</p>
-        </div>
-      )}
-
-      {/* CTA principal */}
-      <Link
-        to="/entrenar"
-        data-tour="home-cta-entrenar"
-        className="block card p-5 bg-gradient-to-br from-primary to-primary-container border-none relative overflow-hidden"
-      >
-        <div className="relative z-10">
-          <p className="text-label-md text-accent uppercase tracking-wide mb-1">Carga rápida</p>
-          <h2 className="font-display text-headline-sm text-on-primary mb-1">Empezar entrenamiento</h2>
-          <p className="text-body-sm text-on-primary-container">Sin teclado. Solo tocá y registrá.</p>
-        </div>
-        <span className="material-symbols-outlined absolute -right-3 -bottom-3 text-[110px] text-white/5">bolt</span>
-      </Link>
-
-      {/* Sugerencia de deload */}
-      {deload && (
-        <div className="card p-4 border-l-4 border-l-accent bg-accent/5 flex gap-3">
-          <span className="material-symbols-outlined text-accent text-[22px] shrink-0">self_improvement</span>
-          <div>
-            <p className="text-body-sm font-semibold text-on-surface mb-0.5">Sugerencia: semana de descarga</p>
-            <p className="text-body-sm text-on-surface-variant">{deload.mensaje}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Ejercicio abandonado */}
-      {abandonados.length > 0 && (
-        <div className="card p-4 border-l-4 border-l-accent bg-accent/5 flex gap-3">
-          <span className="material-symbols-outlined text-accent text-[22px] shrink-0">history_toggle_off</span>
-          <div>
-            <p className="text-body-sm font-semibold text-on-surface mb-0.5">Coach · Ejercicio abandonado</p>
-            <p className="text-body-sm text-on-surface-variant">
-              Hace {abandonados[0].dias} días que no hacés <span className="font-semibold text-on-surface">{abandonados[0].nombre}</span>, y sigue en tus rutinas activas.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Quick stats */}
-      <div data-tour="home-stats" className="grid grid-cols-3 gap-3">
-        <div className="card p-3 text-center">
-          <p className="font-mono text-headline-md text-accent">{loading ? '–' : rutinas.length}</p>
-          <p className="text-label-md text-on-surface-variant mt-1">Rutinas</p>
-        </div>
-        <div className="card p-3 text-center">
-          <p className="font-mono text-headline-md text-accent">{loading ? '–' : sesionesSemana.length}</p>
-          <p className="text-label-md text-on-surface-variant mt-1">Sesiones · semana</p>
-        </div>
-        <div className="card p-3 text-center">
-          <p className="font-mono text-headline-md text-accent">{loading ? '–' : rachaSemanal.racha}</p>
-          <p className="text-label-md text-on-surface-variant mt-1 flex items-center justify-center gap-1">
-            Racha (semanas)
-            <span title={`Cumplís tu meta cuando entrenás ${rachaSemanal.meta} días en la semana`} className="material-symbols-outlined text-[14px] text-on-surface-variant/60">info</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Calendario de la semana + progreso contra la meta */}
-      {!loading && (
-        <CalendarioSemana
-          sesionesSemana={sesionesSemana}
-          inicio={inicio}
-          sesionesEstaSemana={rachaSemanal.sesionesEstaSemana}
-          meta={rachaSemanal.meta}
-          metaCumplida={rachaSemanal.metaCumplidaEstaSemana}
-        />
-      )}
-
-      {/* Última sesión */}
-      {ultimaSesion && (
-        <div>
-          <h3 className="text-headline-sm font-display text-on-surface mb-2">Tu última sesión</h3>
-          <div className="card p-4 timeline-accent">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-body-md font-semibold text-on-surface">{ultimaSesion.rutina_nombre || 'Sesión libre'}</p>
-                <p className="text-body-sm text-on-surface-variant">{formatFechaRelativa(ultimaSesion.fecha)}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-body-lg text-accent">{formatKg(ultimaSesion.volumen_total || volumenSesion(ultimaSesion.ejercicios))} kg</p>
-                <p className="text-label-md text-on-surface-variant">volumen total</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Rutinas */}
-      <div data-tour="home-rutinas">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-headline-sm font-display text-on-surface">Mis rutinas</h3>
-          <Link to="/rutinas" className="text-body-sm text-accent">Ver todas</Link>
-        </div>
-
-        {loading ? (
-          <p className="text-body-sm text-on-surface-variant">Cargando...</p>
-        ) : rutinas.length === 0 ? (
-          <div className="card p-5 text-center">
-            <p className="text-body-md text-on-surface mb-1">Todavía no tenés rutinas</p>
-            <p className="text-body-sm text-on-surface-variant mb-3">Creá la primera para empezar a registrar tu progreso.</p>
-            <Link to="/rutinas" className="btn-primary inline-block px-4 py-2 text-body-sm">Crear rutina</Link>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {rutinas.slice(0, 3).map(r => (
-              <div key={r.id} className="card p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-body-md font-semibold text-on-surface">{r.nombre}</p>
-                  <p className="text-label-md text-on-surface-variant">{(r.ejercicios || []).length} ejercicios</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Logros */}
-      <div data-tour="home-logros">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-headline-sm font-display text-on-surface">Logros</h3>
-          <Link to="/perfil" className="text-label-md text-accent">{logrosDesbloqueados}/{logrosTotales.length} · Ver todos</Link>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {logros.map(l => (
-            <Link
-              to="/perfil"
-              key={l.id}
-              className={`card p-3 text-center flex flex-col items-center gap-1.5 ${l.desbloqueado ? 'border-accent/40' : 'opacity-50'}`}
-            >
-              <span
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${l.desbloqueado ? '' : 'bg-surface-container-high'}`}
-                style={{
-                  backgroundColor: l.desbloqueado ? `${NIVEL_COLOR[l.nivel]}26` : undefined,
-                  color: l.desbloqueado ? NIVEL_COLOR[l.nivel] : undefined,
-                }}
-              >
-                <span
-                  className={`material-symbols-outlined text-[20px] ${l.desbloqueado ? '' : 'text-on-surface-variant'}`}
-                  style={l.desbloqueado ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                >
-                  {l.icono}
-                </span>
-              </span>
-              <p className="text-label-md font-semibold text-on-surface leading-tight">{l.titulo}</p>
-              <p className="text-label-md text-on-surface-variant leading-tight">{l.descripcion}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+    const update = () => setDraft(leerBorrador(user.id))
+    window.addEventListener(STORAGE_EVENT, update)
+    return () => window.removeEventListener(STORAGE_EVENT, update)
+  }, [user.id])
+  const {rutinas, sesiones, perfil} = data
+  const hoy = new Date()
+  const lunes = new Date(hoy); lunes.setHours(0,0,0,0); lunes.setDate(lunes.getDate() - (lunes.getDay()+6)%7)
+  const semana = sesiones.filter(s => fechaSesion(s.fecha) >= lunes)
+  const dias = new Set(semana.map(s => fechaSesion(s.fecha).toDateString()))
+  const racha = calcularRachaSemanal(sesiones, perfil?.preferencias?.metaSemanal || 3)
+  const nombre = (perfil?.nombre || user.user_metadata?.nombre || 'Atleta').split(' ')[0]
+  const ultimo = sesiones[0]
+  const series = draft?.sesionEjercicios?.reduce((sum,e) => sum + e.series.length, 0) || 0
+  const recuperar = () => {
+    if (!confirm('Hay un entrenamiento de una versión anterior sin cuenta asociada. ¿Es tuyo y querés recuperarlo en esta cuenta?')) return
+    try { recuperarDatosAnteriores(user.id); setLegacy(false); setDraft(leerBorrador(user.id)) }
+    catch { setError('No pudimos recuperar el entrenamiento. Los datos originales siguen guardados.') }
+  }
+  return <div className="home-page page-enter">
+    <div className="page-heading"><div><p className="eyebrow">TU ESPACIO DE ENTRENAMIENTO</p><h1>Vamos, {nombre}<span className="text-accent">.</span></h1><p>Una serie más. Un paso adelante.</p></div><span className="date-badge">{hoy.toLocaleDateString('es-AR', {day:'2-digit', month:'short'}).replace('.','')}</span></div>
+    {error && <div role="alert" className="notice"><p>{error}</p><button onClick={cargar}>Volver a intentar</button></div>}
+    {legacy && <div className="notice"><p>Encontramos un entrenamiento de tu versión anterior.</p><button onClick={recuperar}>Recuperar mis datos</button></div>}
+    <Link to="/entrenar" data-tour="home-cta-entrenar" className="training-hero">
+      <div className="hero-orbit" aria-hidden="true"><Dumbbell size={92} strokeWidth={1.1}/></div>
+      <p className="eyebrow"><span className="live-dot"/>{draft ? 'TENÉS UNA SESIÓN EN CURSO' : 'TU PRÓXIMA MEJOR VERSIÓN'}</p>
+      <h2>{draft ? 'Seguí donde' : 'Hoy se'}<br/>{draft ? 'lo dejaste.' : 'entrena.'}</h2>
+      <p>{draft ? `${draft.rutinaNombre || 'Sesión libre'} · ${series} series registradas` : 'Tu rutina, tus pesos, tu ritmo.'}</p>
+      <div className="hero-action"><span>{draft ? 'Retomar entrenamiento' : 'Empezar entrenamiento'}</span><span className="hero-play"><Play size={19} fill="currentColor"/></span></div>
+    </Link>
+    <section className="week-card" data-tour="home-stats" aria-label="Actividad de esta semana">
+      <div className="section-heading"><h2>Tu semana</h2><span><strong>{loading ? '—' : dias.size}</strong> / {racha.meta} días</span></div>
+      <div className="week-days">{['L','M','M','J','V','S','D'].map((letra,i) => {
+        const fecha = new Date(lunes); fecha.setDate(lunes.getDate()+i)
+        const done = dias.has(fecha.toDateString()); const today = fecha.toDateString() === hoy.toDateString()
+        return <div key={i} className={`${done ? 'done' : ''} ${today ? 'today' : ''}`} aria-label={`${fecha.toLocaleDateString('es-AR')}${done ? ', entrenaste' : ''}${today ? ', hoy' : ''}`}><span>{letra}</span><b>{done ? <Check size={18}/> : fecha.getDate()}</b><i/></div>
+      })}</div>
+      <div className="week-footer"><span><Flame size={15}/> {racha.racha} {racha.racha === 1 ? 'semana' : 'semanas'} de constancia</span><Link to="/historial">Ver progreso <ArrowUpRight size={14}/></Link></div>
+    </section>
+    <section data-tour="home-rutinas"><div className="section-heading"><h2>Tus rutinas</h2><Link to="/rutinas">Ver todas <ArrowRight size={15}/></Link></div>
+      {loading ? <div className="skeleton-card" aria-label="Cargando rutinas"/> : rutinas.length ? <div className="routine-stack">{rutinas.slice(0,3).map((r,i) => <Link className="routine-preview" to={draft ? '/entrenar' : `/entrenar/${r.id}`} key={r.id}><span className="routine-number">0{i+1}</span><div><h3>{r.nombre}</h3><p>{r.ejercicios?.length || 0} ejercicios · {(r.ejercicios || []).reduce((a,e) => a+(e.series_objetivo || 3),0)} series</p></div><ArrowUpRight size={20}/></Link>)}</div> : <Link className="empty-state" to="/rutinas"><Plus size={24}/><h3>Tu primera rutina empieza acá</h3><p>Armala una vez. Repetila y superate.</p></Link>}
+    </section>
+    {ultimo && <section><div className="section-heading"><h2>Último entrenamiento</h2><History size={18} className="text-on-surface-variant"/></div><Link className="last-workout" to="/historial"><div><p className="eyebrow">{formatFechaRelativa(ultimo.fecha)}</p><h3>{ultimo.rutina_nombre || 'Sesión libre'}</h3><p>{ultimo.ejercicios?.length || 0} ejercicios completados</p></div><div><strong>{formatKg(ultimo.volumen_total ?? volumenSesion(ultimo.ejercicios))}</strong><span>kg de volumen</span></div></Link></section>}
+    <p className="home-footnote">TU FUERZA, EN DATOS.</p>
+  </div>
 }

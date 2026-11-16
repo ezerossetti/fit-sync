@@ -5,6 +5,7 @@ import { registerSW } from 'virtual:pwa-register'
 import { AuthProvider } from './context/AuthContext'
 import App from './App.jsx'
 import './styles.css'
+import './mobile.css'
 
 // Registro manual del service worker (en vez de injectRegister:'auto' de
 // vite-plugin-pwa) para poder forzar un chequeo de actualización cada vez

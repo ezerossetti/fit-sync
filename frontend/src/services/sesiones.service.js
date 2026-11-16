@@ -14,8 +14,8 @@ const sesionesService = {
   },
 
   // POST crear nueva sesión
-  create: async (data) => {
-    const response = await apiClient.post('/sesiones', data)
+  create: async (data, token) => {
+    const response = await apiClient.post('/sesiones', data, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
     return response.data.data
   },
 
