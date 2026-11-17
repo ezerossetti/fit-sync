@@ -1,3 +1,5 @@
+import PRMoment from '../components/PRMoment'
+import { personalRecords } from '../utils/moments'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Check, Pause, Play, Timer, Pencil, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -1214,11 +1216,8 @@ export default function EntrenamientoActivo() {
     // contra ultimoRegistroEjercicio (solo la sesión anterior), así que
     // avisaba "nuevo récord" con solo superar la última sesión, aunque
     // siguiera por debajo del máximo histórico real.
-    const pbs = sesionEjercicios.filter(ej => {
-      const pr = prPersonalEjercicio(historial, ej.nombre)
-      const maxHoy = Math.max(...ej.series.map(s => Number(s.peso)))
-      return !pr || maxHoy > Number(pr.peso)
-    })
+    const sessionRecords = personalRecords([...historial, ultimaSesionGuardada].filter(Boolean)).filter(r => r.sessionId === ultimaSesionGuardada?.id)
+    const pbs = sessionRecords.map(r => ({nombre:r.name}))
 
     const semana = volumenPorDiaSemana(historial, ultimaSesionGuardada)
     const maxSemana = Math.max(1, ...semana.map(d => d.volumen))
@@ -1249,17 +1248,7 @@ export default function EntrenamientoActivo() {
           </div>
         )}
 
-        {pbs.length > 0 && (
-          <div className="card p-4 mb-5 border-success/40 bg-success-container/20">
-            <p className="text-body-sm font-semibold text-on-success-container mb-1 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>military_tech</span>
-              ¡Nuevo récord personal en {pbs[0].nombre}!
-            </p>
-            {pbs.length > 1 && (
-              <p className="text-body-sm text-on-surface-variant">También en: {pbs.slice(1).map(p => p.nombre).join(', ')}</p>
-            )}
-          </div>
-        )}
+        {!!sessionRecords.length && <PRMoment records={sessionRecords}/>}
 
         {(cargandoComentarioCoach || comentarioCoach) && (
           <div className="card p-4 mb-5 border-accent/30 bg-accent/5">

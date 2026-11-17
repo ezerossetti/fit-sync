@@ -1,3 +1,4 @@
+import '../moments.css'
 import { useTour } from '../context/TourContext'
 import { TOURS } from '../data/tours'
 import { useEffect, useState } from 'react'
@@ -68,6 +69,7 @@ export default function Home() {
       })}</div>
       <div className="week-footer"><span><Flame size={15}/> {racha.racha} {racha.racha === 1 ? 'semana' : 'semanas'} de constancia</span><Link to="/historial">Ver progreso <ArrowUpRight size={14}/></Link></div>
     </section>
+    <Link to="/historial/momentos" className="moments-entry"><div><span className="moment-entry-label">HECHO POR VOS</span><b>Tus momentos.</b><p>Tu Wrapped, tu mapa muscular<br/>y una misión a tu medida.</p></div><ArrowUpRight size={23}/></Link>
     <section data-tour="home-rutinas"><div className="section-heading"><h2>Tus rutinas</h2><Link to="/rutinas">Ver todas <ArrowRight size={15}/></Link></div>
       {loading ? <div className="skeleton-card" aria-label="Cargando rutinas"/> : rutinas.length ? <div className="routine-stack">{rutinas.slice(0,3).map((r,i) => <Link className="routine-preview" to={draft ? '/entrenar' : `/entrenar/${r.id}`} key={r.id}><span className="routine-number">0{i+1}</span><div><h3>{r.nombre}</h3><p>{r.ejercicios?.length || 0} ejercicios · {(r.ejercicios || []).reduce((a,e) => a+(e.series_objetivo || 3),0)} series</p></div><ArrowUpRight size={20}/></Link>)}</div> : <Link className="empty-state" to="/rutinas"><Plus size={24}/><h3>Tu primera rutina empieza acá</h3><p>Armala una vez. Repetila y superate.</p></Link>}
     </section>

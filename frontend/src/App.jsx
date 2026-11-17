@@ -9,6 +9,7 @@ const Home = lazy(() => import('./pages/Home'))
 const Rutinas = lazy(() => import('./pages/Rutinas'))
 const EntrenamientoActivo = lazy(() => import('./pages/EntrenamientoActivo'))
 const Historial = lazy(() => import('./pages/Historial'))
+const Momentos = lazy(() => import('./pages/Momentos'))
 const Perfil = lazy(() => import('./pages/Perfil'))
 import CoachChat from './components/CoachChat'
 import PendingSyncBanner from './components/PendingSyncBanner'
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/rutinas" element={<Rutinas />} />
             <Route path="/entrenar" element={<EntrenamientoActivo />} />
             <Route path="/entrenar/:rutinaId" element={<EntrenamientoActivo />} />
+            <Route path="/historial/momentos" element={<Momentos />} />
             <Route path="/historial" element={<Historial />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="*" element={<Navigate to="/" replace />} />

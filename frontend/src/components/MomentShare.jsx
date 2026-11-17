@@ -1,0 +1,17 @@
+import { useEffect, useRef, useState } from 'react'
+import { ImagePlus, Share2, Download } from 'lucide-react'
+import MobileSheet from './MobileSheet'
+import { drawMoment } from '../utils/momentCard'
+import { downloadFile } from '../utils/progress'
+export default function MomentShare({data,label='Compartir momento'}){
+ const [open,setOpen]=useState(false),[url,setUrl]=useState(null),[file,setFile]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('')
+ const photo=useRef(null),generation=useRef(0)
+ useEffect(()=>()=>{if(url)URL.revokeObjectURL(url)},[url])
+ useEffect(()=>()=>{generation.current++;photo.current?.close?.()},[])
+ async function prepare(image=photo.current){const id=++generation.current;setBusy(true);setError('');setFile(null);try{const canvas=document.createElement('canvas');drawMoment(canvas,data,image);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error();if(id!==generation.current)return;setFile(new File([blob],'fitsync-momento.png',{type:'image/png'}));setUrl(URL.createObjectURL(blob))}catch{if(id===generation.current)setError('No pudimos preparar la imagen. Volvé a intentarlo.')}finally{if(id===generation.current)setBusy(false)}}
+ async function pick(e){const f=e.target.files?.[0];e.target.value='';if(!f)return;if(f.size>25*1024*1024){setError('Elegí una foto de menos de 25 MB.');return}const id=++generation.current;setBusy(true);try{const bitmap=await createImageBitmap(f);if(id!==generation.current){bitmap.close();return}photo.current?.close?.();photo.current=bitmap;await prepare(bitmap)}catch{if(id===generation.current){setError('No pudimos abrir esa foto. Probá JPG o PNG.');setBusy(false)}}}
+ function save(){if(!file||!url)return;downloadFile(file,file.name,'image/png');setError('Si quedó en Archivos, abrí la imagen y elegí Compartir → Guardar imagen. Después seleccionála al crear tu historia.')}
+ async function share(){if(!file)return;const payload={files:[file]};if(!navigator.share||!navigator.canShare?.(payload)){save();return}setBusy(true);try{await navigator.share(payload)}catch(e){if(e.name!=='AbortError')setError('No se pudo compartir. Podés guardar la imagen.')}finally{setBusy(false)}}
+ function close(){generation.current++;setOpen(false);setBusy(false)}
+ return <><button className="moment-share-btn" onClick={()=>{setOpen(true);prepare()}}><Share2 size={17}/>{label}</button>{open&&<MobileSheet title="Tu momento, para compartir" busy={busy} onClose={close}><div className="sheet-content"><div className="moment-share-preview">{busy?<p>Preparando…</p>:url?<img src={url} alt="Vista previa de tu momento FitSync"/>:null}</div><div className="share-options"><label className="photo-picker"><ImagePlus size={18}/>Tu foto<input aria-label="Foto para mi momento" type="file" accept="image/*" disabled={busy} onChange={pick}/></label><button disabled={busy} onClick={()=>{photo.current?.close?.();photo.current=null;prepare(null)}}>Sin foto</button></div><p className="chart-note">Imagen 9:16. Tu foto se procesa en el teléfono. Instagram puede aparecer en Compartir; también podés guardar la imagen y elegirla desde una historia.</p>{error&&<p role="status" className="notice">{error}</p>}</div><footer className="sheet-actions"><button aria-label="Guardar momento" className="btn-secondary" disabled={busy||!file} onClick={save}><Download size={20}/></button><button className="btn-primary" disabled={busy||!file} onClick={share}>Compartir imagen</button></footer></MobileSheet>}</>
+}

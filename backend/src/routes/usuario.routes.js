@@ -11,5 +11,6 @@ router.get('/usuario/me', usuarioController.getMe);
 
 // PUT: Actualizar perfil propio
 router.put('/usuario/me', usuarioController.updateMe);
+router.put('/usuario/misiones', usuarioController.missions);
 
 export default router;

@@ -28,9 +28,9 @@ function Evolution({sessions}) {
   {points.length ? <>
    <svg className="depth-chart" viewBox="0 0 340 205" role="img" aria-label={`${metrics[metric].label} por sesión de ${name}. Detalle debajo del gráfico.`}>
     <defs><linearGradient id={`${id}fill`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#53dcef" stopOpacity=".34"/><stop offset="1" stopColor="#53dcef" stopOpacity=".01"/></linearGradient><linearGradient id={`${id}line`}><stop stopColor="#4e9fff"/><stop offset="1" stopColor="#79fff0"/></linearGradient><filter id={`${id}glow`} x="-25%" y="-60%" width="150%" height="220%"><feGaussianBlur stdDeviation="4"/></filter></defs>
-    <path d="M42 174L312 174L328 190L58 190Z" fill="#253f58" opacity=".3"/>
+
     {[0,.5,1].map(t=><g key={t}><line x1="42" x2="312" y1={174-140*t} y2={174-140*t} stroke="#47617c" strokeOpacity=".3" strokeDasharray="3 6"/><text x="0" y={178-140*t} fill="#9ab2c9" fontSize="10">{number(maximum*t)}</text></g>)}
-    {points.length>1 && <><path d={`${line} L${coords.at(-1).x} 174 L${coords[0].x} 174 Z`} fill={`url(#${id}fill)`}/><path d={line} transform="translate(0 8)" fill="none" stroke="#08101a" strokeWidth="5" opacity=".6"/><path d={line} fill="none" stroke="#53dcef" strokeWidth="6" opacity=".35" filter={`url(#${id}glow)`}/><path d={line} fill="none" stroke={`url(#${id}line)`} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/></>}
+    {points.length>1 && <><path d={`${line} L${coords.at(-1).x} 174 L${coords[0].x} 174 Z`} fill={`url(#${id}fill)`}/><path d={line} fill="none" stroke={`url(#${id}line)`} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/></>}
     {activeCoord && <line x1={activeCoord.x} x2={activeCoord.x} y1="24" y2="174" stroke="#a4f9ff" strokeOpacity=".35" strokeDasharray="3 4"/>}
     {coords.map((p,i)=><g key={p.id} onClick={()=>setSelection(p.id)}><circle cx={p.x} cy={p.y} r={p.id===active?.id?7:3.5} fill={p.id===active?.id?'#d0ffff':'#7be7ee'} stroke="#162b40" strokeWidth="2"/><circle cx={p.x} cy={p.y} r="14" fill="transparent"><title>{date(p.date)}: {number(p[metric])} kg</title></circle></g>)}
     <text x="42" y="203" fill="#9ab2c9" fontSize="10">{date(first.date)}</text><text x="312" y="203" textAnchor="end" fill="#9ab2c9" fontSize="10">{points.length>1?date(last.date):'Primera sesión'}</text>

@@ -1,4 +1,5 @@
 import { validarSesion } from './validarSesion.js';
+import { validMissionSelection } from './missions.js';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const text=(value,max,required=false)=>typeof value==='string'&&value.length<=max&&(!required||value.trim().length>0);
 const pick=(row,keys)=>Object.fromEntries(keys.filter(k=>row[k]!==undefined).map(k=>[k,row[k]]));
@@ -34,6 +35,10 @@ export function validateBackup(body,userId){
  }
  const p=body.preferencias||{};if(typeof p!=='object'||Array.isArray(p))throw new Error('Preferencias inválidas.');
  result.preferencias={};
+ if(p.misiones!==undefined){
+  if(!p.misiones||typeof p.misiones!=='object'||Array.isArray(p.misiones)||Object.keys(p.misiones).length>24||Object.entries(p.misiones).some(([month,ids])=>!validMissionSelection(month,ids)))throw new Error('Misiones inválidas.');
+  result.preferencias.misiones=p.misiones;
+ }
  for(const [key,min,max] of [['metaSemanal',1,7],['descansoDefault',0,3600],['pesoCorporalKg',1,1000],['barraKg',0,500]]){
   if(p[key]!==undefined){if(typeof p[key]!=='number'||!Number.isFinite(p[key])||p[key]<min||p[key]>max)throw new Error('Preferencias fuera de rango.');result.preferencias[key]=p[key];}
  }
