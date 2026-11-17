@@ -1,10 +1,26 @@
 import { rutinaModel } from '../models/rutina.model.js';
+import { usuarioModel } from '../models/usuario.model.js';
 
 export const rutinaController = {
+  reorder: async (req,res) => {
+    try {
+      const { ids } = req.body;
+      const rows = await rutinaModel.getAll(req.usuarioId);
+      if (!Array.isArray(ids) || ids.length !== rows.length || new Set(ids).size !== ids.length || ids.some(id => !rows.some(r => r.id === id))) return res.status(400).json({message:'La lista de rutinas cambió. Recargá y volvé a ordenar.'});
+      const profile = await usuarioModel.getById(req.usuarioId);
+      const updated = await usuarioModel.update(req.usuarioId, {preferencias:{...profile?.preferencias, ordenRutinas:ids}});
+      if (!updated) throw new Error('Perfil no encontrado');
+      res.json({success:true,data:ids});
+    } catch { res.status(500).json({message:'No se pudo guardar el orden de las rutinas.'}); }
+  },
   getAll: async (req, res) => {
     try {
       const usuarioId = req.params.usuarioId;
       const rutinas = await rutinaModel.getAll(usuarioId);
+      const profile = await usuarioModel.getById(usuarioId);
+      const order = Array.isArray(profile?.preferencias?.ordenRutinas) ? profile.preferencias.ordenRutinas : [];
+      const position = id => { const index = order.indexOf(id); return index < 0 ? order.length : index; };
+      rutinas.sort((a,b) => position(a.id) - position(b.id) || String(a.creada_en || '').localeCompare(String(b.creada_en || '')) || a.id.localeCompare(b.id));
       res.status(200).json({ success: true, data: rutinas, count: rutinas.length });
     } catch (error) {
       res.status(500).json({ success: false, message: 'Error al obtener rutinas', error: error.message });

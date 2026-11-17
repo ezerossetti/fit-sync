@@ -1,6 +1,7 @@
 import apiClient from './apiClient'
 
 const rutinasService = {
+  reorder: async (ids) => (await apiClient.put('/rutinas/orden', { ids })).data.data,
   // GET todas las rutinas del usuario logueado
   getAll: async () => {
     const response = await apiClient.get('/rutinas')

@@ -130,6 +130,7 @@ export const sesionController = {
       const validation = validarSesion({ ...current, ...datosActualizacion, id: undefined });
       if (validation.error) return res.status(400).json({ success: false, message: validation.error });
       if (rutina_id && !await rutinaModel.getById(rutina_id, req.usuarioId)) return res.status(400).json({ success: false, message: 'Rutina inválida para esta cuenta.' });
+      for (const key of Object.keys(datosActualizacion)) datosActualizacion[key] = validation.data[key];
       datosActualizacion.volumen_total = validation.data.volumen_total;
       const sesionActualizada = await sesionModel.update(sesionId, req.usuarioId, datosActualizacion);
 

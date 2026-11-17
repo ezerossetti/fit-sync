@@ -1,4 +1,5 @@
 import { ArrowUpRight, MoreHorizontal, Plus, Dumbbell, ArrowUp, ArrowDown } from 'lucide-react'
+import RoutineOrder from '../components/RoutineOrder'
 import { useAuth } from '../context/AuthContext'
 import { leerBorrador } from '../utils/sesionDraft'
 import { useEffect, useState } from 'react'
@@ -232,6 +233,7 @@ export default function Rutinas() {
   const { user } = useAuth()
 
   const [rutinas, setRutinas] = useState([])
+  const [ordering,setOrdering] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -431,6 +433,8 @@ export default function Rutinas() {
     <div className="page-enter">
       <div className="page-heading"><div><p className="eyebrow">TU PLAN, A TU MANERA</p><h1>Tus rutinas<span className="text-accent">.</span></h1><p>Menos improvisar. Más entrenar.</p></div><Dumbbell size={26} className="text-accent"/></div>
       <button data-tour="rutinas-nueva" onClick={abrirNueva} className="btn-primary w-full mb-6 flex items-center justify-center gap-2 text-body-sm"><Plus size={18}/> Crear rutina</button>
+      {rutinas.length>1 && <button className="text-accent min-h-11 mb-3 text-body-sm" onClick={()=>setOrdering(true)}>Ordenar rutinas</button>}
+      {ordering && <RoutineOrder routines={rutinas} onClose={()=>setOrdering(false)} onSaved={setRutinas}/>}
       {error && <div className="notice mb-4" role="alert">{error}</div>}
       {loading ? <div className="skeleton-card" aria-label="Cargando rutinas"/> : rutinas.length === 0 ? <button className="empty-state w-full" onClick={abrirNueva}><Dumbbell size={28}/><h3>Armá tu primera rutina</h3><p>Elegí ejercicios, series y repeticiones.<br/>La próxima vez ya está todo listo.</p></button> : <div className="space-y-4">{rutinas.map((r,i) => <article className="card routine-card" key={r.id}>
         <p className="routine-index">RUTINA {String(i+1).padStart(2,'0')} · {(r.ejercicios || []).reduce((a,e) => a+(e.series_objetivo || 3),0)} SERIES</p>

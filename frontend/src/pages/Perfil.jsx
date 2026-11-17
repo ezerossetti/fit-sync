@@ -1,3 +1,4 @@
+import DataBackup from '../components/DataBackup'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -661,6 +662,7 @@ export default function Perfil() {
       </div>
 
       </div>
+      <DataBackup/>
       <button
         onClick={async () => { try { await signOut() } catch { alert('No se pudo cerrar la sesión. Revisá la conexión y volvé a intentar.') } }}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg border border-error/40 text-error font-semibold text-body-sm"

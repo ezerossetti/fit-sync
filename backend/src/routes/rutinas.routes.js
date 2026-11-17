@@ -18,6 +18,7 @@ router.post('/rutinas', (req, res) => {
   rutinaController.create(req, res);
 });
 
+router.put('/rutinas/orden', (req, res) => rutinaController.reorder(req, res));
 router.put('/rutinas/:rutinaId', (req, res) => rutinaController.update(req, res));
 
 router.delete('/rutinas/:rutinaId', (req, res) => rutinaController.remove(req, res));
