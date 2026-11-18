@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, ChevronRight, Plus, Check, History, MoveUpRight } from 'lucide-react'
 import TrainingFocus from '../components/TrainingFocus'
+import { completedSessions } from '../utils/moments'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
@@ -43,7 +44,7 @@ export default function Home() {
   const dias = new Set(semana.map(s => fechaSesion(s.fecha).toDateString()))
   const racha = calcularRachaSemanal(sesiones, perfil?.preferencias?.metaSemanal || 3)
   const nombre = (perfil?.nombre || user.user_metadata?.nombre || 'Atleta').split(' ')[0]
-  const ultimo = sesiones[0]
+  const ultimo = completedSessions(sesiones).at(-1)
   const recuperar = () => {
     if (!confirm('Hay un entrenamiento de una versión anterior sin cuenta asociada. ¿Es tuyo y querés recuperarlo en esta cuenta?')) return
     try { recuperarDatosAnteriores(user.id); setLegacy(false); setDraft(leerBorrador(user.id)) }
@@ -53,7 +54,7 @@ export default function Home() {
     <header className="athletic-greeting"><div><p>{hoy.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}</p><h1>Vamos, {nombre}<span>.</span></h1></div><Link to="/perfil" aria-label="Ir a mi perfil" className="athletic-avatar">{nombre.slice(0,1).toUpperCase()}</Link></header>
     {error && <div role="alert" className="notice"><p>{error}</p><button onClick={cargar}>Volver a intentar</button></div>}
     {legacy && <div className="notice"><p>Encontramos un entrenamiento de tu versión anterior.</p><button onClick={recuperar}>Recuperar mis datos</button></div>}
-    <TrainingFocus rutinas={rutinas} sesiones={sesiones} draft={draft} loading={loading}/>
+    <TrainingFocus sesiones={sesiones} draft={draft} loading={loading} error={error}/>
     <section className="athletic-week" data-tour="home-stats" aria-label="Actividad de esta semana"><div className="athletic-section-heading"><h2>Esta semana</h2><Link to="/historial"><b>{loading?'—':dias.size}</b> / {racha.meta} días <ArrowUpRight size={15}/></Link></div><div className="athletic-days">{['L','M','M','J','V','S','D'].map((letter,i)=>{const date=new Date(lunes);date.setDate(date.getDate()+i);const done=dias.has(date.toDateString()),today=date.toDateString()===hoy.toDateString();return <div key={i} className={`${done?'done':''} ${today?'today':''}`} aria-label={`${date.toLocaleDateString('es-AR')}${done?', entrenaste':''}${today?', hoy':''}`}><span>{letter}</span><b>{done?<Check size={19}/>:date.getDate()}</b><i/></div>})}</div></section>
     <section className="athletic-routines" data-tour="home-rutinas">
       <div className="athletic-section-heading"><h2>Tus rutinas</h2><Link to="/rutinas">Editar <ArrowUpRight size={15}/></Link></div>

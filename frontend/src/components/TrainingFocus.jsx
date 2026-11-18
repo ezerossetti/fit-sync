@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { getExerciseInfo } from '../data/exerciseCatalog'
 import { muscleGroup, MUSCLES, completedSessions } from '../utils/moments'
 import { formatFechaRelativa } from '../utils/helpers'
@@ -37,38 +37,35 @@ function Anatomy({ groups }) {
   </div>
 }
 
-export default function TrainingFocus({ rutinas, sesiones, draft, loading }) {
-  const [selectedId, setSelectedId] = useState(null)
-  const index = Math.max(0, rutinas.findIndex(r => r.id === selectedId))
-  const routine = draft ? rutinas.find(r => r.id === draft.rutinaId) : rutinas[index]
-  const exercises = draft ? draft.sesionEjercicios || [] : routine?.ejercicios || []
+export default function TrainingFocus({ sesiones, draft, loading, error }) {
+  const last = completedSessions(sesiones).at(-1)
+  // Only performed exercises contribute to the previous session's silhouette.
+  const exercises = (last?.ejercicios || []).filter(e => e.series?.length > 0)
   const groups = [...new Set(exercises.map(e => {
     const own = muscleGroup(e.grupo || '')
     return own !== 'other' ? own : muscleGroup(getExerciseInfo(e.nombre)?.grupo || '')
   }))].filter(g => g !== 'other')
-  const sets = exercises.reduce((n, e) => n + (draft ? e.series?.length || 0 : Number(e.series_objetivo) || 3), 0)
-  const last = routine && completedSessions(sesiones).filter(s => s.rutina_id === routine.id).at(-1)
-  const title = draft ? draft.rutinaNombre || 'Sesión libre' : loading ? 'Preparando…' : routine?.nombre || 'Sesión libre'
-  const target = draft || !routine ? '/entrenar' : `/entrenar/${routine.id}`
-  const identity = draft ? `draft-${draft.sessionId || 'current'}` : routine?.id || 'free'
+  const sets = exercises.reduce((n, e) => n + e.series.length, 0)
+  const title = loading ? 'Preparando…' : last ? last.rutina_nombre || 'Sesión libre' : error ? 'Tu historial' : 'Tu primera sesión'
   const labels = groups.map(g => MUSCLES.find(([id]) => id === g)[1])
-  return <section className="training-feature training-focus" aria-label="Tu entrenamiento de hoy" aria-busy={loading}>
-    <div className="focus-eyebrow"><span><i className={draft ? 'in-progress' : ''}/>{draft ? 'SESIÓN EN CURSO' : 'TU ENTRENAMIENTO'}</span><span>{!draft && rutinas.length ? `${String(index + 1).padStart(2, '0')} / ${String(rutinas.length).padStart(2, '0')}` : 'FITSYNC'}</span></div>
-    <div className="focus-composition" key={identity}>
+  const duration = last?.duracion_min != null && Number.isFinite(Number(last.duracion_min)) && Number(last.duracion_min) > 0 ? `${Number(last.duracion_min).toLocaleString('es-AR')} min · ` : ''
+  return <section className="training-feature training-focus" aria-label="Tu último entrenamiento completado" aria-busy={loading}>
+    <div className="focus-eyebrow"><span><i/>{last ? 'ÚLTIMA SESIÓN' : 'TU HISTORIAL'}</span><span>{last ? formatFechaRelativa(last.fecha) : 'FITSYNC'}</span></div>
+    <div className="focus-composition" key={last?.id || 'empty'}>
       <div className="focus-copy">
         <h2>{title}</h2>
-        <p className="focus-muscles">{loading ? 'Cargando tu plan' : labels.length ? labels.join(' · ') : exercises.length ? 'Ejercicios a tu medida' : 'Tu ritmo. Tu selección.'}</p>
+        <p className="focus-muscles">{loading ? 'Cargando tu historial' : labels.length ? labels.join(' · ') : last ? 'Tu entrenamiento registrado' : error ? 'No pudimos cargar tus sesiones.' : 'Tu próximo entrenamiento quedará acá.'}</p>
         <div className="focus-numbers">
-          <div><strong>{loading ? '—' : String(exercises.length).padStart(2, '0')}</strong><span>{draft ? 'ejercicios registrados' : 'ejercicios'}</span></div>
-          <div><strong>{loading ? '—' : String(sets).padStart(2, '0')}</strong><span>{draft ? 'series registradas' : 'series previstas'}</span></div>
+          <div><strong>{loading || !last ? '—' : String(exercises.length).padStart(2, '0')}</strong><span>ejercicios realizados</span></div>
+          <div><strong>{loading || !last ? '—' : String(sets).padStart(2, '0')}</strong><span>series completadas</span></div>
         </div>
-        <p className="focus-context">{draft ? `${sets} ${sets === 1 ? 'serie registrada' : 'series registradas'}. Seguí donde quedaste.` : last ? `Última vez · ${formatFechaRelativa(last.fecha)}` : exercises.length ? 'Todo listo para empezar.' : 'Sumá ejercicios al empezar.'}</p>
+        <p className="focus-context">{last ? `${duration}Sesión completada` : loading || error ? 'Tus datos se conservan.' : 'Cada sesión cuenta.'}</p>
       </div>
       <Anatomy groups={groups}/>
     </div>
     <div className="focus-actions">
-      {!draft && rutinas.length > 1 ? <div className="focus-pagination" aria-label="Elegir rutina"><button aria-label="Rutina anterior" disabled={index === 0} onClick={() => setSelectedId(rutinas[index - 1].id)}><ArrowLeft size={18}/></button><button aria-label="Rutina siguiente" disabled={index === rutinas.length - 1} onClick={() => setSelectedId(rutinas[index + 1].id)}><ArrowRight size={18}/></button><span>Cambiar rutina</span></div> : <span className="focus-legend"><i/>Grupos principales</span>}
-      <Link to={target} data-tour="home-cta-entrenar" className="training-start-button" aria-label={draft ? 'Retomar entrenamiento' : 'Empezar entrenamiento'}>{draft ? 'Continuar' : 'Entrenar'}<ArrowUpRight size={19}/></Link>
+      <span className="focus-legend"><i/>{draft ? 'Tenés una sesión en curso' : last ? 'Entrenamiento registrado' : 'A tu ritmo'}</span>
+      <Link to="/entrenar" data-tour="home-cta-entrenar" className="training-start-button" aria-label={draft ? 'Retomar entrenamiento' : 'Empezar entrenamiento'}>{draft ? 'Continuar' : 'Entrenar'}<ArrowUpRight size={19}/></Link>
     </div>
   </section>
 }
