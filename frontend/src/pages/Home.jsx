@@ -4,7 +4,7 @@ import { TOURS } from '../data/tours'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, ChevronRight, Plus, Check, History, MoveUpRight } from 'lucide-react'
-import trainingPhoto from '../assets/training-editorial.png'
+import TrainingFocus from '../components/TrainingFocus'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
@@ -44,29 +44,16 @@ export default function Home() {
   const racha = calcularRachaSemanal(sesiones, perfil?.preferencias?.metaSemanal || 3)
   const nombre = (perfil?.nombre || user.user_metadata?.nombre || 'Atleta').split(' ')[0]
   const ultimo = sesiones[0]
-  const series = draft?.sesionEjercicios?.reduce((sum,e) => sum + e.series.length, 0) || 0
   const recuperar = () => {
     if (!confirm('Hay un entrenamiento de una versión anterior sin cuenta asociada. ¿Es tuyo y querés recuperarlo en esta cuenta?')) return
     try { recuperarDatosAnteriores(user.id); setLegacy(false); setDraft(leerBorrador(user.id)) }
     catch { setError('No pudimos recuperar el entrenamiento. Los datos originales siguen guardados.') }
   }
-  const featured = rutinas[0]
-  const target = draft ? '/entrenar' : featured ? `/entrenar/${featured.id}` : '/entrenar'
   return <div className="athletic-home">
     <header className="athletic-greeting"><div><p>{hoy.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}</p><h1>Vamos, {nombre}<span>.</span></h1></div><Link to="/perfil" aria-label="Ir a mi perfil" className="athletic-avatar">{nombre.slice(0,1).toUpperCase()}</Link></header>
     {error && <div role="alert" className="notice"><p>{error}</p><button onClick={cargar}>Volver a intentar</button></div>}
     {legacy && <div className="notice"><p>Encontramos un entrenamiento de tu versión anterior.</p><button onClick={recuperar}>Recuperar mis datos</button></div>}
-    <section className="training-feature" aria-label="Tu entrenamiento de hoy">
-      <div className="training-photograph"><img src={trainingPhoto} alt="" width="1536" height="1024" fetchPriority="high" decoding="async"/></div>
-      <div className="training-start">
-        <div className="training-start-copy">
-          <p className="training-caption">{draft ? 'Sesión en curso' : 'Tu entrenamiento'}</p>
-          <h2>{draft ? draft.rutinaNombre || 'Sesión libre' : loading ? 'Preparando…' : featured?.nombre || 'Sesión libre'}</h2>
-          <p className="training-detail">{draft ? `${series} ${series === 1 ? 'serie registrada' : 'series registradas'}` : featured ? `${featured.ejercicios?.length || 0} ejercicios` : 'Elegí tus ejercicios al empezar'}</p>
-        </div>
-        <Link to={target} data-tour="home-cta-entrenar" className="training-start-button" aria-label={draft ? 'Retomar entrenamiento' : 'Empezar entrenamiento'}><span>{draft ? 'Continuar' : 'Entrenar'}</span><ArrowUpRight size={18}/></Link>
-      </div>
-    </section>
+    <TrainingFocus rutinas={rutinas} sesiones={sesiones} draft={draft} loading={loading}/>
     <section className="athletic-week" data-tour="home-stats" aria-label="Actividad de esta semana"><div className="athletic-section-heading"><h2>Esta semana</h2><Link to="/historial"><b>{loading?'—':dias.size}</b> / {racha.meta} días <ArrowUpRight size={15}/></Link></div><div className="athletic-days">{['L','M','M','J','V','S','D'].map((letter,i)=>{const date=new Date(lunes);date.setDate(date.getDate()+i);const done=dias.has(date.toDateString()),today=date.toDateString()===hoy.toDateString();return <div key={i} className={`${done?'done':''} ${today?'today':''}`} aria-label={`${date.toLocaleDateString('es-AR')}${done?', entrenaste':''}${today?', hoy':''}`}><span>{letter}</span><b>{done?<Check size={19}/>:date.getDate()}</b><i/></div>})}</div></section>
     <section className="athletic-routines" data-tour="home-rutinas">
       <div className="athletic-section-heading"><h2>Tus rutinas</h2><Link to="/rutinas">Editar <ArrowUpRight size={15}/></Link></div>

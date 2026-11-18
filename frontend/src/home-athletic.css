@@ -10,7 +10,7 @@ body:has(.athletic-home),html:has(.athletic-home){background:#fff;color-scheme:l
 .app-shell:has(.athletic-home) .nav-item.is-active{color:#111}
 .app-shell:has(.athletic-home) .nav-train>span{background:#111;color:#fff}
 .app-shell:has(.athletic-home) .app-main{padding-top:20px}
-/* A white canvas, one photograph and unboxed lists. */
+/* Personal training composition on an open white canvas. */
 .athletic-home{display:flex;flex-direction:column;gap:28px;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;color:#111}
 .athletic-greeting{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .athletic-greeting p{font-size:11px;color:#707072;text-transform:capitalize;margin-bottom:6px}
@@ -18,13 +18,6 @@ body:has(.athletic-home),html:has(.athletic-home){background:#fff;color-scheme:l
 .athletic-greeting h1 span{color:#111}
 .athletic-avatar{width:44px;height:44px;border:1px solid #dedede;display:grid;place-items:center;border-radius:50%;font-size:16px;font-weight:650;flex-shrink:0}
 .training-feature{min-width:0}
-.training-photograph{overflow:hidden;background:#ededed;aspect-ratio:1.85;border-radius:2px}
-.training-photograph img{display:block;width:100%;height:100%;object-fit:cover;object-position:60% 60%}
-.training-start{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 0 0}
-.training-start-copy{min-width:0}
-.training-caption{font-size:10px;letter-spacing:.5px;color:#707072;margin-bottom:6px}
-.training-start h2{font-size:21px;font-weight:650;line-height:1.2;letter-spacing:-.7px;overflow-wrap:anywhere}
-.training-detail{font-size:11px;color:#707072;margin-top:6px;line-height:1.5}
 .training-start-button{flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:0 17px;border-radius:99px;background:#111;color:white;font-size:12px;font-weight:600}
 .athletic-section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .athletic-section-heading h2{font-size:18px;letter-spacing:-.5px;font-weight:650}
@@ -82,5 +75,49 @@ body:has(.athletic-home),html:has(.athletic-home){background:#fff;color-scheme:l
 }
 @keyframes athletic-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes sheet-arrive{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
-@media(max-width:359px){.athletic-greeting h1{font-size:24px}.training-start{gap:10px}.training-start h2{font-size:19px}.training-start-button{padding:0 13px;gap:6px}.athletic-days{gap:4px}.athletic-days b{width:32px;height:32px}}
-@media(min-width:600px){.training-photograph{aspect-ratio:2.4}.training-start h2{font-size:25px}.athletic-days b{width:40px;height:40px}}
+@media(max-width:359px){.athletic-greeting h1{font-size:24px}.training-start-button{padding:0 13px;gap:6px}.athletic-days{gap:4px}.athletic-days b{width:32px;height:32px}}
+@media(min-width:600px){.athletic-days b{width:40px;height:40px}}
+
+/* Training focus: live routine data and lightweight anatomical artwork. */
+.training-focus{padding-top:8px}
+.focus-eyebrow{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:9px;font-weight:550;letter-spacing:1.5px;color:#757875}
+.focus-eyebrow>span:first-child{display:flex;align-items:center;gap:7px}
+.focus-eyebrow i{width:5px;height:5px;background:#25352d;border-radius:50%}
+.focus-eyebrow>span:last-child{font-variant-numeric:tabular-nums;letter-spacing:1px}
+.focus-composition{display:grid;grid-template-columns:minmax(0,1fr) 42%;gap:8px;padding:24px 0 10px;align-items:center;min-height:278px}
+.focus-copy{min-width:0;align-self:center}
+.focus-copy h2{font-size:clamp(29px,8.7vw,38px);font-weight:560;letter-spacing:-1.7px;line-height:1.03;text-wrap:balance;overflow-wrap:anywhere}
+.focus-muscles{font-size:11px;line-height:1.65;color:#626962;margin-top:13px;max-width:205px}
+.focus-numbers{display:flex;gap:24px;margin-top:25px}
+.focus-numbers>div{min-width:0}
+.focus-numbers strong{font-size:30px;line-height:1;font-weight:400;letter-spacing:-1.5px;font-variant-numeric:tabular-nums}
+.focus-numbers span{display:block;font-size:9px;color:#747974;margin-top:7px;line-height:1.4;max-width:74px}
+.focus-context{font-size:10px;line-height:1.6;color:#777e77;margin-top:20px;max-width:180px}
+.focus-anatomy{min-width:0;align-self:center}
+.focus-anatomy>svg{display:block;width:100%;height:247px;overflow:visible}
+.anatomy-guide{fill:none;stroke:#edefea;stroke-width:.7;stroke-dasharray:2 5}
+.anatomy-base{fill:#f5f5f1;stroke:#c9cdc5;stroke-width:.85;stroke-linejoin:round}
+.anatomy-detail{fill:none;stroke:#c9cdc5;stroke-width:.7}
+.anatomy-muscle{fill:#e5e7e0;stroke:#fff;stroke-width:.8}
+.anatomy-muscle.is-focused{fill:#4e6356;stroke:#fff}
+.anatomy-views{display:flex;align-items:center;justify-content:center;gap:5px;color:#a5aaa5}
+.anatomy-views button{min-width:44px;min-height:44px;padding:0 4px;background:none;color:#777e77;font-size:9px}
+.anatomy-views button[aria-pressed=true]{color:#1d2b21;text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1px}
+.focus-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0 20px;border-bottom:1px solid #e8eae6}
+.focus-pagination{display:flex;align-items:center;gap:0;min-width:0}
+.focus-pagination button{display:grid;place-items:center;width:44px;min-height:44px;color:#152019;background:transparent}
+.focus-pagination button:disabled{color:#bec2bb}
+.focus-pagination span{font-size:9px;color:#747974;margin-left:6px;max-width:40px;line-height:1.4}
+.focus-legend{display:flex;align-items:center;gap:6px;font-size:9px;color:#747974}
+.focus-legend i{width:5px;height:5px;border-radius:50%;background:#4e6356}
+.training-focus .training-start-button{min-width:120px;gap:17px;font-size:13px}
+.training-focus button:focus-visible{outline:2px solid #4e6356;outline-offset:2px}
+@media(prefers-reduced-motion:no-preference){
+ .focus-composition{animation:focus-enter .35s ease-out both}
+ .anatomy-muscle{transition:fill .3s ease}
+ .focus-pagination button{transition:transform .18s,opacity .18s}
+ .focus-pagination button:active{transform:scale(.9)}
+}
+@keyframes focus-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(max-width:359px){.focus-composition{grid-template-columns:minmax(0,1fr) 40%;gap:4px;padding-top:20px}.focus-copy h2{font-size:29px;letter-spacing:-1.2px}.focus-numbers{gap:17px}.focus-anatomy>svg{height:230px}.focus-pagination span{display:none}.training-focus .training-start-button{min-width:110px}}
+@media(min-width:600px){.focus-composition{grid-template-columns:minmax(0,1fr) 40%;padding:20px 24px 10px}.focus-copy h2{font-size:44px;max-width:290px}.focus-anatomy>svg{height:290px}.focus-muscles{font-size:13px}.focus-numbers{gap:42px}.focus-numbers strong{font-size:36px}}
