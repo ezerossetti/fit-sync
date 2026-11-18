@@ -1,18 +1,20 @@
-import '../moments.css'
+import '../home-athletic.css'
 import { useTour } from '../context/TourContext'
 import { TOURS } from '../data/tours'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, ArrowRight, Play, Dumbbell, Plus, Check, History, Flame } from 'lucide-react'
+import { ArrowUpRight, ArrowRight, Plus, Check, History } from 'lucide-react'
 import rutinasService from '../services/rutinas.service'
 import sesionesService from '../services/sesiones.service'
 import usuarioService from '../services/usuario.service'
 import { useAuth } from '../context/AuthContext'
-import { fechaSesion, formatKg, formatFechaRelativa, calcularRachaSemanal, volumenSesion } from '../utils/helpers'
+import { fechaSesion, formatFechaRelativa, calcularRachaSemanal } from '../utils/helpers'
 import { leerBorrador, hayDatosAnteriores, recuperarDatosAnteriores, STORAGE_EVENT } from '../utils/sesionDraft'
 
 export default function Home() {
   const { user } = useAuth()
+  const rail = useRef(null)
+  const [activeRoutine,setActiveRoutine] = useState(0)
   const { startTour } = useTour()
   useEffect(() => { startTour('home', TOURS.home.steps); startTour('bienvenida', TOURS.bienvenida.steps) }, [startTour])
   const [data, setData] = useState({rutinas: [], sesiones: [], perfil: null})
@@ -38,7 +40,7 @@ export default function Home() {
   const {rutinas, sesiones, perfil} = data
   const hoy = new Date()
   const lunes = new Date(hoy); lunes.setHours(0,0,0,0); lunes.setDate(lunes.getDate() - (lunes.getDay()+6)%7)
-  const semana = sesiones.filter(s => fechaSesion(s.fecha) >= lunes)
+  const semana = sesiones.filter(s => s.completada !== false && fechaSesion(s.fecha) >= lunes && fechaSesion(s.fecha) <= hoy)
   const dias = new Set(semana.map(s => fechaSesion(s.fecha).toDateString()))
   const racha = calcularRachaSemanal(sesiones, perfil?.preferencias?.metaSemanal || 3)
   const nombre = (perfil?.nombre || user.user_metadata?.nombre || 'Atleta').split(' ')[0]
@@ -49,31 +51,27 @@ export default function Home() {
     try { recuperarDatosAnteriores(user.id); setLegacy(false); setDraft(leerBorrador(user.id)) }
     catch { setError('No pudimos recuperar el entrenamiento. Los datos originales siguen guardados.') }
   }
-  return <div className="home-page page-enter">
-    <div className="page-heading"><div><p className="eyebrow">TU ESPACIO DE ENTRENAMIENTO</p><h1>Vamos, {nombre}<span className="text-accent">.</span></h1><p>Una serie más. Un paso adelante.</p></div><span className="date-badge">{hoy.toLocaleDateString('es-AR', {day:'2-digit', month:'short'}).replace('.','')}</span></div>
+  const featured = rutinas[activeRoutine] || rutinas[0]
+  const target = draft ? '/entrenar' : featured ? `/entrenar/${featured.id}` : '/entrenar'
+  function scrollRoutine(direction) {
+    const next = Math.max(0, Math.min(rutinas.length-1, activeRoutine+direction))
+    const item = rail.current?.children[next]
+    if (item) rail.current.scrollTo({left:item.offsetLeft-rail.current.offsetLeft,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})
+  }
+  return <div className="athletic-home">
+    <header className="athletic-greeting"><div><p>{hoy.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}</p><h1>Vamos, {nombre}<span>.</span></h1></div><Link to="/perfil" aria-label="Ir a mi perfil" className="athletic-avatar">{nombre.slice(0,1).toUpperCase()}</Link></header>
     {error && <div role="alert" className="notice"><p>{error}</p><button onClick={cargar}>Volver a intentar</button></div>}
     {legacy && <div className="notice"><p>Encontramos un entrenamiento de tu versión anterior.</p><button onClick={recuperar}>Recuperar mis datos</button></div>}
-    <Link to="/entrenar" data-tour="home-cta-entrenar" className="training-hero">
-      <div className="hero-orbit" aria-hidden="true"><Dumbbell size={92} strokeWidth={1.1}/></div>
-      <p className="eyebrow"><span className="live-dot"/>{draft ? 'TENÉS UNA SESIÓN EN CURSO' : 'TU PRÓXIMA MEJOR VERSIÓN'}</p>
-      <h2>{draft ? 'Seguí donde' : 'Hoy se'}<br/>{draft ? 'lo dejaste.' : 'entrena.'}</h2>
-      <p>{draft ? `${draft.rutinaNombre || 'Sesión libre'} · ${series} series registradas` : 'Tu rutina, tus pesos, tu ritmo.'}</p>
-      <div className="hero-action"><span>{draft ? 'Retomar entrenamiento' : 'Empezar entrenamiento'}</span><span className="hero-play"><Play size={19} fill="currentColor"/></span></div>
-    </Link>
-    <section className="week-card" data-tour="home-stats" aria-label="Actividad de esta semana">
-      <div className="section-heading"><h2>Tu semana</h2><span><strong>{loading ? '—' : dias.size}</strong> / {racha.meta} días</span></div>
-      <div className="week-days">{['L','M','M','J','V','S','D'].map((letra,i) => {
-        const fecha = new Date(lunes); fecha.setDate(lunes.getDate()+i)
-        const done = dias.has(fecha.toDateString()); const today = fecha.toDateString() === hoy.toDateString()
-        return <div key={i} className={`${done ? 'done' : ''} ${today ? 'today' : ''}`} aria-label={`${fecha.toLocaleDateString('es-AR')}${done ? ', entrenaste' : ''}${today ? ', hoy' : ''}`}><span>{letra}</span><b>{done ? <Check size={18}/> : fecha.getDate()}</b><i/></div>
-      })}</div>
-      <div className="week-footer"><span><Flame size={15}/> {racha.racha} {racha.racha === 1 ? 'semana' : 'semanas'} de constancia</span><Link to="/historial">Ver progreso <ArrowUpRight size={14}/></Link></div>
+    <section className="training-poster" aria-label="Tu entrenamiento de hoy">
+      <div className="poster-top"><span>FITSYNC / TRAINING CLUB</span><span>{draft?'EN CURSO':'TU ESPACIO'}</span></div>
+      <div className="poster-art" aria-hidden="true"><svg viewBox="0 0 300 300"><circle cx="150" cy="150" r="128"/><circle cx="150" cy="150" r="106"/><circle cx="150" cy="150" r="84"/><circle cx="150" cy="150" r="62"/><path d="M0 150H300M150 0V300"/></svg><span>FS</span></div>
+      <h2>{draft?<>SEGUÍ.<br/>ES TUYO.</>:<>HOY<br/>CUENTA.</>}</h2>
+      <div className="poster-bottom"><div><span>{draft?'RETOMÁ TU SESIÓN':featured?'LISTO PARA VOS':'A TU RITMO'}</span><p>{draft?`${draft.rutinaNombre||'Sesión libre'} · ${series} series`:loading?'Preparando tu entrenamiento…':featured?.nombre||'Tu primer entrenamiento empieza acá'}</p></div><Link to={target} data-tour="home-cta-entrenar" className="poster-cta" aria-label={draft?'Retomar entrenamiento':'Empezar entrenamiento'}><span>{draft?'Continuar':'Entrenar'}</span><ArrowUpRight size={22}/></Link></div>
     </section>
-    <Link to="/historial/momentos" className="moments-entry"><div><span className="moment-entry-label">HECHO POR VOS</span><b>Tus momentos.</b><p>Tu Wrapped, tu mapa muscular<br/>y una misión a tu medida.</p></div><ArrowUpRight size={23}/></Link>
-    <section data-tour="home-rutinas"><div className="section-heading"><h2>Tus rutinas</h2><Link to="/rutinas">Ver todas <ArrowRight size={15}/></Link></div>
-      {loading ? <div className="skeleton-card" aria-label="Cargando rutinas"/> : rutinas.length ? <div className="routine-stack">{rutinas.slice(0,3).map((r,i) => <Link className="routine-preview" to={draft ? '/entrenar' : `/entrenar/${r.id}`} key={r.id}><span className="routine-number">0{i+1}</span><div><h3>{r.nombre}</h3><p>{r.ejercicios?.length || 0} ejercicios · {(r.ejercicios || []).reduce((a,e) => a+(e.series_objetivo || 3),0)} series</p></div><ArrowUpRight size={20}/></Link>)}</div> : <Link className="empty-state" to="/rutinas"><Plus size={24}/><h3>Tu primera rutina empieza acá</h3><p>Armala una vez. Repetila y superate.</p></Link>}
-    </section>
-    {ultimo && <section><div className="section-heading"><h2>Último entrenamiento</h2><History size={18} className="text-on-surface-variant"/></div><Link className="last-workout" to="/historial"><div><p className="eyebrow">{formatFechaRelativa(ultimo.fecha)}</p><h3>{ultimo.rutina_nombre || 'Sesión libre'}</h3><p>{ultimo.ejercicios?.length || 0} ejercicios completados</p></div><div><strong>{formatKg(ultimo.volumen_total ?? volumenSesion(ultimo.ejercicios))}</strong><span>kg de volumen</span></div></Link></section>}
-    <p className="home-footnote">TU FUERZA, EN DATOS.</p>
+    <section className="athletic-week" data-tour="home-stats" aria-label="Actividad de esta semana"><div className="athletic-section-heading"><h2>Esta semana</h2><Link to="/historial"><b>{loading?'—':dias.size}</b> / {racha.meta} días <ArrowUpRight size={15}/></Link></div><div className="athletic-days">{['L','M','M','J','V','S','D'].map((letter,i)=>{const date=new Date(lunes);date.setDate(date.getDate()+i);const done=dias.has(date.toDateString()),today=date.toDateString()===hoy.toDateString();return <div key={i} className={`${done?'done':''} ${today?'today':''}`} aria-label={`${date.toLocaleDateString('es-AR')}${done?', entrenaste':''}${today?', hoy':''}`}><span>{letter}</span><b>{done?<Check size={19}/>:date.getDate()}</b><i/></div>})}</div></section>
+    <section className="athletic-routines" data-tour="home-rutinas"><div className="athletic-section-heading"><h2>Tu plan.</h2><Link to="/rutinas">Ver todas <ArrowUpRight size={16}/></Link></div>{loading?<div className="athletic-loading" aria-label="Cargando rutinas"/>:rutinas.length?<><div ref={rail} className="routine-rail" aria-label="Elegí tu rutina" onScroll={e=>{const el=e.currentTarget;const width=el.children[0]?.getBoundingClientRect().width+12;if(width)setActiveRoutine(Math.min(rutinas.length-1,Math.round(el.scrollLeft/width)))}}>{rutinas.map((r,i)=><Link className="athletic-routine" key={r.id} to={draft?'/entrenar':`/entrenar/${r.id}`}><div className="routine-cover" aria-hidden="true"><span>{String(i+1).padStart(2,'0')}</span><svg viewBox="0 0 100 100"><path d={i%3===0?'M10 78L35 53L50 68L90 22':i%3===1?'M20 80V20H80V80Z M35 65V35H65V65Z':'M15 75L50 15L85 75Z M30 75L50 40L70 75Z'}/></svg><ArrowUpRight size={20}/></div><h3>{r.nombre}</h3><p>{r.ejercicios?.length||0} ejercicios · {(r.ejercicios||[]).reduce((n,e)=>n+(Number(e.series_objetivo)||3),0)} series</p></Link>)}</div>{rutinas.length>1&&<div className="routine-rail-controls"><span>{String(activeRoutine+1).padStart(2,'0')} <i>/ {String(rutinas.length).padStart(2,'0')}</i></span><div><button aria-label="Rutina anterior" disabled={!activeRoutine} onClick={()=>scrollRoutine(-1)}><ArrowRight size={17} style={{transform:'rotate(180deg)'}}/></button><button aria-label="Rutina siguiente" disabled={activeRoutine>=rutinas.length-1} onClick={()=>scrollRoutine(1)}><ArrowRight size={17}/></button></div></div>}</>:<Link className="athletic-empty" to="/rutinas"><Plus size={22}/><span>Armá tu primera rutina</span><ArrowUpRight size={18}/></Link>}</section>
+    <Link to="/historial/momentos" className="athletic-moments"><div><span>EL ESFUERZO DEJA HUELLA</span><h2>TU HISTORIA.<br/>TUS REGLAS.</h2><p>Wrapped, marcas y misiones personales.</p></div><span className="moments-arrow"><ArrowUpRight size={24}/></span></Link>
+    {ultimo&&<Link className="athletic-last" to="/historial"><History size={20}/><div><span>ÚLTIMA SESIÓN · {formatFechaRelativa(ultimo.fecha)}</span><b>{ultimo.rutina_nombre||'Sesión libre'}</b></div><ArrowUpRight size={18}/></Link>}
+    <p className="athletic-signoff">FITSYNC<span>HECHO POR VOS.</span></p>
   </div>
 }
