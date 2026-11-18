@@ -53,12 +53,12 @@ export const TOURS = {
       {
         target: 'home-cta-entrenar',
         title: 'Carga rápida',
-        body: 'Tocá esta tarjeta para empezar a entrenar ya mismo. No hace falta teclear nada durante la sesión.',
+        body: 'Tocá Entrenar para empezar, o Continuar si tenés una sesión en curso. No hace falta teclear nada durante la sesión.',
       },
       {
         target: 'home-stats',
         title: 'Tu resumen',
-        body: 'Rutinas activas, sesiones de esta semana y tu racha de entrenamiento, de un vistazo.',
+        body: 'Los días que entrenaste esta semana y tu objetivo semanal, de un vistazo.',
       },
       {
         target: 'home-rutinas',
